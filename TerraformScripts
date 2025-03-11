@@ -66,3 +66,117 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
+#IAM Role for Cross-Account Access
+
+resource "aws_iam_role" "app_role" {
+  name = "AppMigrationRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam::123456789012:role/Admin"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Project = "App Migration"
+  }
+}
+
+#Application Load Balancer (ALB)
+
+resource "aws_lb" "app_alb" {
+  name               = "app-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.app_sg.id]
+  subnets            = module.vpc.public_subnets
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "app-alb"
+  }
+}
+
+#RDS Database Migration
+
+resource "aws_db_instance" "app_db" {
+  identifier             = "app-db"
+  engine                 = "mysql"
+  instance_class         = "db.t3.micro"
+  allocated_storage      = 20
+  username              = "admin"
+  password              = "SuperSecurePassword"
+  parameter_group_name  = "default.mysql8.0"
+  publicly_accessible   = false
+  skip_final_snapshot   = true
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  db_subnet_group_name  = module.vpc.database_subnet_group
+
+  tags = {
+    Name = "app-db"
+  }
+}
+
+#ECS for Microservices (Fargate)
+
+resource "aws_ecs_cluster" "app_cluster" {
+  name = "app-cluster"
+}
+
+resource "aws_ecs_task_definition" "app_task" {
+  family                   = "app-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "512"
+  memory                   = "1024"
+
+  container_definitions = jsonencode([{
+    name      = "app-container"
+    image     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest"
+    essential = true
+    portMappings = [{
+      containerPort = 80
+      hostPort      = 80
+    }]
+  }])
+}
+
+resource "aws_ecs_service" "app_service" {
+  name            = "app-service"
+  cluster         = aws_ecs_cluster.app_cluster.id
+  task_definition = aws_ecs_task_definition.app_task.arn
+  desired_count   = 2
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = module.vpc.private_subnets
+    security_groups = [aws_security_group.app_sg.id]
+  }
+}
+
+#Route 53 DNS Configuration
+
+resource "aws_route53_record" "app_dns" {
+  zone_id = "Z3ABCEXAMPLE"
+  name    = "app.example.com"
+  type    = "A"
+  alias {
+    name                   = aws_lb.app_alb.dns_name
+    zone_id                = aws_lb.app_alb.zone_id
+    evaluate_target_health = true
+  }
+}
+
+terraform init
+
+terraform plan
+
+terraform apply -auto-approve
+
+
