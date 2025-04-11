@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# AWS CLI must be configured with appropriate credentials
+# Output file
+output="aws_discovery_$(date +%Y%m%d_%H%M%S).txt"
+
+echo "Starting AWS Environment Discovery..." | tee -a $output
+
+# Get all AWS regions
+regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output text)
+
+for region in $regions; do
+  echo "=======================================" | tee -a $output
+  echo "Region: $region" | tee -a $output
+  echo "=======================================" | tee -a $output
+
+  echo "EC2 Instances:" | tee -a $output
+  aws ec2 describe-instances --region $region --query "Reservations[].Instances[].InstanceId" --output table | tee -a $output
+
+  echo "VPCs:" | tee -a $output
+  aws ec2 describe-vpcs --region $region --query "Vpcs[].VpcId" --output table | tee -a $output
+
+  echo "Subnets:" | tee -a $output
+  aws ec2 describe-subnets --region $region --query "Subnets[].SubnetId" --output table | tee -a $output
+
+  echo "Security Groups:" | tee -a $output
+  aws ec2 describe-security-groups --region $region --query "SecurityGroups[].GroupId" --output table | tee -a $output
+
+  echo "RDS Instances:" | tee -a $output
+  aws rds describe-db-instances --region $region --query "DBInstances[].DBInstanceIdentifier" --output table | tee -a $output
+
+  echo "S3 Buckets (Global resource):" | tee -a $output
+  aws s3api list-buckets --query "Buckets[].Name" --output table | tee -a $output
+
+  echo "Lambda Functions:" | tee -a $output
+  aws lambda list-functions --region $region --query "Functions[].FunctionName" --output table | tee -a $output
+
+  echo "Load Balancers:" | tee -a $output
+  aws elbv2 describe-load-balancers --region $region --query "LoadBalancers[].LoadBalancerName" --output table | tee -a $output
+
+done
+
+echo "=======================================" | tee -a $output
+echo "Global IAM Roles:" | tee -a $output
+aws iam list-roles --query "Roles[].RoleName" --output table | tee -a $output
+
+echo "Global CloudFormation Stacks:" | tee -a $output
+aws cloudformation describe-stacks --query "Stacks[].StackName" --output table | tee -a $output
+
+echo "Global Taggable Resources:" | tee -a $output
+aws resourcegroupstaggingapi get-resources --output table | tee -a $output
+
+echo "Discovery Completed! Results saved to: $output"
