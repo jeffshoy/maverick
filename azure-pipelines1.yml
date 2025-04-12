@@ -1,0 +1,42 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  TF_VERSION: '1.7.5'
+
+stages:
+- stage: TerraformInitPlanApply
+  jobs:
+  - job: Terraform
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+
+    - script: |
+        curl -sL https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip -o terraform.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+      displayName: 'Install Terraform'
+
+    - script: |
+        terraform init
+      workingDirectory: ./terraform
+      displayName: 'Terraform Init'
+
+    - script: |
+        terraform plan -out=tfplan
+      workingDirectory: ./terraform
+      displayName: 'Terraform Plan'
+
+    - script: |
+        terraform apply -auto-approve tfplan
+      workingDirectory: ./terraform
+      displayName: 'Terraform Apply'
