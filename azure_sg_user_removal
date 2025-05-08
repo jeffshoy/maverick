@@ -1,0 +1,42 @@
+# Ensure you have the Microsoft.Graph module installed
+# Install-Module Microsoft.Graph -Scope CurrentUser
+
+# Connect to Microsoft Graph with appropriate permissions
+Connect-MgGraph -Scopes "Group.ReadWrite.All"
+
+# Define your group ID (replace with your actual group ID)
+$groupId = "<your-group-id>"
+
+# Define the list of users to remove
+# Option 1: From a CSV file with a column 'UserPrincipalName' or 'ObjectId'
+# $users = Import-Csv -Path "users-to-remove.csv"
+
+# Option 2: Hardcoded list of UPNs or Object IDs
+$users = @(
+    "user1@domain.com",
+    "user2@domain.com",
+    "user3@domain.com"
+)
+
+# Loop through each user and remove them
+foreach ($user in $users) {
+    try {
+        # Determine if input is UPN or ObjectId
+        if ($user -match "@") {
+            # Get user ObjectId from UPN
+            $userObject = Get-MgUser -UserPrincipalName $user
+            $userId = $userObject.Id
+        } else {
+            # Assume it's an ObjectId
+            $userId = $user
+        }
+
+        # Remove user from group
+        Remove-MgGroupMember -GroupId $groupId -DirectoryObjectId $userId
+        Write-Output "Removed user: $user"
+    } catch {
+        Write-Warning "Failed to remove user: $user. Error: $_"
+    }
+}
+
+Write-Output "Completed removal of users."
