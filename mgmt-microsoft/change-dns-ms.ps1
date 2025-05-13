@@ -35,16 +35,16 @@ function func_exit([string] $outputcode) {
   "
   if ($mailto) {
    $logcontents=(get-content $Script:logfile) -join '<br>'
-  if ($outputcode) {
-    $subject=$timestamp+" - Failed - changedns-ms Script:"+$client
-  } else {
-    $subject=$timestamp+" - Success - changedns-ms Script:"+$client
-  }
-  if ((test-netconnection relay.aspgov.com -port 25).tcptestsucceeded -eq "True") { $smtprelay="relay.aspgov.com" }
-  if (!($smtprelay)) {
-    if ((test-netconnection relay101.aspgov.com -port 25).tcptestsucceeded -eq "True") { $smtprelay="relay101.aspgov.com" }
-  }
-  if ($smtprelay) { send-mailmessage -from "aspinfrastructure@centralsquare.com" -to "aspinfrastructure+cloudops@centralsquare.com" -subject $subject -bodyashtml -body "$logcontents" -smtpserver $smtprelay }
+  if ($outputcode) {
+    $subject=$timestamp+" - Failed - changedns-ms Script:"+$client
+  } else {
+    $subject=$timestamp+" - Success - changedns-ms Script:"+$client
+  }
+  if ((test-netconnection relay.aspgov.com -port 25).tcptestsucceeded -eq "True") { $smtprelay="relay.aspgov.com" }
+  if (!($smtprelay)) {
+    if ((test-netconnection relay101.aspgov.com -port 25).tcptestsucceeded -eq "True") { $smtprelay="relay101.aspgov.com" }
+  }
+  if ($smtprelay) { send-mailmessage -from "aspinfrastructure@centralsquare.com" -to "aspinfrastructure+cloudops@centralsquare.com" -subject $subject -bodyashtml -body "$logcontents" -smtpserver $smtprelay }
   }
   exit $outputcode
 }
