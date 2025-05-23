@@ -1,0 +1,14 @@
+Output
+Generates a log file like: ADFS_Health_Report_20250522_1310.txt in your current working directory.
+
+Each section checks a part of the ADFS health (service status, metadata, certs, sync, errors, etc.).
+
+Usage
+Save it as: Check-ADFSHealth.ps1
+
+Run in PowerShell as Admin:
+
+powershell
+Copy
+Edit
+.\Check-ADFSHealth.ps1
