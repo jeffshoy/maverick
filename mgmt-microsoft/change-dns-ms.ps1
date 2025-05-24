@@ -5,7 +5,7 @@ param(
   [Parameter(Mandatory=$true)][string]$newip, #Set to New IP Address
   [Parameter(Mandatory=$true)][string]$zone, #DNS zone
   [Parameter(Mandatory=$true)][string]$server, #DNS server hosting the zone to be changed
-  [string]$dnsservervmname=@("inf-svrdns001","inf-svrdc001","inf-svrdc002","inf-svrdc011","inf-svrdc012","inf-svrdc012","inf-svrdc101","inf-svrdc102","inf-svrdc111","inf-svrdc112"),
+  $dnsservervmname=@("inf-svrdns001","inf-svrdc001","inf-svrdc002","inf-svrdc011","inf-svrdc012","inf-svrdc012","inf-svrdc101","inf-svrdc102","inf-svrdc111","inf-svrdc112"),
   [string]$logfile, #Optional: Location of log to be used by this script.
   [string]$mailto,#Optional: Specify email address to mail results to.
   $creds, #Optional:  Only needed with cleardnsservercache
@@ -17,7 +17,7 @@ param(
 )
 
 if (!($logfile)) {
-  $Global:logfile="changedns-ms_"+$client+"_"+$timestamp+"_"+$action+".log"
+  $script:logfile="changedns-ms_"+$client+"_"+$timestamp+".log"
 }
 
 function func_eventhandler([string] $outputevent) {
@@ -25,7 +25,7 @@ function func_eventhandler([string] $outputevent) {
   if (!($quiet)) {
     $outputevent
   }
-  $outputevent | out-file -append $Global:logfile
+  $outputevent | out-file -append $script:logfile
 }
 
 function func_exit([string] $outputcode) {
@@ -53,25 +53,68 @@ func_eventhandler "$timestamp : Begin changedns-ms script."
 
 $olddns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $oldip) -AND ($_.recorddata.ipv4address -ne $nul)}
 
-if (!($olddns)) {
-  func_eventhandler "ERROR:  No Records on DNSServer=$server in Zone=$zone matching Old IP of $oldip."
-  $outputcode=1
-}
-
-function func_precheck {
-  $newdns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $newip) -AND ($_.recorddata.ipv4address -ne $nul)}
-  if ($newdns) {
-    func_eventhandler "ERROR:  EXISTING RECORD FOUND ON DNSServer=$server in Zone=$zone matching NEW IP of $newip."
+function func_dnscheck($action) {
+  if ($action -eq "precheck") { 
+    func_eventhandler "INFO:  Starting Precheck..."
+	$oldstatus="INFO:"
+	$newstatus="WARNING:"
   }
-  if (!($outputcode)) {
-    func_eventhandler "INFO:  Precheck passed with no errors."
+  if ($action -eq "validation") { 
+    func_eventhandler "INFO:  Starting validation..." 
+	$oldstatus="ERROR:"
+	$newstatus="INFO:"
+  }
+  $foundoldip=$false
+  $foundnewip=$false
+  if ($olddns) {
+	func_eventhandler "$oldstatus  Record found ON DNSServer=$server in Zone=$zone matching OLD IP of $oldip."
+	$foundoldip=$True
   }
   else {
-    func_exit
+    func_eventhandler "$oldstatus  No Records on DNSServer=$server in Zone=$zone matching OLD IP of $oldip."
+  }
+
+  $newdns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $newip) -AND ($_.recorddata.ipv4address -ne $nul)}
+  if ($newdns) {
+    func_eventhandler "$newstatus  Existing record found on DNSServer=$server in Zone=$zone matching NEW IP of $newip."
+	$foundnewip=$True
+  }
+  else {
+    func_eventhandler "$oldstatus  No Records on DNSServer=$server in Zone=$zone matching Old IP of $oldip."
+  }
+
+  if (($action -eq "precheck") -AND (($foundoldip -eq $false) -OR ($foundnewip -eq $true))) {
+    $outputcode=1
+	$newdnsstring=@("Hostname,RecordType")
+	foreach ($d in $newdns) {
+	  $newdnsstring+=@($d.hostname+","+$d.RecordType)
+	}
+	$newdnsstring=$newdnsstring -join '|'
+	func_eventhandler "ERROR:  Records with New IP are: $newdnsstring"
+  }
+  if (($action -eq "validation") -AND (($foundoldip -eq $true) -OR ($foundnewip -eq $false))) {
+	$outputcode=1
+	$olddnsstring=@("Hostname,RecordType")
+	foreach ($d in $olddns) {
+	  $olddnsstring+=@($d.hostname+","+$d.RecordType)
+	}
+	$olddnsstring=$olddnsstring -join '|'
+	func_eventhandler "ERROR:  Records with Old IP are: $olddnsstring"
+  }
+  if ($outputcode -eq 1) {  
+    if ($ignoreerrors) { func_eventhandler "WARNING:  Script ran with IgnoreErrors parameter, attempting to continue despite above Errors..." }
+	else {
+	  func_eventhandler "Exiting with errors..."
+	  func_exit $outputcode
+	}
+  }
+  else {
+	func_eventhandler "INFO:  Precheck passed with no errors."
   }
 }
 
 function func_changedns {
+  func_eventhandler "INFO:  Starting ChangeDNS..."
   foreach ($o in $olddns) {
     $ohostname=$o.hostname
     $oipv4address=$o.recorddata.ipv4address
@@ -86,9 +129,12 @@ function func_changedns {
     }
     set-dnsserverresourcerecord -newinputobject $n -oldinputobject $o -zonename $zone -computername $server
   }
+  $olddns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $oldip) -AND ($_.recorddata.ipv4address -ne $nul)}
+
 }
 
 function func_clearserverdnscache {
+  func_eventhandler "Starting ClearserverDNSCache..."
   if (!($creds)) {
 	func_eventhandler "VM Guest Credentials not set.  Prompting..."
     $creds=get-Credential
@@ -106,14 +152,12 @@ function func_clearserverdnscache {
   }
 }
 
-if ($precheck) { func_precheck }
+if ($precheck) { func_dnscheck precheck }
 
-if ($outputcode -gt 0) {
-  func_eventhandler "Exiting due to previos ERRORs..."
-  func_exit
+if ($changedns) { 
+  func_changedns
+  func_dnscheck validation
 }
-
-if ($changedns) { func_changedns }
 
 if ($cleardnsservercache) { func_clearserverdnscache }
 
