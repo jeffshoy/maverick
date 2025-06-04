@@ -1,0 +1,81 @@
+#Terraform File Structure - Edwards Project
+
+terraform/
+├── modules/                            # Reusable modules (single source of truth) - Note: file strucutre under each module type
+│   ├── ec2/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│   ├── vpc/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│   ├── iam/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│   ├── s3/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│   ├── alb/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│   └── rds/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│
+├── global/                             # Control Tower & organization-level infrastructure
+│   ├── control-tower/
+│   ├── scps/
+│   ├── baseline-logging/
+│   └── org-units/
+│
+├── environments/                       # Environment-specific deployments
+│   ├── dev/
+│   │   ├── us-east-1/               
+│   │   │   ├── account-111111111111/
+│   │   │   │   ├── app-ecs-service/
+│   │   │   │   │   ├── main.tf
+│   │   │   │   │   ├── backend.tf
+│   │   │   │   │   ├── variables.tf
+│   │   │   │   │   └── terraform.tfvars
+│   ├── prod/                           
+│   │   ├── us-west-2/
+│   │   │   ├── account-222222222222/
+│   │   │   │   ├── app-payment-api/
+│   │   │   │   │   ├── main.tf
+│   │   │   │   │   ├── backend.tf
+│   │   │   │   │   ├── variables.tf
+│   │   │   │   │   └── terraform.tfvars
+│   ├── staging/
+│   ├── test/
+│   └── dmz/
+│
+├── policies/                           # OPA or Sentinel policies
+│   ├── naming-policy.rego
+│   ├── tag-policy.rego
+│   └── resource-restrictions.rego
+│
+├── scripts/                            # Helper scripts
+│   ├── import-existing.sh
+│   ├── generate-tfvars.py
+│   └── check-drift.sh
+│
+├── ci-cd/                              # Pipeline templates
+│   ├── github-actions/
+│   │   └── terraform-deploy.yml
+│   ├── gitlab-ci/
+│   │   └── terraform.gitlab-ci.yml
+│   └── spacelift/
+│       └── spacelift.yaml
+│
+└── README.md
