@@ -1,0 +1,144 @@
+terraform-root/
+├── modules/
+│   └── ec2-instance/
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+├── environments/
+│   └── prod/
+│       └── us-east-1/
+│           └── app-account-001/
+│               └── app1-backend/
+│                   ├── main.tf
+│                   ├── variables.tf
+│                   ├── terraform.tfvars
+│                   └── backend.tf
+├── .github/
+│   └── workflows/
+│       └── terraform.yml
+
+# modules/ec2-instance/main.tf
+resource "aws_instance" "ec2" {
+  count = length(var.instances)
+
+  ami           = var.instances[count.index]["ami"]
+  instance_type = var.instances[count.index]["instance_type"]
+  subnet_id     = var.instances[count.index]["subnet_id"]
+  key_name      = var.instances[count.index]["key_name"]
+
+  tags = merge({
+    Name = var.instances[count.index]["name"]
+  }, var.instances[count.index]["tags"])
+}
+
+# modules/ec2-instance/variables.tf
+variable "instances" {
+  description = "List of EC2 instance definitions"
+  type = list(object({
+    name          = string
+    ami           = string
+    instance_type = string
+    subnet_id     = string
+    key_name      = string
+    tags          = map(string)
+  }))
+}
+
+# modules/ec2-instance/outputs.tf
+output "instance_ids" {
+  value = aws_instance.ec2[*].id
+}
+
+# environments/prod/us-east-1/app-account-001/app1-backend/main.tf
+module "ec2" {
+  source      = "../../../../../modules/ec2-instance"
+  instances   = var.instances
+  environment = var.environment
+  region      = var.region
+  app         = var.app
+}
+
+# environments/prod/us-east-1/app-account-001/app1-backend/variables.tf
+variable "instances" {
+  type = any
+}
+
+variable "environment" { default = "prod" }
+variable "region"      { default = "us-east-1" }
+variable "app"         { default = "app1-backend" }
+
+# environments/prod/us-east-1/app-account-001/app1-backend/terraform.tfvars
+instances = [
+  {
+    name          = "web-01"
+    ami           = "ami-0123456789abcdef0"
+    instance_type = "t3.micro"
+    subnet_id     = "subnet-aaaabbbb"
+    key_name      = "prod-key"
+    tags = {
+      role = "web"
+      app  = "frontend"
+    }
+  },
+  {
+    name          = "api-01"
+    ami           = "ami-0123456789abcdef0"
+    instance_type = "t3.medium"
+    subnet_id     = "subnet-ccccdddd"
+    key_name      = "prod-key"
+    tags = {
+      role = "api"
+      app  = "backend"
+    }
+  }
+]
+
+# environments/prod/us-east-1/app-account-001/app1-backend/backend.tf
+terraform {
+  backend "s3" {
+    bucket         = "tf-state-prod"
+    key            = "prod/us-east-1/app-account-001/app1-backend/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-locks"
+  }
+}
+
+# .github/workflows/terraform.yml
+name: Terraform Plan & Apply
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: environments/prod/us-east-1/app-account-001/app1-backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.6
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="terraform.tfvars"
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
