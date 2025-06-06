@@ -83,6 +83,8 @@ function func_dnscheck($action) {
     func_eventhandler "$oldstatus  No Records on DNSServer=$server in Zone=$zone matching Old IP of $oldip."
   }
 
+$outputcode=$nul
+  
   if (($action -eq "precheck") -AND (($foundoldip -eq $false) -OR ($foundnewip -eq $true))) {
     $outputcode=1
 	$newdnsstring=@("Hostname,RecordType")
