@@ -1,0 +1,75 @@
+# main.tf
+
+provider "aws" {
+  region = "us-east-1" # adjust as needed
+}
+
+# Lookup latest Debian 12 AMI from Debian official owner
+data "aws_ami" "debian12" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["debian-12-amd64-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["136693071363"] # Debian official AMI owner ID in AWS Marketplace (confirm region-specific ID)
+}
+
+# Security Group allowing SSH
+resource "aws_security_group" "debian12_sg" {
+  name        = "debian12-sg"
+  description = "Allow SSH inbound traffic"
+  vpc_id      = "vpc-xxxxxxxx" # Replace with your VPC ID
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Adjust to your IP range for security
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "debian12-sg"
+  }
+}
+
+# EC2 Instance
+resource "aws_instance" "debian12" {
+  ami           = data.aws_ami.debian12.id
+  instance_type = "t3.micro" # Adjust based on workload
+
+  key_name = "your-ssh-key" # Replace with your existing key pair name
+
+  vpc_security_group_ids = [aws_security_group.debian12_sg.id]
+  subnet_id              = "subnet-xxxxxxxx" # Replace with your subnet ID
+
+  tags = {
+    Name = "debian12-ec2"
+    Environment = "dev"
+  }
+
+  user_data = <<-EOF
+    #!/bin/bash
+    apt update -y
+    apt upgrade -y
+    # Install any other packages you need
+  EOF
+}
+
+output "instance_public_ip" {
+  value = aws_instance.debian12.public_ip
+}
