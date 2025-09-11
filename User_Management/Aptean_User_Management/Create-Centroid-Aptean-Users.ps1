@@ -92,6 +92,13 @@ function Split-FullName {
   }
 }
 
+# Get OU portion from a DN (strip leading CN=...,)
+function Get-OuFromDn {
+  param([string]$dn)
+  if ($dn -match '^CN=.*?,(.+)$') { return $Matches[1] }
+  return $dn
+}
+
 # ---------- sAM policy: prefix c_; if >20, trim to 19 and try 1..9,0 as 20th char; ensure unique (in centroid) ----------
 function Get-PolicySam {
   param([Parameter(Mandatory)][string]$RawSam)
@@ -128,6 +135,25 @@ function New-StrongPassword {
     if ($pwd.Length -ge 12 -and $pwd -match '[A-Z]' -and $pwd -match '[a-z]' -and $pwd -match '\d' -and $pwd -match '[^A-Za-z0-9]') { return $pwd }
   }
   Fail "Could not generate password."
+}
+
+# ---------- print a user summary card in a given color (used for duplicates) ----------
+function Show-UserCard {
+  param(
+    [Parameter(Mandatory)]$User,
+    [string]$Color = 'DarkYellow'   # "orange-ish"
+  )
+  $ou = Get-OuFromDn $User.DistinguishedName
+  Write-Host ""
+  Write-Host "=== EXISTING USER (EMAIL MATCH) ===" -ForegroundColor $Color
+  Write-Host ("Full Name     : {0}" -f $User.Name)               -ForegroundColor $Color
+  Write-Host ("UserID (sAM)  : {0}" -f $User.SamAccountName)     -ForegroundColor $Color
+  Write-Host ("Email         : {0}" -f $User.Mail)               -ForegroundColor $Color
+  Write-Host ("ADSSP Login   : {0}" -f $User.OfficePhone)        -ForegroundColor $Color
+  Write-Host ("UPN           : {0}" -f $User.UserPrincipalName)  -ForegroundColor $Color
+  Write-Host ("OU            : {0}" -f $ou)                      -ForegroundColor $Color
+  Write-Host ("Enabled       : {0}" -f $(if ($User.Enabled) {'True'} else {'False'})) -ForegroundColor $Color
+  Write-Host ""
 }
 
 # ---------- main ----------
@@ -185,16 +211,32 @@ try {
   $pwdPlain  = New-StrongPassword
   $pwd       = ConvertTo-SecureString -AsPlainText $pwdPlain -Force
 
-  # Duplicates (in centroid)
-  $lookup = {
-    param($filter, $creds)
-    if ($creds) { Get-ADUser -Filter $filter -Server $TargetDomainFqdn -Credential $creds -ErrorAction SilentlyContinue }
-    else        { Get-ADUser -Filter $filter -Server $TargetDomainFqdn                       -ErrorAction SilentlyContinue }
-  }
-  if (& $lookup "samAccountName -eq '$sam'" $creds) { Fail "samAccountName '$sam' already exists in centroid." }
-  if (& $lookup "mail -eq '$email'" $creds)         { Warn "Warning: Email '$email' already exists in centroid." }
-  if (& $lookup "officePhone -eq '$adssplogin'" $creds) { Warn "Warning: ADSSP login (officePhone) '$adssplogin' already exists in centroid." }
+  # ===== Duplicates (in centroid) =====
 
+  # sAM must be unique: fail immediately if taken
+  $samHit = if ($creds) { Get-ADUser -Filter "samAccountName -eq '$sam'" -Server $TargetDomainFqdn -Credential $creds -ErrorAction SilentlyContinue }
+            else        { Get-ADUser -Filter "samAccountName -eq '$sam'" -Server $TargetDomainFqdn                       -ErrorAction SilentlyContinue }
+  if ($samHit) { Fail "samAccountName '$sam' already exists in centroid." }
+
+  # --- New: duplicate EMAIL inspection (show details in orange and confirm) ---
+  $emailHits = if ($creds) { Get-ADUser -Filter "mail -eq '$email'" -Server $TargetDomainFqdn -Credential $creds -Properties mail,samAccountName,Name,DistinguishedName,UserPrincipalName,OfficePhone,Enabled -ErrorAction SilentlyContinue }
+               else        { Get-ADUser -Filter "mail -eq '$email'" -Server $TargetDomainFqdn                       -Properties mail,samAccountName,Name,DistinguishedName,UserPrincipalName,OfficePhone,Enabled -ErrorAction SilentlyContinue }
+
+  if ($emailHits) {
+    Warn "Duplicate email detected in centroid for '$email'. Displaying matches..."
+    foreach ($hit in @($emailHits)) { Show-UserCard -User $hit -Color 'DarkYellow' }
+    $ans = (Read-Host "Proceed with creating a NEW user with the same email? [Y]es / [N]o").Trim().ToUpper()
+    if ($ans -ne 'Y') { Fail "Aborted by operator due to duplicate email conflict." }
+  }
+
+  # ADSSP login (OfficePhone) duplicate: warn only
+  $adsspHits = if ($adssplogin) {
+    if ($creds) { Get-ADUser -Filter "officePhone -eq '$adssplogin'" -Server $TargetDomainFqdn -Credential $creds -ErrorAction SilentlyContinue }
+    else        { Get-ADUser -Filter "officePhone -eq '$adssplogin'" -Server $TargetDomainFqdn                       -ErrorAction SilentlyContinue }
+  }
+  if ($adsspHits) { Warn "Warning: ADSSP login (officePhone) '$adssplogin' already exists in centroid." }
+
+  # ===== Create user =====
   $newUserParams = @{
     Server            = $TargetDomainFqdn
     Path              = $targetUsersOU
