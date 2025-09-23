@@ -1,31 +1,11 @@
 Add-Type -AssemblyName System.Windows.Forms
 
 # Mapping of client codes to Centroid customer OUs
-$clientMappings = @{
-   "CAS" = "CSUCHICOASSOCIATEDSTUDENTSCA"
-   "CAM" = "CAMDENCOUNTYCOLLEGENJ"
-   "LWCL" = "LEWISANDCLARKCOUNTYMT"
-   "FIT" = "FASHIONINSTITUTEOFTECHNOLOGYNY"
-   "TUKW" = "TUKWILAWA"
-   "SOL" = "SOLANOCOUNTYCA"
-   "BELT" = "BELTONMO"
-   "COSC" = "COLUMBIASC"
-   "IMP" = "IMPERIALCOUNTYCA"
-   "MAUI" = "MAUICOUNTYHI"
-   "SANA" = "SANANGELOTX"
-   "RACO" = "RANCHOCORDOVACA"
-   "COSM" = "SANMATEOCOUNTYCA"
-   "DHILL" = "CSUDOMINGUEZHILLSFOUNDATIONCA"
-   "GLENN" = "GLENNCOUNTYCA"
-   "STPB" = "STPETEBEACHFL"
-   "GGB" = "GOLDENGATEBRIDGEHIGHWAYTRANSITDISTRICTCA"
-   "EBPRK" = "EASTBAYREGIONALPARKSCA"
-   "SJRTD" = "SANJOAQUINREGIONALTRANSITDISTRICTCA"
-   "ENC" = "ELECTRICITIESOFNORTHCAROLINANC"
-   "TRIN" = "TrinityCountyCA"
-   "SMIA" = "SOUTHMIAMIFL"
-   "OCLS" = "ORANGECOUNTYPUBLICLIBRARYSYSTEMFL"
-   
+$data = import-csv .\clientMappings.csv
+$clientMappings = @{}
+
+foreach ($row in $data) {
+    $clientMappings[$row.Code] = $row.ClientName
 }
 
 function Write-Color {
@@ -34,6 +14,21 @@ function Write-Color {
         [ValidateSet("Green","Red","Yellow","White")][string]$Color = "White"
     )
     Write-Host $Message -ForegroundColor $Color
+}
+
+function Update-ClientMappingsCsv{
+    param (
+        [string]$Path = ".\clientMappings.csv"
+    )
+    #convert hashtable to array, sort, and save as csv
+    $clientMappings.GetEnumerator() | 
+        Sort-Object Key | 
+        ForEach-Object {
+            [PSCustomObject]@{
+                Code        = $_.Key
+                ClientName  = $_.Value
+            }
+        } | Export-Csv -Path $Path -NoTypeInformation
 }
 
 function Generate-RandomPassword {
@@ -203,8 +198,9 @@ if ($mode -eq 'S') {
         if ($addMapping -eq 'Y') {
             $newOU = Read-Host "Enter the full OU value to map for client code '$clientCode' (e.g. SANANGELOTX)"
             if ($newOU -ne "") {
-                $clientMappings[$clientCode] = $newOU
+                $clientMappings[$clientCode.toUpper()] = $newOU
                 Write-Color "Mapping added for $clientCode => $newOU" -Color Green
+                Update-ClientMappingsCsv
             } else {
                 Write-Color "No OU entered. Cannot continue." -Color Red
                 return
