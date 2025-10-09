@@ -1,28 +1,32 @@
 # UI module - Event handlers and UI functions
-# Import validation fix module
-Import-Module "$PSScriptRoot\ValidationFix.psm1" -Force -WarningAction SilentlyContinue
 
 # Validation constants for inline validation
 $script:DangerousChars = @('`', '$', '&', '|', ';', '<', '>', '"', "'", '\', '/', '(', ')')
 
 function Initialize-EventHandlers {
+    # Check if essential UI elements are available
+    if (-not $global:btnRefreshProfiles -or -not $global:btnCheckStatus -or -not $global:btnSearch) {
+        Write-Warning "Essential UI elements not available for event handler initialization"
+        return
+    }
+    
     # Initialize filter dropdowns first
-    Initialize-FilterDropdowns
+    try { Initialize-FilterDropdowns } catch { Write-Warning "Filter dropdown initialization failed: $($_.Exception.Message)" }
     
     # Initialize name filter placeholder
-    Initialize-NameFilterPlaceholder
+    try { Initialize-NameFilterPlaceholder } catch { Write-Warning "Name filter placeholder initialization failed: $($_.Exception.Message)" }
     
     # Add validation to text input fields
-    Initialize-InputValidation
+    try { Initialize-InputValidation } catch { Write-Warning "Input validation initialization failed: $($_.Exception.Message)" }
     
     # Initialize search history and favorites
-    Initialize-SearchHistoryAndFavorites
+    try { Initialize-SearchHistoryAndFavorites } catch { Write-Warning "Search history initialization failed: $($_.Exception.Message)" }
     
     # Profile events
-    $btnRefreshProfiles.Add_Click({ Get-AwsProfiles })
-    $btnCheckStatus.Add_Click({ Test-ProfileSsoStatus })
-    $btnSsoLogin.Add_Click({ Start-SsoLogin })
-    $btnSsoLogout.Add_Click({ Start-SsoLogout })
+    if ($global:btnRefreshProfiles) { $global:btnRefreshProfiles.Add_Click({ Get-AwsProfiles }) }
+    if ($global:btnCheckStatus) { $global:btnCheckStatus.Add_Click({ Test-ProfileSsoStatus }) }
+    if ($global:btnSsoLogin) { $global:btnSsoLogin.Add_Click({ Start-SsoLogin }) }
+    if ($global:btnSsoLogout) { $global:btnSsoLogout.Add_Click({ Start-SsoLogout }) }
     
     # Service tab change events
     if ($global:tcServices) {
@@ -49,35 +53,39 @@ function Initialize-EventHandlers {
     }
     
     # Search events - service-aware search
-    $btnSearch.Add_Click({
-        if ($btnSearch.Content -like "🔍 Search*") {
-            $profileName = $cmbProfile.Text.Trim()
-            if ($profileName) {
-                # Get current service from selected tab
-                $currentService = 'EC2'  # Default
-                if ($global:tcServices -and $global:tcServices.SelectedItem -and $global:tcServices.SelectedItem.Tag) {
-                    $currentService = $global:tcServices.SelectedItem.Tag
-                }
-                
-                if ($currentService -eq 'EC2') {
-                    Search-EC2Instances -ProfileName $profileName
-                } else {
-                    try {
-                        Search-AWSService -ServiceKey $currentService -ProfileName $profileName
-                    } catch {
-                        $global:lblStatus.Content = "Search failed for $currentService"
+    if ($global:btnSearch) {
+        $global:btnSearch.Add_Click({
+            if ($global:btnSearch.Content -like "🔍 Search*") {
+                $profileName = if ($global:cmbProfile) { $global:cmbProfile.Text.Trim() } else { "" }
+                if ($profileName) {
+                    # Get current service from selected tab
+                    $currentService = 'EC2'  # Default
+                    if ($global:tcServices -and $global:tcServices.SelectedItem -and $global:tcServices.SelectedItem.Tag) {
+                        $currentService = $global:tcServices.SelectedItem.Tag
+                    }
+                    
+                    if ($currentService -eq 'EC2') {
+                        Search-EC2Instances -ProfileName $profileName
+                    } else {
+                        try {
+                            Search-AWSService -ServiceKey $currentService -ProfileName $profileName
+                        } catch {
+                            if ($global:lblStatus) { $global:lblStatus.Content = "Search failed for $currentService" }
+                        }
                     }
                 }
+            } else {
+                # Cancel search
+                Stop-SearchJob
+                try { Stop-AllServiceSearchJobs } catch { }
+                if ($global:btnSearch) {
+                    $global:btnSearch.IsEnabled = $true
+                    $global:btnSearch.Content = "🔍 Search Instances"
+                }
+                if ($global:lblStatus) { $global:lblStatus.Content = "Search cancelled" }
             }
-        } else {
-            # Cancel search
-            Stop-SearchJob
-            try { Stop-AllServiceSearchJobs } catch { }
-            $btnSearch.IsEnabled = $true
-            $btnSearch.Content = "🔍 Search Instances"
-            $lblStatus.Content = "Search cancelled"
-        }
-    })
+        })
+    }
     
     # History and favorites events
     $cmbSearchHistory.Add_SelectionChanged({ 
@@ -132,10 +140,21 @@ function Initialize-EventHandlers {
     $miSendCommand.Add_Click({ Show-SendCommandDialog })
     
     # Connection manager button event
-    $btnConnectionManager.Add_Click({ Switch-ConnectionManagerPanel })
+    if ($global:btnConnectionManager) { 
+        $global:btnConnectionManager.Add_Click({ Switch-ConnectionManagerPanel }) 
+        Write-Verbose "Connection manager button event registered"
+    }
     
     # Settings button event
-    $btnSettings.Add_Click({ Switch-SettingsPanel })
+    if ($global:btnSettings) { 
+        $global:btnSettings.Add_Click({ 
+            Write-Host "Settings button clicked!" -ForegroundColor Green
+            Switch-SettingsPanel 
+        }) 
+        Write-Verbose "Settings button event registered"
+    } else {
+        Write-Warning "Settings button not found - cannot register event handler"
+    }
 }
 
 function Initialize-NameFilterPlaceholder {
@@ -839,7 +858,7 @@ function Start-InstanceRDPConnection {
     # Auto-open connection manager BEFORE starting connection if enabled
     $userSettings = Get-UserSettings
     if ($userSettings.General.AutoOpenConnectionManager -and $global:SidePanelContainer.Visibility -ne [System.Windows.Visibility]::Visible) {
-        Toggle-ConnectionManagerPanel
+        Switch-ConnectionManagerPanel
     }
     
     $lblStatus.Content = "Starting RDP connection to $($selectedInstance.Name)..."
@@ -922,7 +941,7 @@ function Start-InstanceSSHConnection {
     # Auto-open connection manager BEFORE starting connection if enabled
     $userSettings = Get-UserSettings
     if ($userSettings.General.AutoOpenConnectionManager -and $global:SidePanelContainer.Visibility -ne [System.Windows.Visibility]::Visible) {
-        Toggle-ConnectionManagerPanel
+        Switch-ConnectionManagerPanel
     }
     
     $global:lblStatus.Content = "Starting SSH connection to $($selectedInstance.Name)..."
@@ -1181,8 +1200,8 @@ function Show-ActiveConnectionsDialog {
 
 # Phase 1: Basic Connection Manager Panel Functions (UI Only - No Background Processing)
 function Switch-ConnectionManagerPanel {
-    # Get window reference from SidePanelContainer
-    $window = [System.Windows.Window]::GetWindow($global:SidePanelContainer)
+    # Use the global window variable directly
+    $window = $global:window
     
     if ($global:SidePanelContainer.Visibility -eq [System.Windows.Visibility]::Visible) {
         # Hide panel and restore window width
@@ -2196,28 +2215,47 @@ function Test-ConnectionStatus {
 }
 
 function Switch-SettingsPanel {
-    # Get window reference from SidePanelContainer
-    $window = [System.Windows.Window]::GetWindow($global:SidePanelContainer)
-    
-    # Check if settings panel is already open
-    $existingPanel = $global:SidePanelContainer.Children | Where-Object { $_.Tag -eq "Settings" }
-    
-    if ($existingPanel) {
-        # Close settings panel
-        $global:SidePanelContainer.Children.Remove($existingPanel)
-        if ($window) { $window.Width = $window.Width - 350 }
-        $global:btnSettings.Background = [System.Windows.Media.Brushes]::LightGray
+    try {
+        Write-Host "[DEBUG] Switch-SettingsPanel called" -ForegroundColor Cyan
         
-        # Hide container if no panels left
-        if ($global:SidePanelContainer.Children.Count -eq 0) {
-            $global:SidePanelContainer.Visibility = [System.Windows.Visibility]::Collapsed
+        # Use the global window variable directly
+        $window = $global:window
+        Write-Host "[DEBUG] Window: $($window -ne $null)" -ForegroundColor Cyan
+        Write-Host "[DEBUG] SidePanelContainer: $($global:SidePanelContainer -ne $null)" -ForegroundColor Cyan
+        
+        if (-not $global:SidePanelContainer) {
+            Write-Host "[ERROR] SidePanelContainer is null!" -ForegroundColor Red
+            return
         }
-    } else {
-        # Show settings panel
-        Show-SettingsPanel
-        if ($window) { $window.Width = $window.Width + 350 }
-        $global:SidePanelContainer.Visibility = [System.Windows.Visibility]::Visible
-        $global:btnSettings.Background = [System.Windows.Media.Brushes]::Orange
+        
+        # Check if settings panel is already open
+        $existingPanel = $global:SidePanelContainer.Children | Where-Object { $_.Tag -eq "Settings" }
+        Write-Host "[DEBUG] Existing panel: $($existingPanel -ne $null)" -ForegroundColor Cyan
+    
+        
+        if ($existingPanel) {
+            Write-Host "[DEBUG] Closing existing settings panel" -ForegroundColor Cyan
+            # Close settings panel
+            $global:SidePanelContainer.Children.Remove($existingPanel)
+            if ($window) { $window.Width = $window.Width - 350 }
+            $global:btnSettings.Background = [System.Windows.Media.Brushes]::LightGray
+            
+            # Hide container if no panels left
+            if ($global:SidePanelContainer.Children.Count -eq 0) {
+                $global:SidePanelContainer.Visibility = [System.Windows.Visibility]::Collapsed
+            }
+        } else {
+            Write-Host "[DEBUG] Opening new settings panel" -ForegroundColor Cyan
+            # Show settings panel
+            Show-SettingsPanel
+            Write-Host "[DEBUG] Show-SettingsPanel completed" -ForegroundColor Cyan
+            if ($window) { $window.Width = $window.Width + 350 }
+            $global:SidePanelContainer.Visibility = [System.Windows.Visibility]::Visible
+            $global:btnSettings.Background = [System.Windows.Media.Brushes]::Orange
+        }
+    } catch {
+        Write-Host "[ERROR] Switch-SettingsPanel failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[ERROR] Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
     }
 }
 
@@ -2338,6 +2376,49 @@ function Show-SettingsPanel {
     $servicesGroup.Content = $servicesStack
     $settingsStack.Children.Add($servicesGroup)
     
+    # Background Discovery Status Section
+    $discoveryGroup = New-Object System.Windows.Controls.GroupBox
+    $discoveryGroup.Header = "Background Service Discovery"
+    $discoveryGroup.Margin = New-Object System.Windows.Thickness(0, 0, 0, 10)
+    $discoveryGroup.Padding = New-Object System.Windows.Thickness(10)
+    
+    $discoveryStack = New-Object System.Windows.Controls.StackPanel
+    
+    # Get discovery status
+    $cacheData = Get-ServiceCache
+    $statusLabel = New-Object System.Windows.Controls.Label
+    $statusLabel.FontSize = 11
+    
+    if ($cacheData -and $cacheData.lastUpdated) {
+        $lastUpdate = [DateTime]::Parse($cacheData.lastUpdated)
+        $timeSince = (Get-Date) - $lastUpdate
+        
+        if ($timeSince.TotalMinutes -lt 1) {
+            $timeText = "$([math]::Floor($timeSince.TotalSeconds)) seconds ago"
+        } elseif ($timeSince.TotalHours -lt 1) {
+            $timeText = "$([math]::Floor($timeSince.TotalMinutes)) minutes ago"
+        } else {
+            $timeText = "$([math]::Floor($timeSince.TotalHours)) hours ago"
+        }
+        
+        $statusText = "✅ Last scan: $timeText\n📊 Found: $($cacheData.count) accessible services"
+        if ($cacheData.totalCount -and $cacheData.totalCount -gt $cacheData.count) {
+            $statusText += " (of $($cacheData.totalCount) total)"
+        }
+        if ($cacheData.profileName) {
+            $statusText += "\n👤 Profile: $($cacheData.profileName)"
+        }
+    } else {
+        $statusText = "🔄 Initial discovery in progress...\n⏱️ Next check: Every hour"
+    }
+    
+    $statusLabel.Content = $statusText
+    $statusLabel.Foreground = [System.Windows.Media.Brushes]::DarkGreen
+    
+    $discoveryStack.Children.Add($statusLabel)
+    $discoveryGroup.Content = $discoveryStack
+    $settingsStack.Children.Add($discoveryGroup)
+    
     # DataGrid Spacing Section
     $spacingGroup = New-Object System.Windows.Controls.GroupBox
     $spacingGroup.Header = "DataGrid Column Spacing"
@@ -2405,44 +2486,16 @@ function Show-SettingsPanel {
     $applyButton.Margin = New-Object System.Windows.Thickness(0, 0, 10, 0)
     
     $discoverButton = New-Object System.Windows.Controls.Button
-    $discoverButton.Content = "🔍 Discover Services"
+    $discoverButton.Content = "🔧 Configure Services"
     $discoverButton.Width = 130
     $discoverButton.Height = 30
-    $discoverButton.ToolTip = "Query AWS to discover available services and update configuration"
+    $discoverButton.ToolTip = "Open service picker to select from available AWS services"
     
     $buttonPanel.Children.Add($applyButton)
     $buttonPanel.Children.Add($discoverButton)
     
-    # Progress section
-    $progressGroup = New-Object System.Windows.Controls.GroupBox
-    $progressGroup.Header = "Service Discovery Progress"
-    $progressGroup.Margin = New-Object System.Windows.Thickness(0, 10, 0, 0)
-    $progressGroup.Padding = New-Object System.Windows.Thickness(10)
-    $progressGroup.Visibility = [System.Windows.Visibility]::Collapsed
-    
-    $progressStack = New-Object System.Windows.Controls.StackPanel
-    
-    $progressBar = New-Object System.Windows.Controls.ProgressBar
-    $progressBar.Height = 20
-    $progressBar.Margin = New-Object System.Windows.Thickness(0, 5, 0, 5)
-    
-    $progressLabel = New-Object System.Windows.Controls.Label
-    $progressLabel.Content = "Ready to discover services..."
-    $progressLabel.FontSize = 10
-    
-    $cancelButton = New-Object System.Windows.Controls.Button
-    $cancelButton.Content = "Cancel Discovery"
-    $cancelButton.Width = 100
-    $cancelButton.Height = 25
-    $cancelButton.Margin = New-Object System.Windows.Thickness(0, 5, 0, 0)
-    $cancelButton.IsEnabled = $false
-    
-    $progressStack.Children.Add($progressLabel)
-    $progressStack.Children.Add($progressBar)
-    $progressStack.Children.Add($cancelButton)
-    $progressGroup.Content = $progressStack
-    
-    $settingsStack.Children.Add($progressGroup)
+    # REMOVED: Progress section no longer needed with background discovery
+    # JUSTIFICATION: Background discovery eliminates need for progress tracking UI
     
     $applyButton.Add_Click({
         # Get selected services
@@ -2489,11 +2542,21 @@ function Show-SettingsPanel {
     }.GetNewClosure())
     
     $discoverButton.Add_Click({
-        Start-UniversalServiceDiscoveryAsync -ProgressGroup $progressGroup -ProgressBar $progressBar -ProgressLabel $progressLabel -CancelButton $cancelButton -DiscoverButton $discoverButton
-    }.GetNewClosure())
-    
-    $cancelButton.Add_Click({
-        Stop-ServiceDiscovery
+        # REPLACED: Old on-demand discovery with background service picker
+        # JUSTIFICATION: Background discovery eliminates UI blocking and provides instant service access
+        try {
+            $serviceGroups = Get-ServiceGroups
+            if (-not $serviceGroups -or $serviceGroups.Count -eq 0) {
+                # Trigger background discovery if no cache available
+                Initialize-BackgroundServiceDiscovery
+                [System.Windows.MessageBox]::Show("Service discovery is running in the background.\nServices will be available shortly.", "Background Discovery", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+            } else {
+                # Show service picker with cached data
+                Show-ServicePickerDialog -ServiceGroups $serviceGroups
+            }
+        } catch {
+            [System.Windows.MessageBox]::Show("Service discovery failed: $($_.Exception.Message)", "Discovery Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+        }
     }.GetNewClosure())
     
     [System.Windows.Controls.Grid]::SetRow($buttonPanel, 2)
@@ -2660,9 +2723,206 @@ function Get-ServiceDisplayName {
     return if ($serviceMap.ContainsKey($ServiceKey)) { $serviceMap[$ServiceKey] } else { $ServiceKey }
 }
 
+function Get-DiscoveryStatusText {
+    # Helper function to get formatted discovery status
+    try {
+        $cacheData = Get-ServiceCache
+        if ($cacheData -and $cacheData.lastUpdated) {
+            $lastUpdate = [DateTime]::Parse($cacheData.lastUpdated)
+            $timeSince = (Get-Date) - $lastUpdate
+            
+            if ($timeSince.TotalMinutes -lt 1) {
+                return "$([math]::Floor($timeSince.TotalSeconds)) seconds ago"
+            } elseif ($timeSince.TotalHours -lt 1) {
+                return "$([math]::Floor($timeSince.TotalMinutes)) minutes ago"
+            } else {
+                return "$([math]::Floor($timeSince.TotalHours)) hours ago"
+            }
+        }
+        return "Never"
+    } catch {
+        return "Unknown"
+    }
+}
+
+function Show-ServicePickerDialog {
+    param([hashtable]$ServiceGroups)
+    
+    # REPLACED: Complex service discovery UI with simple service picker
+    # JUSTIFICATION: Background discovery provides organized service groups for easy selection
+    try {
+        # Create service picker window
+        $pickerWindow = New-Object System.Windows.Window
+        $pickerWindow.Title = "AWS Service Configuration"
+        $pickerWindow.Width = 500
+        $pickerWindow.Height = 600
+        $pickerWindow.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterOwner
+        $pickerWindow.Owner = [System.Windows.Window]::GetWindow($global:SidePanelContainer)
+        
+        # Create main grid
+        $mainGrid = New-Object System.Windows.Controls.Grid
+        $mainGrid.Margin = New-Object System.Windows.Thickness(20)
+        
+        # Add rows
+        $headerRow = New-Object System.Windows.Controls.RowDefinition
+        $headerRow.Height = [System.Windows.GridLength]::Auto
+        $contentRow = New-Object System.Windows.Controls.RowDefinition
+        $contentRow.Height = New-Object System.Windows.GridLength(1, [System.Windows.GridUnitType]::Star)
+        $buttonRow = New-Object System.Windows.Controls.RowDefinition
+        $buttonRow.Height = [System.Windows.GridLength]::Auto
+        
+        $mainGrid.RowDefinitions.Add($headerRow)
+        $mainGrid.RowDefinitions.Add($contentRow)
+        $mainGrid.RowDefinitions.Add($buttonRow)
+        
+        # Header
+        $header = New-Object System.Windows.Controls.Label
+        $header.Content = "🔧 Select AWS Services to Enable"
+        $header.FontSize = 16
+        $header.FontWeight = [System.Windows.FontWeights]::Bold
+        $header.Margin = New-Object System.Windows.Thickness(0, 0, 0, 20)
+        [System.Windows.Controls.Grid]::SetRow($header, 0)
+        
+        # Service tree view
+        $treeView = New-Object System.Windows.Controls.TreeView
+        $treeView.Margin = New-Object System.Windows.Thickness(0, 0, 0, 20)
+        [System.Windows.Controls.Grid]::SetRow($treeView, 1)
+        
+        # Get cache data to show permission status
+        $cacheData = Get-ServiceCache
+        $hasPermissionData = $cacheData -and $cacheData.profileName
+        
+        # Populate tree view with service groups
+        foreach ($groupName in $ServiceGroups.Keys) {
+            if ($ServiceGroups[$groupName] -and $ServiceGroups[$groupName].Count -gt 0) {
+                $groupItem = New-Object System.Windows.Controls.TreeViewItem
+                $groupItem.Header = "📁 $groupName ($($ServiceGroups[$groupName].Count) services)"
+                $groupItem.IsExpanded = $true
+                
+                foreach ($service in $ServiceGroups[$groupName]) {
+                    $serviceItem = New-Object System.Windows.Controls.CheckBox
+                    
+                    # Show permission status if available
+                    if ($hasPermissionData) {
+                        $serviceItem.Content = "✅ $service (accessible)"
+                        $serviceItem.ToolTip = "Service is accessible with current profile: $($cacheData.profileName)"
+                    } else {
+                        $serviceItem.Content = "🔧 $service"
+                        $serviceItem.ToolTip = "Permission status unknown - select profile to check access"
+                    }
+                    
+                    $serviceItem.Margin = New-Object System.Windows.Thickness(20, 2, 0, 2)
+                    $serviceItem.Tag = $service
+                    
+                    # Check if service is currently enabled
+                    $userSettings = Get-UserSettings
+                    $enabledServices = if ($userSettings.PSObject.Properties['Services']) { $userSettings.Services } else { @('EC2', 'RDS', 'S3', 'Lambda') }
+                    $serviceItem.IsChecked = $service.ToUpper() -in $enabledServices
+                    
+                    $groupItem.Items.Add($serviceItem)
+                }
+                
+                $treeView.Items.Add($groupItem)
+            }
+        }
+        
+        # Add permission status header with discovery info
+        if ($hasPermissionData) {
+            $header.Content = "🔧 Select AWS Services to Enable (Profile: $($cacheData.profileName))"
+        } else {
+            $header.Content = "🔧 Select AWS Services to Enable (No profile selected)"
+        }
+        
+        # Add discovery status info
+        $statusInfo = New-Object System.Windows.Controls.Label
+        $statusInfo.FontSize = 10
+        $statusInfo.Foreground = [System.Windows.Media.Brushes]::Gray
+        $statusInfo.Margin = New-Object System.Windows.Thickness(0, -10, 0, 10)
+        
+        if ($cacheData -and $cacheData.lastUpdated) {
+            $lastUpdate = [DateTime]::Parse($cacheData.lastUpdated)
+            $timeSince = (Get-Date) - $lastUpdate
+            
+            if ($timeSince.TotalMinutes -lt 1) {
+                $timeText = "$([math]::Floor($timeSince.TotalSeconds)) seconds ago"
+            } elseif ($timeSince.TotalHours -lt 1) {
+                $timeText = "$([math]::Floor($timeSince.TotalMinutes)) minutes ago"
+            } else {
+                $timeText = "$([math]::Floor($timeSince.TotalHours)) hours ago"
+            }
+            
+            $statusInfo.Content = "📡 Background discovery: $($cacheData.count) services found $timeText (hourly checks)"
+        } else {
+            $statusInfo.Content = "📡 Background discovery: Running initial scan..."
+        }
+        
+        [System.Windows.Controls.Grid]::SetRow($statusInfo, 0)
+        $mainGrid.Children.Add($statusInfo)
+        
+        # Button panel
+        $buttonPanel = New-Object System.Windows.Controls.StackPanel
+        $buttonPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $buttonPanel.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        [System.Windows.Controls.Grid]::SetRow($buttonPanel, 2)
+        
+        $saveButton = New-Object System.Windows.Controls.Button
+        $saveButton.Content = "💾 Save Configuration"
+        $saveButton.Width = 150
+        $saveButton.Height = 35
+        $saveButton.Margin = New-Object System.Windows.Thickness(0, 0, 10, 0)
+        
+        $cancelButton = New-Object System.Windows.Controls.Button
+        $cancelButton.Content = "Cancel"
+        $cancelButton.Width = 80
+        $cancelButton.Height = 35
+        
+        $buttonPanel.Children.Add($saveButton)
+        $buttonPanel.Children.Add($cancelButton)
+        
+        # Event handlers
+        $saveButton.Add_Click({
+            # Collect selected services
+            $selectedServices = @()
+            foreach ($groupItem in $treeView.Items) {
+                foreach ($serviceItem in $groupItem.Items) {
+                    if ($serviceItem -is [System.Windows.Controls.CheckBox] -and $serviceItem.IsChecked) {
+                        $selectedServices += $serviceItem.Tag.ToUpper()
+                    }
+                }
+            }
+            
+            # Save to user settings
+            $userSettings = Get-UserSettings
+            $userSettings.Services = $selectedServices
+            Set-UserSettings $userSettings
+            
+            # Update service tabs
+            Update-ServiceTabs
+            
+            $global:lblStatus.Content = "✅ Service configuration saved: $($selectedServices.Count) services enabled"
+            $pickerWindow.Close()
+        }.GetNewClosure())
+        
+        $cancelButton.Add_Click({
+            $pickerWindow.Close()
+        }.GetNewClosure())
+        
+        # Add elements to grid (header already added above with status)
+        $mainGrid.Children.Add($header)
+        $mainGrid.Children.Add($treeView)
+        $mainGrid.Children.Add($buttonPanel)
+        
+        $pickerWindow.Content = $mainGrid
+        $pickerWindow.ShowDialog()
+        
+    } catch {
+        [System.Windows.MessageBox]::Show("Service picker failed: $($_.Exception.Message)", "Picker Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+    }
+}
+
 # Alias for backward compatibility
 function Apply-InstanceFilters {
     Set-InstanceFilters
 }
 
-Export-ModuleMember -Function Initialize-EventHandlers, Initialize-NameFilterPlaceholder, Initialize-FilterDropdowns, Set-InstanceFilters, Apply-InstanceFilters, Update-FilterDropdowns, Update-PermissionTreeView, Show-LoadingProgress, Hide-LoadingProgress, Start-AutoRefresh, Stop-AutoRefresh, Start-AutoSearch, Initialize-SearchHistoryAndFavorites, Update-SearchHistoryDropdown, Update-FavoritesDropdown, Start-SearchHistoryTimer, Show-RemoveFavoriteDialog, Start-InstanceRDPConnection, Start-InstanceSSHConnection, Show-SendCommandDialog, Show-PortForwardDialog, Show-ActiveConnectionsDialog, Add-SidePanel, Remove-SidePanel, Start-PortForwardConnection, Switch-ConnectionManagerPanel, Show-ConnectionManagerPanel, Update-AllPanelPositions, Initialize-InputValidation, Start-ConnectionMonitoring, Stop-ConnectionMonitoring, Update-ConnectionStatus, Start-StatusResetTimer, Stop-StatusResetTimer, Start-ConnectionTest, Test-ConnectionTestResults, Update-ConnectionManagerPanel, Resize-WindowForResults, Resize-DataGridColumns, Get-StaticConnectionList, Update-ConnectionList, Stop-ConnectionSession, Test-ConnectionStatus, Switch-SettingsPanel, Show-SettingsPanel, Set-DataGridSpacing, Update-ServiceTabs, Get-ServiceDisplayName
+Export-ModuleMember -Function Initialize-EventHandlers, Initialize-NameFilterPlaceholder, Initialize-FilterDropdowns, Set-InstanceFilters, Apply-InstanceFilters, Update-FilterDropdowns, Update-PermissionTreeView, Show-LoadingProgress, Hide-LoadingProgress, Start-AutoRefresh, Stop-AutoRefresh, Start-AutoSearch, Initialize-SearchHistoryAndFavorites, Update-SearchHistoryDropdown, Update-FavoritesDropdown, Start-SearchHistoryTimer, Show-RemoveFavoriteDialog, Start-InstanceRDPConnection, Start-InstanceSSHConnection, Show-SendCommandDialog, Show-PortForwardDialog, Show-ActiveConnectionsDialog, Add-SidePanel, Remove-SidePanel, Start-PortForwardConnection, Switch-ConnectionManagerPanel, Show-ConnectionManagerPanel, Update-AllPanelPositions, Initialize-InputValidation, Start-ConnectionMonitoring, Stop-ConnectionMonitoring, Update-ConnectionStatus, Start-StatusResetTimer, Stop-StatusResetTimer, Start-ConnectionTest, Test-ConnectionTestResults, Update-ConnectionManagerPanel, Resize-WindowForResults, Resize-DataGridColumns, Get-StaticConnectionList, Update-ConnectionList, Stop-ConnectionSession, Test-ConnectionStatus, Switch-SettingsPanel, Show-SettingsPanel, Set-DataGridSpacing, Update-ServiceTabs, Get-ServiceDisplayName, Show-ServicePickerDialog, Get-DiscoveryStatusText

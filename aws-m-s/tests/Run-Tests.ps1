@@ -1,7 +1,7 @@
 #requires -version 7.0
 <#
 .SYNOPSIS
-    Test Runner for AWS Management Studio v6.0.3
+    Test Runner for AWS Management Studio
 
 .DESCRIPTION
     Centralized test runner that can execute different test suites:
@@ -22,7 +22,7 @@
 #>
 
 param(
-    [ValidateSet('Quick', 'Comprehensive', 'Basic', 'Simple', 'All')]
+    [ValidateSet('Quick', 'Comprehensive', 'Basic', 'Simple', 'Discovery', 'Validation', 'All')]
     [string]$TestSuite = 'Quick',
     
     [ValidateSet('Console', 'JSON', 'HTML')]
@@ -32,25 +32,38 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
 
+# Get application version
+. "$PSScriptRoot\Get-AppVersion.ps1"
+
 $script:TestSuites = @{
     'Quick' = @{
-        Script = 'test-quick-validation.ps1'
+        Script = 'test-quick.ps1'
         Description = 'Fast validation for daily development'
         EstimatedTime = '5 seconds'
     }
     'Comprehensive' = @{
-        Script = 'test-comprehensive-v6.ps1'
+        Script = 'test-comprehensive.ps1'
         Description = 'Full feature testing and validation'
         EstimatedTime = '30-60 seconds'
     }
     'Basic' = @{
-        Script = 'test-modular-basic.ps1'
+        Script = 'test-basic.ps1'
         Description = 'Basic modular architecture validation'
         EstimatedTime = '10 seconds'
     }
     'Simple' = @{
-        Script = 'test-simple-validation.ps1'
+        Script = 'test-simple.ps1'
         Description = 'Simple validation without AWS CLI dependencies'
+        EstimatedTime = '3 seconds'
+    }
+    'Discovery' = @{
+        Script = 'test-service-discovery.ps1'
+        Description = 'Validate service discovery system'
+        EstimatedTime = '5 seconds'
+    }
+    'Validation' = @{
+        Script = 'test-validation.ps1'
+        Description = 'Test service validation (API call optimization)'
         EstimatedTime = '3 seconds'
     }
 }
@@ -101,7 +114,7 @@ function Run-TestSuite {
 # Main execution
 $overallStartTime = Get-Date
 
-Write-Header "AWS Management Studio v6.0.8 - Test Runner"
+Write-Header "AWS Management Studio v$global:AppVersion - Test Runner"
 Write-Host "Test Suite: $TestSuite" -ForegroundColor White
 Write-Host "Output Format: $OutputFormat" -ForegroundColor White
 Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)" -ForegroundColor Gray
@@ -111,7 +124,7 @@ $results = @()
 
 if ($TestSuite -eq 'All') {
     # Run all test suites
-    foreach ($suiteName in @('Simple', 'Basic', 'Quick', 'Comprehensive')) {
+    foreach ($suiteName in @('Simple', 'Basic', 'Quick', 'Discovery', 'Validation', 'Comprehensive')) {
         $success = Run-TestSuite -SuiteName $suiteName
         $results += @{
             Suite = $suiteName
@@ -187,7 +200,7 @@ switch ($OutputFormat) {
 </head>
 <body>
     <div class="header">
-        <h1>AWS Management Studio v6.0.3 - Test Results</h1>
+        <h1>AWS Management Studio v$global:AppVersion - Test Results</h1>
         <p>Generated: $(Get-Date)</p>
         <p>Test Suite: $TestSuite</p>
     </div>
