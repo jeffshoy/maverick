@@ -1,7 +1,7 @@
 #requires -version 7.0
 <#
 .SYNOPSIS
-    Quick Validation Test for AWS Management Studio v6.0.3
+    Quick Validation Test for AWS Management Studio
 
 .DESCRIPTION
     Fast validation of core functionality for daily development testing.
@@ -11,8 +11,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
 
+# Get application version
+. "$PSScriptRoot\Get-AppVersion.ps1"
+
 $startTime = Get-Date
-Write-Host "⚡ AWS Management Studio v6.0.8 - Quick Validation" -ForegroundColor Cyan
+Write-Host "⚡ AWS Management Studio v$global:AppVersion - Quick Validation" -ForegroundColor Cyan
 Write-Host "=" * 50
 
 $testsPassed = 0
@@ -69,8 +72,8 @@ Test-Quick "User Settings" {
 }
 
 # Services
-Test-Quick "Service Discovery" {
-    # Test if service management capability is available
+Test-Quick "Service Manager" {
+    # Test if new service management capability is available
     (Get-Module AWSServiceManager -ErrorAction SilentlyContinue) -ne $null
 }
 

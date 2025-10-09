@@ -1,46 +1,44 @@
-# Universal AWS Service Discovery Module
+# Universal AWS Service Discovery Module - Background Integration
+# REPLACED: Old on-demand discovery with background caching system
+# JUSTIFICATION: Eliminates UI blocking, progress bars, and provides instant service access
 
 function Start-UniversalAWSDiscovery {
     param([string]$ProfileName)
     
+    # DEPRECATED: This function is replaced by background service discovery
+    # Return cached results instead of performing live discovery
     try {
-        Write-Host "[DISCOVERY] Starting universal AWS service discovery..." -ForegroundColor Cyan
-        
-        # Get all available AWS services from AWS CLI
-        $allServices = Get-AllAWSServices -ProfileName $ProfileName
-        
-        # Test each service for accessibility
-        $discoveredServices = @{}
-        $totalServices = $allServices.Count
-        $processedServices = 0
-        
-        foreach ($service in $allServices) {
-            $processedServices++
-            $progress = [math]::Round(($processedServices / $totalServices) * 100)
-            
-            Write-Host "[DISCOVERY] Testing $($service.ServiceName) ($processedServices/$totalServices)..." -ForegroundColor Yellow
-            
-            $testResult = Test-AWSServiceAccess -Service $service -ProfileName $ProfileName
-            
-            if ($testResult.Success) {
-                $discoveredServices[$service.ServiceKey] = @{
-                    Status = "Success"
-                    ServiceName = $service.ServiceName
-                    Icon = Get-ServiceIcon -ServiceKey $service.ServiceKey
-                    ItemCount = $testResult.ItemCount
-                    Command = $testResult.Command
-                    DataPath = $testResult.DataPath
-                    Fields = $testResult.Fields
-                    Regions = $testResult.Regions
+        $serviceCache = Get-ServiceCache
+        if ($serviceCache -and $serviceCache.services) {
+            $discoveredServices = @{}
+            foreach ($service in $serviceCache.services) {
+                $serviceKey = ($service.ToUpper() -replace '-', '')
+                $discoveredServices[$serviceKey] = @{
+                    Status = "Cached"
+                    ServiceName = (Get-Culture).TextInfo.ToTitleCase($service -replace '-', ' ')
+                    Icon = Get-ServiceIcon -ServiceKey $serviceKey
+                    ItemCount = 0
+                    Command = $service
+                    DataPath = ""
+                    Fields = @("Name", "Id")
+                    Regions = @('us-east-1', 'us-west-2', 'ca-central-1')
                 }
+            }
+            
+            return @{
+                Status = "Completed"
+                DiscoveredServices = $discoveredServices
+                TotalTested = $serviceCache.services.Count
+                SuccessCount = $discoveredServices.Count
             }
         }
         
+        # Fallback to basic service list if cache not available
         return @{
-            Status = "Completed"
-            DiscoveredServices = $discoveredServices
-            TotalTested = $totalServices
-            SuccessCount = $discoveredServices.Count
+            Status = "Fallback"
+            DiscoveredServices = @{}
+            TotalTested = 0
+            SuccessCount = 0
         }
         
     } catch {
@@ -55,119 +53,36 @@ function Start-UniversalAWSDiscovery {
 function Get-AllAWSServices {
     param([string]$ProfileName)
     
+    # REPLACED: Complex discovery logic with simple cache lookup
+    # JUSTIFICATION: Background discovery handles service enumeration automatically
     try {
-        Write-Host "[DISCOVERY] Discovering all AWS services from CLI..." -ForegroundColor Cyan
-        
-        # Method 1: Parse AWS CLI help for available services
-        $services = Get-ServicesFromCLIHelp
-        
-        # Method 2: If that fails, try service enumeration
-        if ($services.Count -eq 0) {
-            Write-Host "[DISCOVERY] CLI help parsing failed, trying service enumeration..." -ForegroundColor Yellow
-            $services = Get-ServicesFromEnumeration -ProfileName $ProfileName
+        $serviceCache = Get-ServiceCache
+        if ($serviceCache -and $serviceCache.services) {
+            $services = @()
+            foreach ($service in $serviceCache.services) {
+                $serviceKey = ($service.ToUpper() -replace '-', '')
+                $services += @{
+                    ServiceKey = $serviceKey
+                    ServiceName = (Get-Culture).TextInfo.ToTitleCase($service -replace '-', ' ')
+                    CLIName = $service
+                }
+            }
+            return $services | Sort-Object ServiceName
         }
         
-        # Method 3: Fall back to comprehensive list
-        if ($services.Count -eq 0) {
-            Write-Host "[DISCOVERY] Enumeration failed, using comprehensive service list..." -ForegroundColor Yellow
-            $services = Get-ComprehensiveAWSServiceList
-        }
-        
-        Write-Host "[DISCOVERY] Found $($services.Count) AWS services to test" -ForegroundColor Green
-        return $services | Sort-Object ServiceName
+        # Fallback to basic list if cache not available
+        return Get-ComprehensiveAWSServiceList
         
     } catch {
-        Write-Verbose "Failed to get services: $($_.Exception.Message)"
         return Get-ComprehensiveAWSServiceList
     }
 }
 
-function Get-ServicesFromCLIHelp {
-    try {
-        $result = & aws help 2>&1
-        if ($LASTEXITCODE -ne 0) { return @() }
-        
-        $services = @()
-        $helpText = $result -join "`n"
-        
-        # Look for the "Available services:" section
-        if ($helpText -match "(?s)Available services:(.*?)(?=\n\n|\nSee)") {
-            $servicesSection = $matches[1]
-            
-            # Extract service names (typically lowercase with hyphens)
-            $servicePattern = '\b[a-z][a-z0-9-]{2,}\b'
-            $serviceMatches = [regex]::Matches($servicesSection, $servicePattern)
-            
-            $excludeWords = @('and', 'the', 'for', 'with', 'see', 'aws', 'help', 'more', 'information', 'command', 'service', 'available')
-            
-            foreach ($match in $serviceMatches) {
-                $serviceName = $match.Value.Trim()
-                if ($serviceName.Length -gt 2 -and $serviceName -notin $excludeWords) {
-                    $services += @{
-                        ServiceKey = ($serviceName.ToUpper() -replace '-', '')
-                        ServiceName = (Get-Culture).TextInfo.ToTitleCase($serviceName -replace '-', ' ')
-                        CLIName = $serviceName
-                    }
-                }
-            }
-        }
-        
-        return $services | Sort-Object ServiceName -Unique
-    } catch {
-        return @()
-    }
-}
+# REMOVED: Get-ServicesFromCLIHelp - replaced by background discovery
+# JUSTIFICATION: Background service discovery handles CLI parsing automatically
 
-function Get-ServicesFromEnumeration {
-    param([string]$ProfileName)
-    
-    try {
-        # Try to enumerate services by testing common service patterns
-        $services = @()
-        
-        # Get list of all AWS service prefixes by trying 'aws <service> help'
-        $commonServices = @(
-            'ec2', 's3', 's3api', 'rds', 'lambda', 'iam', 'ecs', 'eks', 'sns', 'sqs',
-            'cloudformation', 'route53', 'cloudwatch', 'logs', 'dynamodb', 'elasticache',
-            'redshift', 'apigateway', 'cognito-idp', 'secretsmanager', 'ssm', 'cloudfront',
-            'elasticbeanstalk', 'autoscaling', 'elbv2', 'kinesis', 'firehose', 'glue',
-            'athena', 'emr', 'sagemaker', 'batch', 'stepfunctions', 'events', 'codecommit',
-            'codebuild', 'codepipeline', 'codedeploy', 'xray', 'inspector2', 'guardduty',
-            'macie2', 'configservice', 'cloudtrail', 'organizations', 'workspaces',
-            'connect', 'chime', 'pinpoint', 'ses', 'workmail', 'directconnect',
-            'globalaccelerator', 'shield', 'wafv2', 'acm', 'kms', 'backup', 'storagegateway',
-            'fsx', 'efs', 'datasync', 'snowball', 'mediaconvert', 'medialive', 'mediastore',
-            'rekognition', 'textract', 'comprehend', 'translate', 'polly', 'transcribe',
-            'lexv2-models', 'personalize', 'forecast', 'frauddetector', 'kendra', 'braket',
-            'iot', 'iotanalytics', 'iotevents', 'greengrassv2', 'timestream-query', 'qldb',
-            'docdb', 'neptune', 'keyspaces', 'memorydb', 'opensearch', 'mwaa', 'appflow'
-        )
-        
-        foreach ($serviceCLI in $commonServices) {
-            try {
-                # Test if service exists by trying help
-                $helpResult = & aws $serviceCLI help 2>&1
-                if ($LASTEXITCODE -eq 0) {
-                    $serviceKey = ($serviceCLI.ToUpper() -replace '-', '')
-                    $serviceName = (Get-Culture).TextInfo.ToTitleCase($serviceCLI -replace '-', ' ')
-                    
-                    $services += @{
-                        ServiceKey = $serviceKey
-                        ServiceName = $serviceName
-                        CLIName = $serviceCLI
-                    }
-                }
-            } catch {
-                # Service doesn't exist or not accessible
-                continue
-            }
-        }
-        
-        return $services | Sort-Object ServiceName
-    } catch {
-        return @()
-    }
-}
+# REMOVED: Get-ServicesFromEnumeration - replaced by background discovery
+# JUSTIFICATION: Background service discovery uses botocore data for comprehensive service list
 
 function Get-ComprehensiveAWSServiceList {
     # Comprehensive list of AWS services with their CLI names
@@ -432,57 +347,30 @@ function Get-ServiceIcon {
     return if ($iconMap.ContainsKey($ServiceKey)) { $iconMap[$ServiceKey] } else { '🔧' }
 }
 
-# Add function to get truly universal service discovery
-function Get-TrulyUniversalServices {
-    param([string]$ProfileName)
-    
-    Write-Host "[UNIVERSAL] Starting truly universal AWS service discovery..." -ForegroundColor Magenta
-    
-    # Step 1: Get all services from AWS CLI
-    $allServices = Get-AllAWSServices -ProfileName $ProfileName
-    Write-Host "[UNIVERSAL] Found $($allServices.Count) potential services" -ForegroundColor Cyan
-    
-    # Step 2: Test each service with multiple command patterns
-    $workingServices = @{}
-    $totalServices = $allServices.Count
-    $processedServices = 0
-    
-    foreach ($service in $allServices) {
-        $processedServices++
-        $progress = [math]::Round(($processedServices / $totalServices) * 100)
-        
-        Write-Host "[UNIVERSAL] Testing $($service.ServiceName) ($processedServices/$totalServices - $progress%)..." -ForegroundColor Yellow
-        
-        $testResult = Test-AWSServiceAccess -Service $service -ProfileName $ProfileName
-        
-        if ($testResult.Success) {
-            $workingServices[$service.ServiceKey] = @{
-                Status = "Success"
-                ServiceName = $service.ServiceName
-                CLIName = $service.CLIName
-                Icon = Get-ServiceIcon -ServiceKey $service.ServiceKey
-                ItemCount = $testResult.ItemCount
-                Command = $testResult.Command
-                DataPath = $testResult.DataPath
-                Fields = $testResult.Fields
-                Regions = $testResult.Regions
-                Discovered = $true
-            }
-            Write-Host "[UNIVERSAL] ✅ $($service.ServiceName) - $($testResult.ItemCount) items" -ForegroundColor Green
-        } else {
-            Write-Host "[UNIVERSAL] ❌ $($service.ServiceName) - $($testResult.Error)" -ForegroundColor Red
+# REMOVED: Get-TrulyUniversalServices - replaced by background discovery
+# JUSTIFICATION: Background service discovery provides comprehensive service list without UI blocking
+
+function Get-ServicePickerData {
+    # NEW: Provides organized service data for UI picker
+    # JUSTIFICATION: Replaces complex discovery with simple cache-based service organization
+    try {
+        $serviceGroups = Get-ServiceGroups
+        if ($serviceGroups) {
+            return $serviceGroups
         }
-    }
-    
-    Write-Host "[UNIVERSAL] Discovery complete: $($workingServices.Count)/$totalServices services accessible" -ForegroundColor Magenta
-    
-    return @{
-        Status = "Completed"
-        DiscoveredServices = $workingServices
-        TotalTested = $totalServices
-        SuccessCount = $workingServices.Count
-        SuccessRate = [math]::Round(($workingServices.Count / $totalServices) * 100, 1)
+        
+        # Fallback to basic grouping if cache not available
+        $serviceCache = Get-ServiceCache
+        if ($serviceCache -and $serviceCache.services) {
+            return New-ServiceGroupsByCategory -Services $serviceCache.services
+        }
+        
+        # Final fallback to empty groups
+        return @{}
+        
+    } catch {
+        return @{}
     }
 }
 
-Export-ModuleMember -Function Start-UniversalAWSDiscovery, Get-TrulyUniversalServices, Get-AllAWSServices, Test-AWSServiceAccess, Get-ComprehensiveAWSServiceList
+Export-ModuleMember -Function Start-UniversalAWSDiscovery, Get-AllAWSServices, Get-ServicePickerData, Test-AWSServiceAccess, Get-ComprehensiveAWSServiceList, Get-ServiceIcon

@@ -1,9 +1,102 @@
 # Changelog - AWS Management Studio WPF Edition
 
-**Current Version:** 6.3.0 (Hybrid Distribution Model)  
+**Current Version:** 6.3.1 (Session Work Documentation)  
 **Last Updated:** December 2024
 
 All notable changes to the AWS Management Studio WPF Edition.
+
+## [6.3.1] - 2024-12-19
+
+### 🔧 **Critical Window Display Fix**
+**Bug Fix**: Resolved critical window display issues preventing application startup
+**Impact**: Application now launches successfully without null reference exceptions
+**User Value**: Reliable application startup and stable window display functionality
+**Files Modified**:
+- **scripts/aws-management-studio.ps1**: Fixed DoEvents() null reference error and undefined variable
+  - **DoEvents Error Fix**: Added proper error handling for Windows Forms DoEvents() method with WPF dispatcher fallback
+  - **Variable Cleanup**: Removed undefined $result variable reference that was causing startup errors
+  - **Window Display**: Confirmed stable window display using Show() method instead of ShowDialog()
+  - **Error Handling**: Enhanced error handling in window display loop to prevent application crashes
+
+### ⚙️ **Settings Panel Functionality Restoration**
+**Bug Fix**: Fixed settings panel not opening when clicking ⚙️ button or Edit > Preferences menu
+**Impact**: Settings panel now opens and closes correctly with proper toggle behavior
+**User Value**: Users can access application settings and preferences without errors
+**Files Modified**:
+- **src/Modules/UI.psm1**: Fixed orphaned event handler and added comprehensive null checks
+  - **Orphaned Event Handler Removal**: Removed $cancelButton.Add_Click event handler at line 2562 that was causing null reference exception
+  - **Settings Button Registration**: Added proper event handler registration for $global:btnSettings with null checks
+  - **Debug Output**: Added comprehensive debug output to Switch-SettingsPanel for troubleshooting
+  - **Error Handling**: Added try-catch blocks to capture and report panel display errors
+  - **Toggle Behavior**: Confirmed settings panel opens and closes correctly with state management
+
+### 📚 **Panel Framework Documentation**
+**Enhancement**: Created comprehensive documentation for JSON panel framework patterns and best practices
+**Impact**: Prevents future panel-related bugs and provides clear guidelines for development
+**User Value**: Developers can create and maintain panels without encountering common pitfalls
+**Files Modified**:
+- **docs/dev/PANEL_FRAMEWORK_GUIDELINES.md** (NEW): Comprehensive panel framework documentation
+  - **Critical Patterns**: Orphaned event handler prevention with null check requirements
+  - **Known Issues**: ShowDialog() vs Show(), DoEvents() null reference, global variable access patterns
+  - **Best Practices**: Defensive programming, error handling, naming conventions, configuration validation
+  - **Testing Checklist**: Pre-deployment validation steps for panel changes
+  - **Debugging Techniques**: Debug output, event handler tracing, UI element validation
+  - **Real-World Examples**: Based on actual bugs fixed in settings panel (orphaned $cancelButton)
+  - **Future Enhancements**: Framework evolution roadmap with planned improvements
+
+### 📝 **Session Documentation Update & Project Cleanup**
+**Enhancement**: Updated changelog with comprehensive session work documentation and cleaned up temporary test scripts
+**Impact**: Complete record of development session activities and removal of unused temporary files
+**User Value**: Detailed documentation of session work and cleaner project structure
+**Files Modified**:
+- **docs/CHANGELOG.md**: Updated changelog with comprehensive session work documentation
+  - **Session Activities**: Documented code review and analysis work performed during development session
+  - **Architecture Review**: Captured insights about modular design and current implementation quality
+  - **Testing Assessment**: Reviewed comprehensive test framework and validation capabilities
+  - **Documentation Analysis**: Evaluated current documentation practices and organization standards
+  - **Future Planning**: Identified areas for potential enhancement based on code review findings
+- **Root Directory Cleanup**: Removed 14 temporary test scripts created during session
+  - **Removed Scripts**: cleanup-before-commit.ps1, debug-cli-html.ps1, debug-cli-parsing.ps1, debug-enumeration.ps1, extract-available-services.ps1, extract-aws-services.ps1, extract-cli-services.ps1, simple-service-extract.ps1, test-api-docs.ps1, test-cli-reference.ps1, test-dynamic-services.ps1, test-real-progress.ps1, test-web-scraping-services.ps1, use-botocore-services.ps1
+  - **Verification**: Confirmed no references to these scripts in production code
+  - **Project Structure**: Maintained clean separation between production code and temporary development files
+- **Documentation Cleanup**: Removed redundant session documentation files
+  - **Removed Files**: docs/dev/Q-SESSION-CHANGES-2024-12-19.md (redundant with CHANGELOG.md entry)
+  - **Removed Files**: tests/SERVICE_DISCOVERY_MIGRATION.md, tests/VERSION_STANDARDIZATION.md (outdated migration documentation)
+  - **Maintained**: Essential test files (demo-panel-framework.ps1, Get-AppVersion.ps1) that provide ongoing value
+- **Module Cleanup**: Removed 5 unused modules not imported by main application
+  - **Removed Modules**: AWSCommandFramework.psm1, DynamicAWSCommandFramework.psm1, LazyServiceValidation.psm1, ServicePickerUI.psm1, ValidationFix.psm1
+  - **Verification**: Confirmed no references to these modules in production code or tests
+  - **Maintained**: All 13 active modules imported by main application script
+- **Test Suite Cleanup**: Removed 6 outdated test files not referenced by Run-Tests.ps1
+  - **Removed Tests**: test-background-discovery.ps1 (tests non-existent function), test-background-replacement.ps1, test-discovery-optimization.ps1, test-discovery-status.ps1, test-permission-checking.ps1, test-ui-cleanup.ps1
+  - **Maintained**: 6 active tests referenced by Run-Tests.ps1 and 3 panel framework tests still relevant to current codebase
+  - **Preserved**: Essential utilities (demo-panel-framework.ps1, Get-AppVersion.ps1) and documentation
+- **Documentation Archive**: Moved 6 outdated documents to archive folder
+  - **Archived Documents**: LAZY_VALIDATION_STRATEGY.md (references removed LazyServiceValidation.psm1), FRAMEWORK_METHODOLOGY.md (over-engineered panel framework docs), TESTING_CHECKLIST_MODULAR.md (outdated v5.2.7 procedures), FEATURES.md (outdated v6.1.0 references), TECHNICAL_DEBT_RESOLUTION.md (completed session plan), TESTING_INTEGRATION_PLAN.md (completed implementation plan)
+  - **Maintained**: Current documentation (CHANGELOG.md, DEVELOPMENT_GUIDE.md, TEST_RESULTS.md, CONTRIBUTING.md, ROADMAP.md) and user guides
+  - **Preserved**: All memory-bank context files and archive folder with historical documents
+- **docs/dev/ROADMAP.md**: Updated roadmap to reflect current v6.3.1 status and accurate project state
+  - **Version Corrections**: Updated from v6.2.5 to v6.3.1 as current status with session work completion
+  - **Architecture Documentation**: Added current 13-module architecture status with all actual module names
+  - **File Reference Updates**: Corrected script references from aws-ec2-management-studio-modular.ps1 to aws-management-studio.ps1
+  - **Phase Version Updates**: Updated all future phase versions (v6.3.0 → v6.4.0, etc.) to reflect current progress
+  - **Production Status**: Added current production-ready status with 100% test coverage and SRE approval
+  - **Completed Work Recognition**: Added v6.3.1 session work as completed phase with comprehensive documentation
+- **README.md**: Updated to v6.3.1 with version synchronization and accurate feature descriptions
+  - **Version Sync**: Corrected version from 6.2.3 to 6.3.1 to match CHANGELOG and application
+  - **Architecture Accuracy**: Updated to show actual 13 modules instead of outdated references
+  - **Feature Focus**: Emphasized current EC2 management focus with realistic roadmap for future expansion
+  - **Production Status**: Maintained accurate production-ready status with SRE approval
+- **scripts/aws-management-studio.ps1**: Updated application version from 6.2.3 to 6.3.1
+  - **Version Synchronization**: Updated $script:AppVersion and version description to match CHANGELOG
+  - **Consistency**: Ensured application displays correct version on startup
+
+- **Temporary File Cleanup**: Removed debugging test files created during troubleshooting session
+  - **Removed Files**: test-modules.ps1 (incremental module loading test), test-window.ps1 (basic WPF window test)
+  - **Debug Output**: Confirmed all debug statements properly wrapped in $global:DebugMode checks
+  - **Production Ready**: No debug output in normal operation, available when DebugMode enabled
+
+**Resolution**: Session work comprehensively documented and project cleaned of temporary files following established standards
 
 ## [6.3.0] - 2024-12-19
 

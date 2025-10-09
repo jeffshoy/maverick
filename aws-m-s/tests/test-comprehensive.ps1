@@ -1,7 +1,7 @@
 #requires -version 7.0
 <#
 .SYNOPSIS
-    Comprehensive Test Suite for AWS Management Studio v6.0.3
+    Comprehensive Test Suite for AWS Management Studio
 
 .DESCRIPTION
     Tests all major functionality including:
@@ -15,6 +15,9 @@
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'  # Continue on errors to complete all tests
+
+# Get application version
+. "$PSScriptRoot\Get-AppVersion.ps1"
 
 $script:TestResults = @()
 $script:TestStartTime = Get-Date
@@ -45,7 +48,7 @@ function Write-TestResult {
     if ($Error) { Write-Host "    Error: $Error" -ForegroundColor Red }
 }
 
-Write-Host "🧪 AWS Management Studio v6.0.8 - Comprehensive Test Suite" -ForegroundColor Cyan
+Write-Host "🧪 AWS Management Studio v$global:AppVersion - Comprehensive Test Suite" -ForegroundColor Cyan
 Write-Host "=" * 70
 
 # Test 1: Environment Prerequisites
@@ -206,20 +209,25 @@ try {
 Write-Host "`n🛠️ Test Group 6: Service Configuration" -ForegroundColor Yellow
 
 try {
-    $availableServices = Get-AvailableServices
-    $hasServices = $availableServices -and $availableServices.Count -gt 0
-    Write-TestResult "Available Services" $hasServices "Count: $($availableServices.Count)"
-    
-    if ($hasServices) {
-        foreach ($service in $availableServices) {
-            try {
-                $config = Get-ServiceConfig -ServiceKey $service
-                $hasValidConfig = $config -and $config.Name -and $config.SearchCommand
-                Write-TestResult "  Service Config: $service" $hasValidConfig "Name: $($config.Name)"
-            } catch {
-                Write-TestResult "  Service Config: $service" $false "" $_.Exception.Message
+    # Test new service manager approach
+    if (Get-Command Get-AvailableServices -ErrorAction SilentlyContinue) {
+        $availableServices = Get-AvailableServices
+        $hasServices = $availableServices -and $availableServices.Count -gt 0
+        Write-TestResult "Available Services" $hasServices "Count: $($availableServices.Count)"
+        
+        if ($hasServices) {
+            foreach ($service in $availableServices) {
+                try {
+                    $config = Get-ServiceConfig -ServiceKey $service
+                    $hasValidConfig = $config -and $config.Name -and $config.SearchCommand
+                    Write-TestResult "  Service Config: $service" $hasValidConfig "Name: $($config.Name)"
+                } catch {
+                    Write-TestResult "  Service Config: $service" $false "" $_.Exception.Message
+                }
             }
         }
+    } else {
+        Write-TestResult "Available Services" $false "Get-AvailableServices function not available"
     }
 } catch {
     Write-TestResult "Available Services" $false "" $_.Exception.Message
@@ -456,7 +464,7 @@ try {
     }
     
     # Convert test results to TestRunner format
-    Start-AutomatedTestSuite -SuiteName "Comprehensive Test v6.0.8" -Version "6.0.8" -AutoDocument
+    Start-AutomatedTestSuite -SuiteName "Comprehensive Test" -Version $global:AppVersion -AutoDocument
     
     foreach ($result in $script:TestResults) {
         Add-EnhancedTestResult -TestName $result.TestName -Status $(if ($result.Passed) { "PASS" } else { "FAIL" }) -Details $result.Details -Category "Comprehensive"
