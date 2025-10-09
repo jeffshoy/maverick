@@ -1,0 +1,12 @@
+{
+  "organization": "psgov",
+  "project": "Cloud-PA", 
+  "repository": "cloudops",
+  "smbFallbackPath": "\\\\fileshare.cloud.lcl\\Users\\derek.johnson\\Scripts\\aws-management-studio",
+  "bugTrackingPath": "\\\\fileshare.cloud.lcl\\Users\\derek.johnson\\Scripts\\aws-management-studio\\bugs",
+  "updateCheckInterval": 3600,
+  "autoUpdateEnabled": true,
+  "notificationEnabled": true,
+  "useGitForUpdates": true,
+  "useNetworkShareForBugs": true
+}
