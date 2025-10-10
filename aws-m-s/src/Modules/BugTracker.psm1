@@ -9,6 +9,9 @@
 
 Set-StrictMode -Version Latest
 
+# Import SMB Share Integration
+Import-Module "$PSScriptRoot\SMBShareIntegration.psm1" -Force
+
 # Bug storage
 $script:BugReportsPath = Join-Path $env:APPDATA 'AWS-EC2-Management-Studio-WPF\bug-reports.json'
 $script:BugReportPanel = $null
@@ -96,10 +99,19 @@ function New-BugReport {
     # Add new report
     $existingReports += $bugReport
     
-    # Save reports
+    # Save reports locally
     try {
         $existingReports | ConvertTo-Json -Depth 10 | Set-Content $script:BugReportsPath -Encoding UTF8
-        Write-Verbose "Bug report submitted: $($bugReport.Id) - $Title"
+        Write-Verbose "Bug report submitted locally: $($bugReport.Id) - $Title"
+        
+        # Also save to SMB share for team visibility
+        $smbSaved = Save-BugReportToSMB -BugReport $bugReport
+        if ($smbSaved) {
+            Write-Host "✓ Bug report shared with team via network" -ForegroundColor Green
+        } else {
+            Write-Verbose "Bug report saved locally only (network share unavailable)"
+        }
+        
         return $bugReport.Id
     } catch {
         Write-Warning "Failed to save bug report: $($_.Exception.Message)"

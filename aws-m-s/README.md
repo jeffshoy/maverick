@@ -1,6 +1,6 @@
 # AWS Management Studio
 
-**Current Version:** 6.3.1 (Session Work Documentation) - ✅ **PRODUCTION READY**  
+**Current Version:** 6.4.0 (SMB Share Bug Tracking - Implementation) - ✅ **PRODUCTION READY**  
 **Platform:** PowerShell 7.0+ with WPF UI Framework  
 **Target Users:** Site Reliability Engineers, CloudOps Teams, Technical Operations
 
@@ -37,6 +37,8 @@ AWS Management Studio is a comprehensive PowerShell-based WPF application design
 - **Integrated Bug Tracker**: Built-in bug reporting with structured forms
 - **Screenshot Capture**: Secure application window screenshots
 - **File Attachment Support**: Attach existing image files with validation
+- **SMB Share Integration**: Automatic bug sharing via network share for team visibility
+- **Local Fallback**: Works without network share, saves locally only
 - **Export Capabilities**: HTML export of bug reports for sharing
 - **Panel Framework**: JSON-configurable UI panels for rapid development
 

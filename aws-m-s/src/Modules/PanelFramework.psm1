@@ -129,7 +129,7 @@ function New-ConfigurablePanel {
                 $button.Height = $buttonConfig.height
                 $button.Margin = New-Object System.Windows.Thickness(5, 0, 5, 0)
                 
-                if ($buttonConfig.style) {
+                if ($buttonConfig.PSObject.Properties['style'] -and $buttonConfig.style) {
                     switch ($buttonConfig.style) {
                         "primary" { $button.Background = [System.Windows.Media.Brushes]::LightBlue }
                         "success" { $button.Background = [System.Windows.Media.Brushes]::LightGreen }
@@ -201,6 +201,58 @@ function New-PanelControl {
             $control = New-Object System.Windows.Controls.Label
             $control.Content = $ElementConfig.text
             if ($ElementConfig.PSObject.Properties['bold'] -and $ElementConfig.bold) { $control.FontWeight = "Bold" }
+            if ($ElementConfig.PSObject.Properties['fontWeight'] -and $ElementConfig.fontWeight -eq "Bold") { $control.FontWeight = "Bold" }
+            if ($ElementConfig.PSObject.Properties['margin'] -and $ElementConfig.margin) { 
+                $margins = $ElementConfig.margin -split ','
+                if ($margins.Count -eq 1) {
+                    $control.Margin = New-Object System.Windows.Thickness([double]$margins[0])
+                } elseif ($margins.Count -eq 4) {
+                    $control.Margin = New-Object System.Windows.Thickness([double]$margins[0], [double]$margins[1], [double]$margins[2], [double]$margins[3])
+                }
+            }
+            return $control
+        }
+        
+        "textblock" {
+            $control = New-Object System.Windows.Controls.TextBlock
+            $control.Text = $ElementConfig.text
+            $control.TextWrapping = "Wrap"
+            if ($ElementConfig.PSObject.Properties['fontSize'] -and $ElementConfig.fontSize) { $control.FontSize = $ElementConfig.fontSize }
+            if ($ElementConfig.PSObject.Properties['fontWeight'] -and $ElementConfig.fontWeight -eq "Bold") { $control.FontWeight = "Bold" }
+            if ($ElementConfig.PSObject.Properties['foreground'] -and $ElementConfig.foreground) { 
+                try {
+                    $control.Foreground = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.ColorConverter]::ConvertFromString($ElementConfig.foreground))
+                } catch { }
+            }
+            if ($ElementConfig.PSObject.Properties['margin'] -and $ElementConfig.margin) { 
+                $margins = $ElementConfig.margin -split ','
+                if ($margins.Count -eq 1) {
+                    $control.Margin = New-Object System.Windows.Thickness([double]$margins[0])
+                } elseif ($margins.Count -eq 4) {
+                    $control.Margin = New-Object System.Windows.Thickness([double]$margins[0], [double]$margins[1], [double]$margins[2], [double]$margins[3])
+                }
+            }
+            return $control
+        }
+        
+        "checkbox" {
+            $control = New-Object System.Windows.Controls.CheckBox
+            $control.Content = $ElementConfig.text
+            if ($ElementConfig.PSObject.Properties['isChecked'] -and $ElementConfig.isChecked) { $control.IsChecked = $true }
+            if ($ElementConfig.PSObject.Properties['tooltip'] -and $ElementConfig.tooltip) { $control.ToolTip = $ElementConfig.tooltip }
+            if ($ElementConfig.PSObject.Properties['margin'] -and $ElementConfig.margin) { 
+                $margins = $ElementConfig.margin -split ','
+                if ($margins.Count -eq 1) {
+                    $control.Margin = New-Object System.Windows.Thickness([double]$margins[0])
+                } elseif ($margins.Count -eq 4) {
+                    $control.Margin = New-Object System.Windows.Thickness([double]$margins[0], [double]$margins[1], [double]$margins[2], [double]$margins[3])
+                }
+            }
+            return $control
+        }
+        
+        "separator" {
+            $control = New-Object System.Windows.Controls.Separator
             if ($ElementConfig.PSObject.Properties['margin'] -and $ElementConfig.margin) { 
                 $margins = $ElementConfig.margin -split ','
                 if ($margins.Count -eq 1) {
@@ -215,6 +267,8 @@ function New-PanelControl {
         "textbox" {
             $control = New-Object System.Windows.Controls.TextBox
             if ($ElementConfig.height) { $control.Height = $ElementConfig.height }
+            if ($ElementConfig.PSObject.Properties['text'] -and $ElementConfig.text) { $control.Text = $ElementConfig.text }
+            if ($ElementConfig.PSObject.Properties['tooltip'] -and $ElementConfig.tooltip) { $control.ToolTip = $ElementConfig.tooltip }
             if ($ElementConfig.PSObject.Properties['multiline'] -and $ElementConfig.multiline) { 
                 $control.TextWrapping = "Wrap"
                 $control.AcceptsReturn = $true
@@ -259,6 +313,7 @@ function New-PanelControl {
             $control.Content = $ElementConfig.text
             if ($ElementConfig.PSObject.Properties['width'] -and $ElementConfig.width) { $control.Width = $ElementConfig.width }
             if ($ElementConfig.PSObject.Properties['height'] -and $ElementConfig.height) { $control.Height = $ElementConfig.height }
+            if ($ElementConfig.PSObject.Properties['tooltip'] -and $ElementConfig.tooltip) { $control.ToolTip = $ElementConfig.tooltip }
             if ($ElementConfig.PSObject.Properties['margin'] -and $ElementConfig.margin) { 
                 $margins = $ElementConfig.margin -split ','
                 if ($margins.Count -eq 1) {
