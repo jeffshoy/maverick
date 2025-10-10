@@ -70,7 +70,7 @@ Add-Type @'
 '@
 
 # Application Constants
-$script:AppVersion = "6.3.1"
+$script:AppVersion = "6.4.0"
 $script:AppName = "AWS Management Studio"
 
 # Settings paths - Define before importing modules
@@ -106,6 +106,7 @@ Import-Module "$PSScriptRoot\..\src\Modules\UI.psm1" -Force -WarningAction Silen
 Import-Module "$PSScriptRoot\..\src\Modules\MultiServiceSearch.psm1" -Force -WarningAction SilentlyContinue
 Import-Module "$PSScriptRoot\..\src\Modules\UniversalAWSDiscovery.psm1" -Force -WarningAction SilentlyContinue
 Import-Module "$PSScriptRoot\..\src\Modules\BugTracker.psm1" -Force -WarningAction SilentlyContinue
+Import-Module "$PSScriptRoot\..\src\Modules\SMBShareIntegration.psm1" -Force -WarningAction SilentlyContinue
 Import-Module "$PSScriptRoot\..\src\Modules\VersionTracker.psm1" -Force -WarningAction SilentlyContinue
 Import-Module "$PSScriptRoot\..\src\Modules\PanelFramework.psm1" -Force -WarningAction SilentlyContinue
 Import-Module "$PSScriptRoot\..\src\Modules\BackgroundServiceDiscovery.psm1" -Force -WarningAction SilentlyContinue
@@ -185,6 +186,8 @@ $xaml = @'
                     <MenuItem Name="miViewBugsWindow" Header="View in _Window"/>
                     <MenuItem Name="miExportBugsHtml" Header="Export as _HTML"/>
                 </MenuItem>
+                <Separator/>
+                <MenuItem Name="miSMBConfig" Header="📁 SMB Share _Configuration"/>
                 <Separator/>
                 <MenuItem Name="miDebugMode" Header="Enable _Debug Mode" IsCheckable="True" InputGestureText="F12, Ctrl+Shift+I"/>
                 <Separator/>
@@ -405,11 +408,11 @@ $xaml = @'
 
 # Create WPF Window
 try {
-    Write-Host "Creating XAML reader..." -ForegroundColor Yellow
+    if ($global:DebugMode) { Write-Host "Creating XAML reader..." -ForegroundColor Yellow }
     $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xaml))
-    Write-Host "Loading XAML..." -ForegroundColor Yellow
+    if ($global:DebugMode) { Write-Host "Loading XAML..." -ForegroundColor Yellow }
     $window = [Windows.Markup.XamlReader]::Load($reader)
-    Write-Host "Window created successfully!" -ForegroundColor Green
+    if ($global:DebugMode) { Write-Host "Window created successfully!" -ForegroundColor Green }
     
     if (-not $window) {
         throw "Window object is null after creation"
@@ -444,6 +447,7 @@ try {
     $script:miViewBugs = $window.FindName('miViewBugs')
     $script:miViewBugsWindow = $window.FindName('miViewBugsWindow')
     $script:miExportBugsHtml = $window.FindName('miExportBugsHtml')
+    $script:miSMBConfig = $window.FindName('miSMBConfig')
     $script:miAbout = $window.FindName('miAbout')
 } catch {
     Write-Error "Failed to find menu elements: $($_.Exception.Message)"
@@ -942,6 +946,69 @@ $script:miExportBugsHtml.Add_Click({
     }
 })
 
+$script:miSMBConfig.Add_Click({
+    try {
+        Write-DebugLog "Opening SMB configuration panel" "INFO" "SMBShare"
+        
+        $configPath = "$PSScriptRoot\..\src\Config\panels\smb-config.json"
+        $eventHandlers = @{
+            'btnTestConnection' = {
+                param($controls, $dataContext)
+                try {
+                    $controls['btnTestConnection'].Content = "⏳ Testing..."
+                    $controls['btnTestConnection'].IsEnabled = $false
+                    
+                    $available = Test-SMBShareAvailability -Force
+                    
+                    if ($available) {
+                        $controls['txtStatus'].Text = "Status: ✅ Connected"
+                        $controls['txtStatus'].Foreground = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Colors]::Green)
+                        [System.Windows.MessageBox]::Show("SMB share is accessible!", "Connection Test", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+                    } else {
+                        $controls['txtStatus'].Text = "Status: ❌ Not accessible"
+                        $controls['txtStatus'].Foreground = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Colors]::Red)
+                        [System.Windows.MessageBox]::Show("SMB share is not accessible. Check network path and permissions.", "Connection Test", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+                    }
+                    
+                    $controls['btnTestConnection'].Content = "🔍 Test Connection"
+                    $controls['btnTestConnection'].IsEnabled = $true
+                } catch {
+                    $controls['txtStatus'].Text = "Status: ⚠️ Test failed"
+                    $controls['txtStatus'].Foreground = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Colors]::Orange)
+                    [System.Windows.MessageBox]::Show("Test failed: $($_.Exception.Message)", "Connection Test", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+                    $controls['btnTestConnection'].Content = "🔍 Test Connection"
+                    $controls['btnTestConnection'].IsEnabled = $true
+                }
+            }
+            'saveSMBConfig' = {
+                param($controls, $dataContext)
+                try {
+                    $enabled = $controls['chkEnableSMB'].IsChecked
+                    $basePath = $controls['txtSMBPath'].Text
+                    
+                    if ([string]::IsNullOrWhiteSpace($basePath)) {
+                        [System.Windows.MessageBox]::Show("Please enter a network share path.", "Validation Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+                        return
+                    }
+                    
+                    Set-SMBShareConfiguration -BasePath $basePath -Enabled $enabled
+                    $controls['txtStatus'].Text = "Status: ✅ Configuration saved"
+                    $controls['txtStatus'].Foreground = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Colors]::Green)
+                    [System.Windows.MessageBox]::Show("SMB configuration saved successfully!", "Configuration Saved", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+                } catch {
+                    [System.Windows.MessageBox]::Show("Failed to save configuration: $($_.Exception.Message)", "Save Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+                }
+            }
+        }
+        
+        New-ConfigurablePanel -ConfigPath $configPath -EventHandlers $eventHandlers
+        
+    } catch {
+        Write-DebugLog "Failed to open SMB configuration panel: $($_.Exception.Message)" "ERROR" "SMBShare"
+        [System.Windows.MessageBox]::Show("Failed to open SMB configuration: $($_.Exception.Message)", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+    }
+})
+
 $script:miAbout.Add_Click({
     $aboutText = @"
 AWS Management Studio v$script:AppVersion
@@ -1306,28 +1373,30 @@ try {
     }
     
     # Debug: Check window before event handlers
-    Write-Host "Window before event handlers: $($window -ne $null)" -ForegroundColor Cyan
+    if ($global:DebugMode) { Write-Host "Window before event handlers: $($window -ne $null)" -ForegroundColor Cyan }
     
     # Initialize event handlers after window is ready but before showing
     try {
         Initialize-EventHandlers
-        Write-Host "Event handlers initialized successfully" -ForegroundColor Green
+        if ($global:DebugMode) { Write-Host "Event handlers initialized successfully" -ForegroundColor Green }
     } catch {
         Write-Warning "Event handler initialization failed: $($_.Exception.Message)"
     }
     
     # Debug: Check window after event handlers
-    Write-Host "Window after event handlers: $($window -ne $null)" -ForegroundColor Cyan
-    Write-Host "Window type: $($window.GetType().Name)" -ForegroundColor Cyan
-    Write-Host "Window title: $($window.Title)" -ForegroundColor Cyan
+    if ($global:DebugMode) {
+        Write-Host "Window after event handlers: $($window -ne $null)" -ForegroundColor Cyan
+        Write-Host "Window type: $($window.GetType().Name)" -ForegroundColor Cyan
+        Write-Host "Window title: $($window.Title)" -ForegroundColor Cyan
+    }
     
     # Show window
-    Write-Host "About to call Show()..." -ForegroundColor Yellow
+    if ($global:DebugMode) { Write-Host "About to call Show()..." -ForegroundColor Yellow }
     $window.Show()
-    Write-Host "Window displayed successfully!" -ForegroundColor Green
+    if ($global:DebugMode) { Write-Host "Window displayed successfully!" -ForegroundColor Green }
     
     # Keep the application running with a simple approach
-    Write-Host "Window is now displayed. Close the window to exit." -ForegroundColor Green
+    if ($global:DebugMode) { Write-Host "Window is now displayed. Close the window to exit." -ForegroundColor Green }
     
     # Wait for window to be closed
     while ($window.IsVisible) {
@@ -1340,7 +1409,7 @@ try {
         }
     }
     
-    Write-Host "Window closed." -ForegroundColor Yellow
+    if ($global:DebugMode) { Write-Host "Window closed." -ForegroundColor Yellow }
 } catch {
     Write-Error "Window display failed: $($_.Exception.Message)"
     throw
