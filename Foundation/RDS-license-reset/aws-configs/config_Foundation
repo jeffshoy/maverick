@@ -1,0 +1,561 @@
+# =============================================================================
+# config_Foundation — AWS SSO profiles for the Foundation OU
+# 
+# Usage:
+#   Set-Item Env:AWS_CONFIG_FILE "$HOME\rds-license-reset\aws-configs\config_Foundation"
+#   — or —
+#   Merge into ~/.aws/config
+# =============================================================================
+
+[sso-session foundation]
+sso_start_url       = https://d-9067f93f22.awsapps.com/start
+sso_region          = us-east-1
+sso_registration_scopes = sso:account:access
+
+# ---------------------------------------------------------------------------
+# PALegacySharedServices  (TRKRD / RD servers live here)
+# ---------------------------------------------------------------------------
+[profile PALegacySharedServices]
+sso_session    = foundation
+sso_account_id = 361362055558
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+output         = json
+
+# ---------------------------------------------------------------------------
+# Shared (590183938156)
+# ---------------------------------------------------------------------------
+[profile Shared]
+sso_session    = foundation
+sso_account_id = 590183938156
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+# ---------------------------------------------------------------------------
+# PALegacyFinEnt client accounts
+# ---------------------------------------------------------------------------
+[profile PALegacyFinEntANCO]
+sso_session    = foundation
+sso_account_id = 624248574417
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntBELT]
+sso_session    = foundation
+sso_account_id = 926725308215
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntBRENT]
+sso_session    = foundation
+sso_account_id = 189696722428
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntBRUN]
+sso_session    = foundation
+sso_account_id = 183248602092
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCALCO]
+sso_session    = foundation
+sso_account_id = 516624750060
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCAM]
+sso_session    = foundation
+sso_account_id = 296336226691
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCAMCO]
+sso_session    = foundation
+sso_account_id = 356240508841
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCAS]
+sso_session    = foundation
+sso_account_id = 836683584222
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCCWD]
+sso_session    = foundation
+sso_account_id = 742508967661
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCDRF]
+sso_session    = foundation
+sso_account_id = 710146770100
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCloud]
+sso_session    = foundation
+sso_account_id = 196900110770
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCMV]
+sso_session    = foundation
+sso_account_id = 222066942213
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCOA]
+sso_session    = foundation
+sso_account_id = 000936194892
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCOMP]
+sso_session    = foundation
+sso_account_id = 862191734212
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCOSC]
+sso_session    = foundation
+sso_account_id = 330994198597
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCOSM]
+sso_session    = foundation
+sso_account_id = 880961130429
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCOW]
+sso_session    = foundation
+sso_account_id = 824190116370
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntCRCT]
+sso_session    = foundation
+sso_account_id = 692744833570
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntDALY]
+sso_session    = foundation
+sso_account_id = 434562740830
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntDCSC]
+sso_session    = foundation
+sso_account_id = 512378128179
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntDENT]
+sso_session    = foundation
+sso_account_id = 540334252762
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntDHILL]
+sso_session    = foundation
+sso_account_id = 784486495262
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntEBPRK]
+sso_session    = foundation
+sso_account_id = 186582695548
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntELGR]
+sso_session    = foundation
+sso_account_id = 464478944305
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntELGR-DCI]
+sso_session    = foundation
+sso_account_id = 826297868806
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntELKO]
+sso_session    = foundation
+sso_account_id = 681623867230
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntENC]
+sso_session    = foundation
+sso_account_id = 677930909982
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntESC]
+sso_session    = foundation
+sso_account_id = 327109782480
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntFIT]
+sso_session    = foundation
+sso_account_id = 718219276052
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntGGB]
+sso_session    = foundation
+sso_account_id = 447199793878
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntGLENN]
+sso_session    = foundation
+sso_account_id = 882145599737
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntHIC]
+sso_session    = foundation
+sso_account_id = 976048299571
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntIMP]
+sso_session    = foundation
+sso_account_id = 928998604702
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntISB]
+sso_session    = foundation
+sso_account_id = 166463094979
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntJACO]
+sso_session    = foundation
+sso_account_id = 018882982033
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntJERS]
+sso_session    = foundation
+sso_account_id = 915233243810
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntKETT]
+sso_session    = foundation
+sso_account_id = 209668699377
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntLAPO]
+sso_session    = foundation
+sso_account_id = 245775074687
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntLKWO]
+sso_session    = foundation
+sso_account_id = 565092613725
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntLVRN]
+sso_session    = foundation
+sso_account_id = 070410863625
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntLWCL]
+sso_session    = foundation
+sso_account_id = 213679840389
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMADC]
+sso_session    = foundation
+sso_account_id = 526442642474
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMAUI]
+sso_session    = foundation
+sso_account_id = 154146317456
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMDDL]
+sso_session    = foundation
+sso_account_id = 477655840032
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMDDLI]
+sso_session    = foundation
+sso_account_id = 030342421747
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMERI]
+sso_session    = foundation
+sso_account_id = 466967047678
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMTC]
+sso_session    = foundation
+sso_account_id = 258219590286
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMUKI]
+sso_session    = foundation
+sso_account_id = 036338177430
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntMURR]
+sso_session    = foundation
+sso_account_id = 491766120276
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntNCRTD]
+sso_session    = foundation
+sso_account_id = 024697547769
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntNUC]
+sso_session    = foundation
+sso_account_id = 327285291655
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntOCLS]
+sso_session    = foundation
+sso_account_id = 043031296181
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntOWA]
+sso_session    = foundation
+sso_account_id = 020510964797
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntPIETD]
+sso_session    = foundation
+sso_account_id = 814817358652
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntPLCNT]
+sso_session    = foundation
+sso_account_id = 934860272059
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntPOCA]
+sso_session    = foundation
+sso_account_id = 650681344239
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntRACO]
+sso_session    = foundation
+sso_account_id = 842609633498
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntRCKC]
+sso_session    = foundation
+sso_account_id = 226610659577
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSANA]
+sso_session    = foundation
+sso_account_id = 524522256410
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSCR]
+sso_session    = foundation
+sso_account_id = 505789306231
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSDSP]
+sso_session    = foundation
+sso_account_id = 405028355774
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSJC]
+sso_session    = foundation
+sso_account_id = 807593377084
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSJRTD]
+sso_session    = foundation
+sso_account_id = 550429145130
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSJS]
+sso_session    = foundation
+sso_account_id = 790087872923
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSLT]
+sso_session    = foundation
+sso_account_id = 929690601141
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSMIA]
+sso_session    = foundation
+sso_account_id = 640698236228
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSOL]
+sso_session    = foundation
+sso_account_id = 944777361415
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntSTPB]
+sso_session    = foundation
+sso_account_id = 691443742007
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntTCA]
+sso_session    = foundation
+sso_account_id = 555035388709
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntTEH]
+sso_session    = foundation
+sso_account_id = 606357619300
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntTML]
+sso_session    = foundation
+sso_account_id = 004407157654
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntTRIN]
+sso_session    = foundation
+sso_account_id = 381443105384
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntTUKW]
+sso_session    = foundation
+sso_account_id = 910322382555
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntTUOL]
+sso_session    = foundation
+sso_account_id = 172613389231
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntUNM]
+sso_session    = foundation
+sso_account_id = 491975703086
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntVALL]
+sso_session    = foundation
+sso_account_id = 390489711178
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntWASHC]
+sso_session    = foundation
+sso_account_id = 391957224958
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntWEST]
+sso_session    = foundation
+sso_account_id = 728629253423
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PALegacyFinEntYAVA]
+sso_session    = foundation
+sso_account_id = 946554700152
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile CPFRPrdFE]
+sso_session    = foundation
+sso_account_id = 334139665882
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile DhsrPrdFE]
+sso_session    = foundation
+sso_account_id = 106403001274
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile ECBPrdFE]
+sso_session    = foundation
+sso_account_id = 162452196300
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile ECCPrdFE]
+sso_session    = foundation
+sso_account_id = 962088872955
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile ModPrdFE]
+sso_session    = foundation
+sso_account_id = 582360921531
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile PanaPrdFE]
+sso_session    = foundation
+sso_account_id = 881601365129
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile FESmshProd]
+sso_session    = foundation
+sso_account_id = 850756191955
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+[profile c3development]
+sso_session    = foundation
+sso_account_id = 992382628857
+sso_role_name  = cst-comm-cloudadmin
+region         = us-east-1
+
+# ---------------------------------------------------------------------------
+# Add new Foundation OU accounts below this line
+# ---------------------------------------------------------------------------
