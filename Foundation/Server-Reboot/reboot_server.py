@@ -93,38 +93,41 @@ def sso_login(profile):
 
 
 def find_instances(profile, search_code):
-    """Find EC2 instances matching the search code across regions, with health status."""
+    """Find EC2 instances matching the search code (case-insensitive) across regions."""
     all_instances = []
+    search_lower = search_code.lower()
+
     for region in REGIONS:
         print(f"  Searching {region}...", end=" ")
         session = boto3.Session(profile_name=profile, region_name=region)
         ec2 = session.client("ec2")
 
-        resp = ec2.describe_instances(Filters=[
-            {"Name": "tag:Name", "Values": [
-                f"{search_code}*", f"*{search_code}*",
-            ]},
+        # Fetch all non-terminated instances, filter by name locally (case-insensitive)
+        paginator = ec2.get_paginator("describe_instances")
+        pages = paginator.paginate(Filters=[
             {"Name": "instance-state-name", "Values": ["running", "stopped", "stopping", "pending"]},
         ])
 
         instance_ids = []
         instances_map = {}
-        for res in resp["Reservations"]:
-            for inst in res["Instances"]:
-                iid = inst["InstanceId"]
-                name = next((t["Value"] for t in inst.get("Tags", []) if t["Key"] == "Name"), "N/A")
-                instances_map[iid] = {
-                    "InstanceId": iid,
-                    "Name": name,
-                    "State": inst["State"]["Name"],
-                    "PrivateIp": inst.get("PrivateIpAddress", "N/A"),
-                    "Platform": inst.get("PlatformDetails", "N/A"),
-                    "Region": region,
-                    "HealthChecks": "N/A",
-                }
-                instance_ids.append(iid)
+        for page in pages:
+            for res in page["Reservations"]:
+                for inst in res["Instances"]:
+                    name = next((t["Value"] for t in inst.get("Tags", []) if t["Key"] == "Name"), "")
+                    if search_lower not in name.lower():
+                        continue
+                    iid = inst["InstanceId"]
+                    instances_map[iid] = {
+                        "InstanceId": iid,
+                        "Name": name or "N/A",
+                        "State": inst["State"]["Name"],
+                        "PrivateIp": inst.get("PrivateIpAddress", "N/A"),
+                        "Region": region,
+                        "HealthChecks": "N/A",
+                    }
+                    instance_ids.append(iid)
 
-        # Fetch status checks in batches
+        # Fetch status checks
         if instance_ids:
             try:
                 status_resp = ec2.describe_instance_status(
@@ -134,15 +137,11 @@ def find_instances(profile, search_code):
                     iid = s["InstanceId"]
                     sys_status = s.get("SystemStatus", {}).get("Status", "N/A")
                     inst_status = s.get("InstanceStatus", {}).get("Status", "N/A")
-                    # Count passed checks
                     sys_details = s.get("SystemStatus", {}).get("Details", [])
                     inst_details = s.get("InstanceStatus", {}).get("Details", [])
                     passed = sum(1 for d in sys_details + inst_details if d.get("Status") == "passed")
                     total = len(sys_details) + len(inst_details)
-                    if total > 0:
-                        health = f"{passed}/{total} ({sys_status}/{inst_status})"
-                    else:
-                        health = f"{sys_status}/{inst_status}"
+                    health = f"{passed}/{total} ({sys_status}/{inst_status})" if total > 0 else f"{sys_status}/{inst_status}"
                     if iid in instances_map:
                         instances_map[iid]["HealthChecks"] = health
             except Exception as e:
@@ -163,7 +162,6 @@ def display_instances(instances):
 
 
 def reboot_instance(profile, instance_id, region):
-    """Reboot an EC2 instance via EC2 API (not SSM)."""
     session = boto3.Session(profile_name=profile, region_name=region)
     ec2 = session.client("ec2")
     print(f"  Rebooting {instance_id}...", end=" ")
@@ -172,11 +170,9 @@ def reboot_instance(profile, instance_id, region):
 
 
 def wait_for_online(profile, instance_id, region, ip, timeout=300):
-    """Wait for instance to pass status checks and respond to ping."""
     session = boto3.Session(profile_name=profile, region_name=region)
     ec2 = session.client("ec2")
 
-    # Ping loop
     if ip and ip != "N/A":
         print(f"  Pinging {ip}...", end="", flush=True)
         start = time.time()
@@ -194,13 +190,11 @@ def wait_for_online(profile, instance_id, region, ip, timeout=300):
                 print(f" ONLINE!")
                 break
             else:
-                # Still up, hasn't gone down yet from reboot
                 print(".", end="", flush=True)
                 time.sleep(3)
         else:
             print(f" TIMEOUT after {timeout}s")
 
-    # Wait for status checks to pass
     print(f"  Waiting for health checks on {instance_id}...", end="", flush=True)
     start = time.time()
     while time.time() - start < timeout:
@@ -225,7 +219,6 @@ def wait_for_online(profile, instance_id, region, ip, timeout=300):
 
 
 def show_final_status(profile, instance_ids, region):
-    """Show final status of rebooted instances."""
     session = boto3.Session(profile_name=profile, region_name=region)
     ec2 = session.client("ec2")
     resp = ec2.describe_instance_status(
@@ -256,14 +249,13 @@ def main():
     if not sso_login(profile):
         sys.exit(1)
 
-    # Main search loop
     while True:
         search_code = input("\nEnter client code or server name (e.g. REDB or REDB-PTRKWB001): ").strip()
         if not search_code:
             print("Search code required.")
             continue
 
-        print(f"\nSearching for '{search_code}'...")
+        print(f"\nSearching for '{search_code}' (case-insensitive)...")
         instances = find_instances(profile, search_code)
 
         if not instances:
@@ -297,7 +289,7 @@ def main():
 
         print("\nSelected:")
         for s in selected:
-            print(f"  {s['Name']} ({s['InstanceId']}) — {s['State']} — {s['Region']}")
+            print(f"  {s['Name']} ({s['InstanceId']}) \u2014 {s['State']} \u2014 {s['Region']}")
 
         confirm = input("\nReboot selected server(s)? (Y/N): ").strip().lower()
         if confirm != "y":
@@ -314,7 +306,6 @@ def main():
             for region, ids in by_region.items():
                 show_final_status(profile, ids, region)
 
-        # After reboot or skip, ask what next
         choice = input("\n[S] Search again in same OU  |  [D] Different OU  |  [C] Cancel: ").strip().lower()
         if choice == "s":
             continue
