@@ -6,7 +6,7 @@ Built for responding to LogicMonitor alerts.
 ## Usage
 
 ```
-cd C:\Users\sunil.kanakappagari\cloudops\Foundation\Service-Restart
+cd C:\Users\sunil.kanakappagari\Foundation\Service-Restart
 python restart_services.py
 ```
 
@@ -25,11 +25,16 @@ python restart_services.py
 
 ## Supported OUs
 
-| Profile | Account ID |
-|---------|-----------|
-| PALegacySharedServices | 361362055558 |
-| PALegacyCommDev | 852998999214 |
-| PALegacyCzp | 797320052894 |
-| PALegacyAnalytics | 179934977755 |
+The GUI dropdown automatically loads **all** profiles from `~/.aws/config` that use `sso_session = foundation`. Currently that includes **80+ accounts**:
 
-Add more by appending profiles to `~/.aws/config` with `sso_session = foundation`.
+- All `PALegacyFinEnt*` accounts (77)
+- `PALegacySharedServices`
+- `PALegacyCommDev`
+- `PALegacyCzp`
+- `PALegacyAnalytics`
+- `Shared`
+- And any future profiles you add
+
+To add more, either:
+- Manually append a profile to `~/.aws/config` with `sso_session = foundation`
+- Or run `python fetch_foundation_ous.py --pattern "YourPattern*"` to auto-generate the config block
