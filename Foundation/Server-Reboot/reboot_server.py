@@ -110,7 +110,8 @@ def find_instances(profile, search_code):
 
         instance_ids = []
         instances_map = {}
-        for page in pages:
+        pages_cache = list(pages)
+        for page in pages_cache:
             for res in page["Reservations"]:
                 for inst in res["Instances"]:
                     name = next((t["Value"] for t in inst.get("Tags", []) if t["Key"] == "Name"), "")
@@ -127,21 +128,50 @@ def find_instances(profile, search_code):
                     }
                     instance_ids.append(iid)
 
-        # Fetch status checks
+        # Fetch status checks (system + instance + EBS)
         if instance_ids:
             try:
                 status_resp = ec2.describe_instance_status(
                     InstanceIds=instance_ids, IncludeAllInstances=True
                 )
+                # Build EBS volume map for attached volumes
+                vol_map = {}  # instance_id -> [volume_ids]
+                for iid in instance_ids:
+                    vols = instances_map[iid].get("_volumes", [])
+                    vol_map[iid] = vols
+
+                # Get EBS volume statuses
+                all_vol_ids = []
+                for res in pages_cache:
+                    for r in res["Reservations"]:
+                        for inst in r["Instances"]:
+                            iid = inst["InstanceId"]
+                            if iid in instances_map:
+                                vids = [b["Ebs"]["VolumeId"] for b in inst.get("BlockDeviceMappings", []) if "Ebs" in b]
+                                vol_map[iid] = vids
+                                all_vol_ids.extend(vids)
+
+                ebs_status = {}  # volume_id -> status
+                if all_vol_ids:
+                    try:
+                        vol_resp = ec2.describe_volume_status(VolumeIds=all_vol_ids)
+                        for vs in vol_resp.get("VolumeStatuses", []):
+                            ebs_status[vs["VolumeId"]] = vs.get("VolumeStatus", {}).get("Status", "N/A")
+                    except Exception:
+                        pass
+
                 for s in status_resp.get("InstanceStatuses", []):
                     iid = s["InstanceId"]
-                    sys_status = s.get("SystemStatus", {}).get("Status", "N/A")
-                    inst_status = s.get("InstanceStatus", {}).get("Status", "N/A")
-                    sys_details = s.get("SystemStatus", {}).get("Details", [])
-                    inst_details = s.get("InstanceStatus", {}).get("Details", [])
-                    passed = sum(1 for d in sys_details + inst_details if d.get("Status") == "passed")
-                    total = len(sys_details) + len(inst_details)
-                    health = f"{passed}/{total} ({sys_status}/{inst_status})" if total > 0 else f"{sys_status}/{inst_status}"
+                    sys_st = s.get("SystemStatus", {}).get("Status", "N/A")
+                    inst_st = s.get("InstanceStatus", {}).get("Status", "N/A")
+
+                    # EBS check for this instance
+                    vols = vol_map.get(iid, [])
+                    ebs_ok = all(ebs_status.get(v) == "ok" for v in vols) if vols else None
+                    ebs_st = "ok" if ebs_ok else ("impaired" if ebs_ok is False else "N/A")
+
+                    passed = sum(1 for st in [sys_st, inst_st, ebs_st] if st == "ok")
+                    health = f"{passed}/3 (sys:{sys_st} inst:{inst_st} ebs:{ebs_st})"
                     if iid in instances_map:
                         instances_map[iid]["HealthChecks"] = health
             except Exception as e:
@@ -224,12 +254,33 @@ def show_final_status(profile, instance_ids, region):
     resp = ec2.describe_instance_status(
         InstanceIds=instance_ids, IncludeAllInstances=True
     )
-    print(f"\n{'Instance ID':<22} {'System Status':<15} {'Instance Status'}")
+    # Get EBS statuses
+    inst_resp = ec2.describe_instances(InstanceIds=instance_ids)
+    vol_map = {}
+    for res in inst_resp["Reservations"]:
+        for inst in res["Instances"]:
+            vids = [b["Ebs"]["VolumeId"] for b in inst.get("BlockDeviceMappings", []) if "Ebs" in b]
+            vol_map[inst["InstanceId"]] = vids
+    all_vols = [v for vids in vol_map.values() for v in vids]
+    ebs_status = {}
+    if all_vols:
+        try:
+            vr = ec2.describe_volume_status(VolumeIds=all_vols)
+            for vs in vr.get("VolumeStatuses", []):
+                ebs_status[vs["VolumeId"]] = vs.get("VolumeStatus", {}).get("Status", "N/A")
+        except Exception:
+            pass
+
+    print(f"\n{'Instance ID':<22} {'System':<12} {'Instance':<12} {'EBS'}")
     print("-" * 55)
     for s in resp.get("InstanceStatuses", []):
+        iid = s["InstanceId"]
         sys_s = s.get("SystemStatus", {}).get("Status", "N/A")
         inst_s = s.get("InstanceStatus", {}).get("Status", "N/A")
-        print(f"{s['InstanceId']:<22} {sys_s:<15} {inst_s}")
+        vols = vol_map.get(iid, [])
+        ebs_ok = all(ebs_status.get(v) == "ok" for v in vols) if vols else None
+        ebs_s = "ok" if ebs_ok else ("impaired" if ebs_ok is False else "N/A")
+        print(f"{iid:<22} {sys_s:<12} {inst_s:<12} {ebs_s}")
 
 
 def main():
