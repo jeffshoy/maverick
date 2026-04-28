@@ -83,16 +83,16 @@ Write-Output "USAGE|$DriveLetter|$used|$free|$total"
 # =============================================================================
 def lm_request(method, resource_path, params=None):
     """Make an authenticated LMv1 API request."""
+    import base64
     url = f"https://{LM_PORTAL}/santaba/rest{resource_path}"
     epoch = str(int(time.time() * 1000))
     request_vars = method.upper() + epoch + resource_path
-    signature = hmac.new(
+    sig_hash = hmac.new(
         LM_ACCESS_KEY.encode("utf-8"),
-        request_vars.encode("utf-8"),
-        hashlib.sha256
-    ).hexdigest()
-    import base64
-    sig_b64 = base64.b64encode(signature.encode("utf-8")).decode("utf-8")
+        msg=request_vars.encode("utf-8"),
+        digestmod=hashlib.sha256
+    ).digest()
+    sig_b64 = base64.b64encode(sig_hash).decode("utf-8")
     auth = f"LMv1 {LM_ACCESS_ID}:{sig_b64}:{epoch}"
     headers = {"Authorization": auth, "Content-Type": "application/json", "X-Version": "3"}
     resp = requests.get(url, headers=headers, params=params or {}, timeout=30, verify=False)
