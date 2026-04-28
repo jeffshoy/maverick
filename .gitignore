@@ -1,1 +1,5 @@
 mgmt-microsoft/changedns-ms_*.log
+
+# LM credentials
+.env
+*.env
