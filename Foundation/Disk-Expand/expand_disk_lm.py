@@ -22,6 +22,8 @@ import tkinter as tk
 try:
     import requests
     from dotenv import load_dotenv
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     print("Missing dependencies. Run: pip install requests python-dotenv")
     sys.exit(1)
@@ -93,7 +95,7 @@ def lm_request(method, resource_path, params=None):
     sig_b64 = base64.b64encode(signature.encode("utf-8")).decode("utf-8")
     auth = f"LMv1 {LM_ACCESS_ID}:{sig_b64}:{epoch}"
     headers = {"Authorization": auth, "Content-Type": "application/json", "X-Version": "3"}
-    resp = requests.get(url, headers=headers, params=params or {}, timeout=30)
+    resp = requests.get(url, headers=headers, params=params or {}, timeout=30, verify=False)
     resp.raise_for_status()
     return resp.json()
 
