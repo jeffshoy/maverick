@@ -240,7 +240,6 @@ def show_final_status(profile, instance_ids, region):
 
 
 def main():
-    # 1. GUI OU picker
     print("Loading Foundation OU profiles...")
     profiles = load_foundation_profiles()
     if not profiles:
@@ -254,62 +253,83 @@ def main():
         sys.exit(0)
     print(f"\nSelected OU: {profile}")
 
-    # 2. SSO login
     if not sso_login(profile):
         sys.exit(1)
 
-    # 3. Client/server code
-    search_code = input("\nEnter client code or server name (e.g. REDB or REDB-PTRKWB001): ").strip()
-    if not search_code:
-        print("Search code required.")
-        sys.exit(1)
+    # Main search loop
+    while True:
+        search_code = input("\nEnter client code or server name (e.g. REDB or REDB-PTRKWB001): ").strip()
+        if not search_code:
+            print("Search code required.")
+            continue
 
-    # 4. Find instances
-    print(f"\nSearching for '{search_code}'...")
-    instances = find_instances(profile, search_code)
+        print(f"\nSearching for '{search_code}'...")
+        instances = find_instances(profile, search_code)
 
-    if not instances:
-        print("\nNo instances found.")
-        sys.exit(0)
+        if not instances:
+            print("\nNo instances found.")
+            choice = input("\n[S] Search again in same OU  |  [D] Different OU  |  [C] Cancel: ").strip().lower()
+            if choice == "s":
+                continue
+            elif choice == "d":
+                print("\nOpening OU selector...")
+                profile = pick_profile_gui(profiles)
+                if not profile:
+                    print("No profile selected. Exiting.")
+                    sys.exit(0)
+                print(f"\nSelected OU: {profile}")
+                if not sso_login(profile):
+                    sys.exit(1)
+                continue
+            else:
+                print("Exiting.")
+                sys.exit(0)
 
-    display_instances(instances)
+        display_instances(instances)
 
-    # 5. Select
-    sel = input("\nSelect server(s) by number (comma-separated, e.g. 1,2): ").strip()
-    indices = [int(x.strip()) - 1 for x in sel.split(",") if x.strip().isdigit()]
-    selected = [instances[i] for i in indices if 0 <= i < len(instances)]
+        sel = input("\nSelect server(s) by number (comma-separated, e.g. 1,2): ").strip()
+        indices = [int(x.strip()) - 1 for x in sel.split(",") if x.strip().isdigit()]
+        selected = [instances[i] for i in indices if 0 <= i < len(instances)]
 
-    if not selected:
-        print("No valid selection.")
-        sys.exit(1)
+        if not selected:
+            print("No valid selection.")
+            continue
 
-    print("\nSelected:")
-    for s in selected:
-        print(f"  {s['Name']} ({s['InstanceId']}) — {s['State']} — {s['Region']}")
+        print("\nSelected:")
+        for s in selected:
+            print(f"  {s['Name']} ({s['InstanceId']}) — {s['State']} — {s['Region']}")
 
-    # 6. Confirm reboot
-    confirm = input("\nReboot selected server(s)? (Y/N): ").strip().lower()
-    if confirm != "y":
-        print("Cancelled.")
-        sys.exit(0)
+        confirm = input("\nReboot selected server(s)? (Y/N): ").strip().lower()
+        if confirm != "y":
+            print("Skipped.")
+        else:
+            for inst in selected:
+                reboot_instance(profile, inst["InstanceId"], inst["Region"])
+                wait_for_online(profile, inst["InstanceId"], inst["Region"], inst["PrivateIp"])
 
-    # 7. Reboot and wait
-    for inst in selected:
-        iid = inst["InstanceId"]
-        region = inst["Region"]
-        ip = inst["PrivateIp"]
+            by_region = {}
+            for s in selected:
+                by_region.setdefault(s["Region"], []).append(s["InstanceId"])
+            print("\n=== Final Status ===")
+            for region, ids in by_region.items():
+                show_final_status(profile, ids, region)
 
-        reboot_instance(profile, iid, region)
-        wait_for_online(profile, iid, region, ip)
-
-    # 8. Final status
-    by_region = {}
-    for s in selected:
-        by_region.setdefault(s["Region"], []).append(s["InstanceId"])
-
-    print("\n=== Final Status ===")
-    for region, ids in by_region.items():
-        show_final_status(profile, ids, region)
+        # After reboot or skip, ask what next
+        choice = input("\n[S] Search again in same OU  |  [D] Different OU  |  [C] Cancel: ").strip().lower()
+        if choice == "s":
+            continue
+        elif choice == "d":
+            print("\nOpening OU selector...")
+            profile = pick_profile_gui(profiles)
+            if not profile:
+                print("No profile selected. Exiting.")
+                sys.exit(0)
+            print(f"\nSelected OU: {profile}")
+            if not sso_login(profile):
+                sys.exit(1)
+            continue
+        else:
+            break
 
     print("\n=== Done ===")
 
