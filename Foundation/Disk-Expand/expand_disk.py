@@ -161,15 +161,34 @@ def display_instances(instances):
         print(f"{i:<4} {inst['Name']:<30} {inst['InstanceId']:<22} {inst['State']:<10} {inst['PrivateIp']:<16} {inst['Region']}")
 
 
+def check_ssm_available(profile, region, instance_id):
+    """Check if SSM agent is online on the instance."""
+    session = boto3.Session(profile_name=profile, region_name=region)
+    ssm = session.client("ssm")
+    try:
+        resp = ssm.describe_instance_information(
+            Filters=[{"Key": "InstanceIds", "Values": [instance_id]}]
+        )
+        info = resp.get("InstanceInformationList", [])
+        return bool(info and info[0].get("PingStatus") == "Online")
+    except Exception:
+        return False
+
+
 def run_ssm_command(profile, region, instance_id, script, timeout=60):
     session = boto3.Session(profile_name=profile, region_name=region)
     ssm = session.client("ssm")
-    resp = ssm.send_command(
-        InstanceIds=[instance_id],
-        DocumentName="AWS-RunPowerShellScript",
-        Parameters={"commands": [script]},
-        TimeoutSeconds=timeout,
-    )
+    try:
+        resp = ssm.send_command(
+            InstanceIds=[instance_id],
+            DocumentName="AWS-RunPowerShellScript",
+            Parameters={"commands": [script]},
+            TimeoutSeconds=timeout,
+        )
+    except ssm.exceptions.InvalidInstanceId:
+        return "", "SSM_NOT_AVAILABLE"
+    except Exception as e:
+        return "", f"ERROR: {e}"
     cmd_id = resp["Command"]["CommandId"]
     for _ in range(30):
         time.sleep(2)
@@ -378,7 +397,29 @@ def main():
         region = server["Region"]
         print(f"\nSelected: {server['Name']} ({iid}) - {region}")
 
-        # 2. Get EBS volumes + OS drives
+        # 2. Check SSM availability
+        print("\nChecking SSM connectivity...", end=" ")
+        if not check_ssm_available(profile, region, iid):
+            print("OFFLINE")
+            print("  SSM agent is not available on this instance.")
+            print("  Ensure the instance has an IAM role with AmazonSSMManagedInstanceCore policy")
+            print("  and the SSM agent is installed and running.")
+            choice = input("\n[S] Search again  |  [D] Different OU  |  [C] Cancel: ").strip().lower()
+            if choice == "s":
+                continue
+            elif choice == "d":
+                profile = pick_profile_gui(profiles)
+                if not profile:
+                    sys.exit(0)
+                print(f"\nSelected OU: {profile}")
+                if not sso_login(profile):
+                    sys.exit(1)
+                continue
+            else:
+                sys.exit(0)
+        print("CONNECTED")
+
+        # 3. Get EBS volumes + OS drives
         print("\nFetching disk information...")
         ebs_volumes = get_ebs_volumes(profile, region, iid)
         os_drives = get_os_drives(profile, region, iid)
