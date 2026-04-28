@@ -1,43 +1,25 @@
 """
 Foundation Disk Expand (LogicMonitor Integration)
-Pulls disk alerts from LM, compares historical vs current usage, generates RFC summary,
+Parses LM disk alert details, compares historical vs current usage, generates RFC summary,
 and expands EBS + OS partition on confirmation.
 
 Usage:  python expand_disk_lm.py
-Requires: pip install boto3 requests python-dotenv
+Requires: pip install boto3
 """
 
 import boto3
 import configparser
-import hashlib
-import hmac
-import json
 import math
 import os
+import re
 import subprocess
 import sys
 import time
 import tkinter as tk
 
-try:
-    import requests
-    from dotenv import load_dotenv
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-except ImportError:
-    print("Missing dependencies. Run: pip install requests python-dotenv")
-    sys.exit(1)
-
-# Load .env from script directory
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
-
-LM_PORTAL = os.getenv("LM_PORTAL", "superion.logicmonitor.com")
-LM_ACCESS_ID = os.getenv("LM_ACCESS_ID", "")
-LM_ACCESS_KEY = os.getenv("LM_ACCESS_KEY", "")
 SSO_SESSION = "foundation"
 REGIONS = ["us-east-1", "us-west-2"]
 
-# SSM scripts
 EXPAND_PARTITION_SCRIPT = r'''
 $DriveLetter = '{drive_letter}'
 $DiskNumber = (Get-Partition -DriveLetter $DriveLetter).DiskNumber
@@ -79,99 +61,106 @@ Write-Output "USAGE|$DriveLetter|$used|$free|$total"
 
 
 # =============================================================================
-# LogicMonitor API
+# Alert Parsing
 # =============================================================================
-def lm_request(method, resource_path, params=None):
-    """Make an authenticated LMv1 API request."""
-    import base64
-    url = f"https://{LM_PORTAL}/santaba/rest{resource_path}"
-    epoch = str(int(time.time() * 1000))
-    request_vars = method.upper() + epoch + resource_path
-    sig_hash = hmac.new(
-        LM_ACCESS_KEY.encode("utf-8"),
-        msg=request_vars.encode("utf-8"),
-        digestmod=hashlib.sha256
-    ).digest()
-    sig_b64 = base64.b64encode(sig_hash).decode("utf-8")
-    auth = f"LMv1 {LM_ACCESS_ID}:{sig_b64}:{epoch}"
-    headers = {"Authorization": auth, "Content-Type": "application/json", "X-Version": "3"}
-    resp = requests.get(url, headers=headers, params=params or {}, timeout=30, verify=False)
-    resp.raise_for_status()
-    return resp.json()
+def parse_alert_input():
+    """Parse alert details from user input — supports pasted LM alert text."""
+    print("\n=== LogicMonitor Alert Details ===")
+    print("Paste the alert info below (from LM email, Teams, or the alert page).")
+    print("You can paste the full block or just answer the prompts.\n")
 
+    # Try to get host from pasted text or manual input
+    print("Enter the Host/Server name from the alert")
+    print("  (e.g. REDB-PTRKWB001.aspgov.pri or just REDB-PTRKWB001)")
+    host = input("> ").strip()
 
-def fetch_disk_alerts(limit=20):
-    """Fetch recent disk-related alerts from LogicMonitor."""
-    params = {
-        "size": limit,
-        "sort": "-startEpoch",
-        "filter": "dataPointName~\"Capacity\"|dataPointName~\"PercentUsed\"|dataPointName~\"FreeSpace\"|dataPointName~\"UsedSpace\"|dataPointName~\"percentUsed\"|datasourceName~\"Volume\"",
+    # Extract server name (strip domain)
+    server_name = host.split(".")[0] if host else None
+
+    # Get drive letter from datasource or manual
+    print("\nEnter the Drive letter from the alert")
+    print("  (e.g. C or E — look at the Datasource name like 'WinVolumeUsage-C:')")
+    drive_letter = input("> ").strip().upper().replace(":", "")
+
+    # Get datacenter
+    print("\nEnter Datacenter")
+    print("  (e.g. Vegas or Voorhees — check the Group field in the alert)")
+    datacenter = input("> ").strip()
+    if not datacenter:
+        datacenter = "Vegas"
+
+    # Get threshold/value info
+    print("\nEnter the alert threshold or current usage % (optional, press Enter to skip)")
+    threshold = input("> ").strip()
+
+    return {
+        "server_name": server_name,
+        "host_fqdn": host,
+        "drive_letter": drive_letter,
+        "datacenter": datacenter,
+        "threshold": threshold,
     }
-    data = lm_request("GET", "/alert/alerts", params)
-    alerts = data.get("data", {}).get("items", [])
-    return alerts
 
 
-def fetch_device_data(device_id, datasource_filter="Volume"):
-    """Fetch datasource instances for a device to get disk usage data."""
-    params = {"size": 100, "filter": f"dataSourceDisplayName~\"{datasource_filter}\""}
-    data = lm_request("GET", f"/device/devices/{device_id}/devicedatasources", params)
-    return data.get("data", {}).get("items", [])
+def parse_pasted_block():
+    """Alternative: parse a full pasted alert block."""
+    print("\n=== Paste Full Alert Block ===")
+    print("Paste the alert details and press Enter twice when done:\n")
 
+    lines = []
+    empty_count = 0
+    while True:
+        line = input()
+        if line.strip() == "":
+            empty_count += 1
+            if empty_count >= 2:
+                break
+        else:
+            empty_count = 0
+            lines.append(line)
 
-def fetch_instance_data(device_id, ds_id):
-    """Fetch instances for a device datasource."""
-    data = lm_request("GET", f"/device/devices/{device_id}/devicedatasources/{ds_id}/instances")
-    return data.get("data", {}).get("items", [])
+    text = "\n".join(lines)
+    result = {
+        "server_name": None,
+        "host_fqdn": None,
+        "drive_letter": None,
+        "datacenter": None,
+        "threshold": None,
+    }
 
+    # Parse Host
+    host_match = re.search(r"Host[:\s]+(\S+)", text, re.IGNORECASE)
+    if host_match:
+        result["host_fqdn"] = host_match.group(1)
+        result["server_name"] = host_match.group(1).split(".")[0]
 
-def fetch_graph_data(device_id, ds_id, instance_id, datapoint="PercentUsed", period="-365d"):
-    """Fetch historical data for a datapoint."""
-    end_time = int(time.time())
-    start_time = end_time - (365 * 24 * 3600)  # 1 year ago
-    params = {"start": start_time, "end": end_time, "datapoints": datapoint}
-    try:
-        data = lm_request("GET", f"/device/devices/{device_id}/devicedatasources/{ds_id}/instances/{instance_id}/data", params)
-        return data.get("data", {})
-    except Exception:
-        return {}
+    # Parse drive letter from datasource
+    ds_match = re.search(r"(?:Datasource|DataSource)[:\s]+(.*)", text, re.IGNORECASE)
+    if ds_match:
+        ds_text = ds_match.group(1)
+        drive_match = re.search(r"([A-Z])[\:\\]", ds_text, re.IGNORECASE)
+        if drive_match:
+            result["drive_letter"] = drive_match.group(1).upper()
 
+    # Parse datacenter from Group
+    group_match = re.search(r"Group[:\s]+(.*)", text, re.IGNORECASE)
+    if group_match:
+        group_text = group_match.group(1)
+        if "vegas" in group_text.lower():
+            result["datacenter"] = "Vegas"
+        elif "voorhees" in group_text.lower():
+            result["datacenter"] = "Voorhees"
 
-def display_alerts(alerts):
-    print(f"\n{'#':<4} {'Server':<35} {'Datasource':<35} {'Datapoint':<20} {'Value':<10} {'Started'}")
-    print("-" * 130)
-    for i, a in enumerate(alerts, 1):
-        host = a.get("monitorObjectName", "N/A")
-        ds = a.get("resourceTemplateName", a.get("datasourceName", "N/A"))
-        dp = a.get("dataPointName", "N/A")
-        val = a.get("alertValue", "N/A")
-        start = time.strftime("%Y-%m-%d %H:%M", time.localtime(a.get("startEpoch", 0)))
-        print(f"{i:<4} {host:<35} {ds:<35} {dp:<20} {val:<10} {start}")
+    # Parse threshold/value
+    val_match = re.search(r"Value[:\s]+(\S+)", text, re.IGNORECASE)
+    if val_match:
+        result["threshold"] = val_match.group(1)
 
-
-def parse_drive_from_alert(alert):
-    """Try to extract drive letter from alert datasource/instance name."""
-    instance_name = alert.get("instanceName", "")
-    # Common patterns: "C:\", "WinVolumeUsage-C:", "Volume-C"
-    for char in instance_name:
-        if char.isalpha() and char.upper() in "CDEFGHIJKLMNOPQRSTUVWXYZ":
-            return char.upper()
-    ds_name = alert.get("resourceTemplateName", "") + alert.get("datasourceName", "")
-    for part in ds_name.replace("-", " ").replace("_", " ").split():
-        if len(part) == 1 and part.upper() in "CDEFGHIJKLMNOPQRSTUVWXYZ":
-            return part.upper()
-    return None
-
-
-def parse_server_from_alert(alert):
-    """Extract server hostname from alert."""
-    host = alert.get("monitorObjectName", "")
-    # Strip domain suffix if present
-    return host.split(".")[0] if host else None
+    return result
 
 
 # =============================================================================
-# AWS / SSM helpers (same as expand_disk.py)
+# AWS / SSM helpers
 # =============================================================================
 def load_foundation_profiles():
     config = configparser.ConfigParser()
@@ -298,7 +287,6 @@ def run_ssm_command(profile, region, instance_id, script, timeout=60):
 
 
 def get_current_disk_usage(profile, region, instance_id, drive_letter):
-    """Get current disk usage from the server via SSM."""
     script = GET_DISK_USAGE_SCRIPT.format(drive_letter=drive_letter)
     stdout, status = run_ssm_command(profile, region, instance_id, script)
     if status == "Success":
@@ -339,7 +327,6 @@ def get_ebs_volumes(profile, region, instance_id):
 
 
 def find_ebs_for_drive(drive_letter, os_drives, ebs_volumes):
-    """Match a drive letter to its EBS volume."""
     for d in os_drives:
         if d["DriveLetter"] == drive_letter and d["VolumeId"]:
             for v in ebs_volumes:
@@ -387,20 +374,17 @@ def expand_os_partition(profile, region, instance_id, drive_letter):
 
 
 def generate_rfc(server_name, drive_letter, datacenter, current_cap, current_used, old_used, final_size):
-    """Generate RFC summary matching the Disk Capacity Planner format."""
     growth = current_used - old_used
     growth_pct = (growth / old_used * 100) if old_used > 0 else 0
     thirty_pct = current_cap * 0.30
     increase = max(growth, thirty_pct)
     calculated_final = math.ceil((current_cap + increase) / 10) * 10
-
-    # Use the larger of calculated or user-specified
     if final_size < calculated_final:
         final_size = calculated_final
 
     rfc = f"""
 ================================================================================
-RFC SUMMARY — Disk Expansion
+RFC SUMMARY - Disk Expansion
 ================================================================================
 
 Datacenter: {datacenter}
@@ -427,65 +411,41 @@ Following the confluence page, we are increasing the storage based on the calcul
 # Main
 # =============================================================================
 def main():
-    if not LM_ACCESS_ID or not LM_ACCESS_KEY:
-        print("LM credentials not found. Set LM_ACCESS_ID and LM_ACCESS_KEY in .env file.")
-        print(f"Expected .env location: {os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')}")
-        sys.exit(1)
-
     profiles = load_foundation_profiles()
     if not profiles:
         print("No foundation profiles found in ~/.aws/config")
         sys.exit(1)
 
-    # 1. Fetch LM alerts
-    print("Fetching disk alerts from LogicMonitor...")
-    try:
-        alerts = fetch_disk_alerts()
-    except Exception as e:
-        print(f"Failed to fetch LM alerts: {e}")
-        print("\nFalling back to manual mode...")
-        alerts = []
+    # 1. Get alert details
+    print("How do you want to provide alert details?")
+    print("  [1] Enter details manually (Host, Drive, Datacenter)")
+    print("  [2] Paste full alert block from LM")
+    mode = input("\nSelect (1/2): ").strip()
 
-    if alerts:
-        display_alerts(alerts)
-        sel = input("\nSelect alert by number (or press Enter to enter details manually): ").strip()
-
-        if sel.isdigit() and 1 <= int(sel) <= len(alerts):
-            alert = alerts[int(sel) - 1]
-            server_name = parse_server_from_alert(alert)
-            drive_letter = parse_drive_from_alert(alert)
-            datacenter = "Vegas" if "Vegas" in alert.get("monitorObjectGroups", [{}])[0].get("name", "") else "Voorhees"
-
-            print(f"\nFrom alert:")
-            print(f"  Server: {server_name}")
-            print(f"  Drive: {drive_letter or '(could not detect)'}")
-            print(f"  Datacenter: {datacenter}")
-
-            if not drive_letter:
-                drive_letter = input("  Enter drive letter: ").strip().upper()
-            confirm = input("\nCorrect? (Y/N): ").strip().lower()
-            if confirm != "y":
-                server_name = input("Server name: ").strip()
-                drive_letter = input("Drive letter: ").strip().upper()
-                datacenter = input("Datacenter (Vegas/Voorhees): ").strip()
-        else:
-            server_name = None
+    if mode == "2":
+        alert = parse_pasted_block()
     else:
-        server_name = None
+        alert = parse_alert_input()
 
-    # Manual entry if no alert selected
+    server_name = alert["server_name"]
+    drive_letter = alert["drive_letter"]
+    datacenter = alert["datacenter"] or "Vegas"
+
     if not server_name:
-        server_name = input("\nEnter server name (e.g. REDB-PTRKWB001): ").strip()
-        drive_letter = input("Enter drive letter (e.g. C): ").strip().upper()
-        datacenter = input("Datacenter (Vegas/Voorhees): ").strip()
+        server_name = input("\nServer name: ").strip().split(".")[0]
+    if not drive_letter:
+        drive_letter = input("Drive letter: ").strip().upper()
+    if not datacenter:
+        datacenter = input("Datacenter (Vegas/Voorhees): ").strip() or "Vegas"
 
-    if not server_name or not drive_letter:
-        print("Server name and drive letter are required.")
-        sys.exit(1)
+    print(f"\n  Server: {server_name}")
+    print(f"  Drive: {drive_letter}")
+    print(f"  Datacenter: {datacenter}")
 
-    # 2. Ask for 1-year-ago usage (from LM or manual)
+    # 2. Historical usage
     print("\n--- Historical Data (1 year ago) ---")
-    old_used_input = input("Disk Used 1 year ago (GB) — check LM graphs or enter manually: ").strip()
+    print("Check LM graphs for this server's disk usage 1 year ago.")
+    old_used_input = input("Disk Used 1 year ago (GB): ").strip()
     old_used = float(old_used_input) if old_used_input else 0
 
     # 3. Select AWS OU and find instance
@@ -525,7 +485,7 @@ def main():
         sys.exit(1)
     print("CONNECTED")
 
-    # 5. Get current disk usage from server
+    # 5. Get current disk usage
     print(f"\nFetching current {drive_letter}:\\ usage from server...")
     usage = get_current_disk_usage(profile, region, iid, drive_letter)
     if not usage:
@@ -535,27 +495,17 @@ def main():
     current_cap = usage["Total"]
     current_used = usage["Used"]
     current_free = usage["Free"]
-
-    print(f"  Current: {current_used} GB used / {current_free} GB free / {current_cap} GB total")
+    print(f"  Used: {current_used} GB / Free: {current_free} GB / Total: {current_cap} GB")
 
     if old_used == 0:
-        old_used = current_used * 0.7  # Estimate if not provided
-        print(f"  (No historical data — estimating 1yr ago usage as {old_used:.1f} GB)")
+        old_used = round(current_used * 0.7, 2)
+        print(f"  (No historical data — estimating 1yr ago usage as {old_used} GB)")
 
     # 6. Generate RFC
-    rfc, final_size = generate_rfc(
-        server_name=server["Name"],
-        drive_letter=drive_letter,
-        datacenter=datacenter,
-        current_cap=current_cap,
-        current_used=current_used,
-        old_used=old_used,
-        final_size=0,
-    )
-
+    rfc, final_size = generate_rfc(server["Name"], drive_letter, datacenter, current_cap, current_used, old_used, 0)
     print(rfc)
 
-    # 7. Confirm and expand
+    # 7. Confirm size
     print(f"Proposed new size: {final_size} GB (current: {current_cap} GB)")
     override = input(f"Accept {final_size} GB or enter a different size (press Enter to accept): ").strip()
     if override.isdigit():
@@ -566,10 +516,10 @@ def main():
 
     confirm = input(f"\nProceed with expanding {drive_letter}:\\ to {final_size} GB? (Y/N): ").strip().lower()
     if confirm != "y":
-        print("Cancelled. RFC summary above can still be used.")
+        print("Cancelled. RFC summary above can still be used for your change request.")
         sys.exit(0)
 
-    # 8. Find EBS volume for this drive
+    # 8. Find EBS volume
     print("\nMapping drive to EBS volume...")
     os_drives = get_os_drives(profile, region, iid)
     ebs_volumes = get_ebs_volumes(profile, region, iid)
@@ -577,7 +527,6 @@ def main():
 
     if not ebs_vol:
         print(f"Could not find EBS volume for drive {drive_letter}:\\")
-        print("Available mappings:")
         for d in os_drives:
             print(f"  {d['DriveLetter']}:\\ -> {d['VolumeId']}")
         sys.exit(1)
