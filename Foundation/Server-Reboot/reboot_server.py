@@ -255,7 +255,7 @@ def main():
             print("Search code required.")
             continue
 
-        print(f"\nSearching for '{search_code}' (case-insensitive)...")
+        print(f"\nSearching for '{search_code}'...")
         instances = find_instances(profile, search_code)
 
         if not instances:
