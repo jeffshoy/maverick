@@ -44,6 +44,7 @@ Get-Partition | Where-Object { $_.DriveLetter -ne "`0" } | ForEach-Object {
     $volId = ""
     if ($serialRaw -match "^vol") {
         $volId = $serialRaw -replace "^vol", "vol-"
+        $volId = $volId -replace '[._].*$', ''
         $volId = $volId.Trim()
     }
     Write-Output "$letter|$diskNum|$sizeGB|$volId"
@@ -329,8 +330,9 @@ def get_ebs_volumes(profile, region, instance_id):
 def find_ebs_for_drive(drive_letter, os_drives, ebs_volumes):
     for d in os_drives:
         if d["DriveLetter"] == drive_letter and d["VolumeId"]:
+            clean_id = re.sub(r'[._].*$', '', d["VolumeId"]).strip() if d["VolumeId"] else ""
             for v in ebs_volumes:
-                if v["VolumeId"] == d["VolumeId"]:
+                if v["VolumeId"] == clean_id:
                     return v
     return None
 
@@ -506,18 +508,21 @@ def main():
     print(rfc)
 
     # 7. Confirm size
-    print(f"Proposed new size: {final_size} GB (current: {current_cap} GB)")
-    override = input(f"Accept {final_size} GB or enter a different size (press Enter to accept): ").strip()
-    if override.isdigit():
-        final_size = int(override)
-        if final_size <= current_cap:
-            print(f"Must be greater than {current_cap} GB.")
-            sys.exit(1)
-
-    confirm = input(f"\nProceed with expanding {drive_letter}:\\ to {final_size} GB? (Y/N): ").strip().lower()
-    if confirm != "y":
-        print("Cancelled. RFC summary above can still be used for your change request.")
-        sys.exit(0)
+    while True:
+        print(f"\nProposed new TOTAL size: {final_size} GB (current: {current_cap} GB)")
+        resp = input(f"Type 'yes' to proceed with {final_size} GB, or enter a different TOTAL size in GB (not extra space), or 'no' to cancel: ").strip().lower()
+        if resp == "no":
+            print("Cancelled. RFC summary above can still be used for your change request.")
+            sys.exit(0)
+        if resp == "yes":
+            break
+        if resp.isdigit() and int(resp) > current_cap:
+            final_size = int(resp)
+            continue
+        if resp.isdigit():
+            print(f"  Size must be greater than current size ({current_cap} GB). This is the TOTAL disk size, not extra space.")
+        else:
+            print("  Please type 'yes' to proceed, 'no' to cancel, or enter a valid TOTAL size in GB.")
 
     # 8. Find EBS volume
     print("\nMapping drive to EBS volume...")

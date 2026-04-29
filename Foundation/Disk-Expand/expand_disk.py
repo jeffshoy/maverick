@@ -10,6 +10,7 @@ import boto3
 import configparser
 import math
 import os
+import re
 import subprocess
 import sys
 import time
@@ -30,6 +31,7 @@ Get-Partition | Where-Object { $_.DriveLetter -ne "`0" } | ForEach-Object {
     $volId = ""
     if ($serialRaw -match "^vol") {
         $volId = $serialRaw -replace "^vol", "vol-"
+        $volId = $volId -replace '[._].*$', ''
         $volId = $volId.Trim()
     }
     Write-Output "$letter|$diskNum|$sizeGB|$volId"
@@ -251,11 +253,12 @@ def get_os_drives(profile, region, instance_id):
 
 def display_combined_drives(ebs_volumes, os_drives):
     """Display EBS volumes matched with OS drive letters."""
-    # Match EBS volumes to OS drives by volume ID
+    # Match EBS volumes to OS drives by volume ID (normalize to strip suffixes like _00000001)
     drive_map = {}
     for d in os_drives:
         if d["VolumeId"]:
-            drive_map[d["VolumeId"]] = d
+            clean_id = re.sub(r'[._].*$', '', d["VolumeId"]).strip()
+            drive_map[clean_id] = d
 
     print(f"\n{'#':<4} {'Drive':<8} {'EBS Volume ID':<24} {'Device':<15} {'EBS Size (GB)':<15} {'OS Size (GB)':<15} {'Type'}")
     print("-" * 100)
@@ -439,19 +442,28 @@ def main():
         current_size = drive["EBSSizeGB"]
         print(f"\nSelected: {drive['DriveLetter']}:\\ — Volume {drive['VolumeId']} — Current EBS size: {current_size} GB")
 
-        # 4. Ask for new size
+        # 4. Ask for new size and confirm
         while True:
-            new_size_input = input(f"\nEnter new total size in GB (must be > {current_size}): ").strip()
+            new_size_input = input(f"\nEnter new TOTAL size in GB (not extra space, must be > {current_size}): ").strip()
             if not new_size_input.isdigit():
-                print("Enter a number.")
+                print("  Please enter a valid number.")
                 continue
             new_size = int(new_size_input)
             if new_size <= current_size:
-                print(f"Must be greater than current size ({current_size} GB). Try again.")
+                print(f"  Must be greater than current size ({current_size} GB). This is the TOTAL disk size, not extra space.")
                 continue
             break
 
-        print(f"\nExpanding {drive['DriveLetter']}:\\ from {current_size} GB to {new_size} GB...")
+        while True:
+            resp = input(f"\nExpand {drive['DriveLetter']}:\\ from {current_size} GB to {new_size} GB TOTAL? Type 'yes' to proceed or 'no' to cancel: ").strip().lower()
+            if resp == "yes":
+                break
+            if resp == "no":
+                print("Cancelled.")
+                continue  # back to outer while loop
+            print("  Please type 'yes' to proceed or 'no' to cancel.")
+        if resp == "no":
+            continue
 
         # 5. Expand EBS volume
         success = expand_ebs_volume(profile, region, drive["VolumeId"], new_size)
@@ -482,15 +494,25 @@ def main():
             current_size = drive["EBSSizeGB"]
             print(f"\nSelected: {drive['DriveLetter']}:\\ — Volume {drive['VolumeId']} — Current EBS size: {current_size} GB")
             while True:
-                new_size_input = input(f"\nEnter new total size in GB (must be > {current_size}): ").strip()
+                new_size_input = input(f"\nEnter new TOTAL size in GB (not extra space, must be > {current_size}): ").strip()
                 if not new_size_input.isdigit():
-                    print("Enter a number.")
+                    print("  Please enter a valid number.")
                     continue
                 new_size = int(new_size_input)
                 if new_size <= current_size:
-                    print(f"Must be greater than current size ({current_size} GB). Try again.")
+                    print(f"  Must be greater than current size ({current_size} GB). This is the TOTAL disk size, not extra space.")
                     continue
                 break
+            while True:
+                resp = input(f"\nExpand {drive['DriveLetter']}:\\ from {current_size} GB to {new_size} GB TOTAL? Type 'yes' to proceed or 'no' to cancel: ").strip().lower()
+                if resp == "yes":
+                    break
+                if resp == "no":
+                    print("Cancelled.")
+                    break
+                print("  Please type 'yes' to proceed or 'no' to cancel.")
+            if resp != "yes":
+                continue
             expand_ebs_volume(profile, region, drive["VolumeId"], new_size)
             expand_os_partition(profile, region, iid, drive["DriveLetter"])
             print("\n=== Disk expansion complete ===")
