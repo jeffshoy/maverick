@@ -18,7 +18,7 @@ SSO_SESSION = "foundation"
 REGIONS = ["us-east-1", "us-west-2"]
 
 FIND_SERVICES_SCRIPT = r'''
-$pattern = "{pattern}"
+$pattern = "*{pattern}*"
 $services = Get-Service | Where-Object {{ $_.DisplayName -like $pattern -or $_.ServiceName -like $pattern }}
 if ($services) {{
     $services | ForEach-Object {{
@@ -326,12 +326,14 @@ def main():
 
         # Service loop
         while True:
-            pattern = input("\nEnter service name wildcard (e.g. *Superion* or *Trakit*): ").strip()
+            pattern = input("\nEnter service name to search (e.g. Citrix, Superion, Trakit): ").strip()
             if not pattern:
-                print("Pattern required.")
+                print("Search term required.")
                 continue
 
-            print(f"Searching for services matching '{pattern}'...")
+            # Strip any user-added wildcards — script wraps with * automatically
+            pattern = pattern.strip("*")
+            print(f"Searching for services matching '*{pattern}*'...")
             services = find_services(profile, region, instance_id, pattern)
 
             if not services:
