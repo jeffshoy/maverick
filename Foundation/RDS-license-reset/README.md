@@ -9,14 +9,15 @@ Resets Terminal Server (RDS) grace licensing period to 120 days on remote EC2 in
 - **Python 3.8+** with `boto3` (`pip install boto3`)
 - **AWS CLI v2** installed
 - **SSM Agent** running on target EC2 instances
-- Your user must have the `cst-comm-cloudadmin` role in the `PALegacySharedServices` account (361362055558)
+- Your user must have the `cst-comm-cloudadmin` role in the target AWS account
 
 ---
 
 ## Setup (one-time)
 
-### 1. AWS Config — DONE
-The `PALegacySharedServices` profile has been added to `~/.aws/config`.
+### 1. AWS Config
+Ensure your `~/.aws/config` has Foundation OU profiles with `sso_session = foundation`.
+See `aws-configs/config_Foundation` for reference.
 
 ### 2. Install boto3
 ```
@@ -27,25 +28,7 @@ pip install boto3
 ```
 aws sso login --sso-session foundation
 ```
-Opens your browser → log in → authorize. The scripts auto-trigger this if the session expires.
-
-### 4. Create SSM Document in AWS (auto or manual)
-
-**Option A — Automatic:** Just run `python rds_license_reset.py`. It creates the document automatically in whichever region(s) you pick.
-
-**Option B — Manual:**
-```
-aws ssm create-document --name "Reset-RDSGracePeriod" --document-type "Command" --document-format "JSON" --content file://ssm-doc.json --profile PALegacySharedServices --region us-east-1
-
-aws ssm create-document --name "Reset-RDSGracePeriod" --document-type "Command" --document-format "JSON" --content file://ssm-doc.json --profile PALegacySharedServices --region us-west-2
-```
-
-### 5. Verify SSM Agent on target EC2s
-The TRKRD servers must have SSM Agent installed and an IAM instance profile with `AmazonSSMManagedInstanceCore` policy. Check:
-```
-aws ssm describe-instance-information --profile PALegacySharedServices --region us-east-1
-```
-If your TRKRD servers don't show up, SSM Agent isn't configured on them.
+Opens your browser → log in → authorize. The script auto-triggers this if the session expires.
 
 ---
 
@@ -53,17 +36,24 @@ If your TRKRD servers don't show up, SSM Agent isn't configured on them.
 
 ### Reset RDS License (main tool)
 ```
-cd C:\Users\sunil.kanakappagari\rds-license-reset
+cd C:\Users\sunil.kanakappagari\Foundation\RDS-license-reset
 python rds_license_reset.py
 ```
 
 Flow:
-1. Checks SSO → opens browser if expired
-2. Enter client code (e.g. `ARCT`)
-3. Pick region: `E` (us-east-1), `W` (us-west-2), or Enter (both)
-4. Shows matching EC2 instances (e.g. `ARCT-PTRKRD001`)
-5. Select by number (comma-separated: `1,2,3`)
-6. Runs the reset → force reboots → pings until online → verifies license
+1. GUI popup — searchable dropdown to pick the AWS OU (reads all `foundation` profiles from `~/.aws/config`)
+2. SSO login — opens browser if expired
+3. Enter client code (e.g. `ARCT`) or server name wildcard (e.g. `ARCT-PTRKRD` or just `TRKRD`)
+4. Pick region: `E` (us-east-1), `W` (us-west-2), or Enter (both)
+5. Shows matching EC2 instances
+6. Select by number (comma-separated: `1,2,3`)
+7. **Checks current grace period** on each selected instance:
+   - If grace period is **0** (expired) → auto-queued for reset
+   - If grace period is **> 0** → asks if you want to apply the reset (Y/N)
+   - If grace period **cannot be determined** → asks if you want to proceed anyway
+8. Final confirmation before executing
+9. Runs the reset → force reboots → pings until online → verifies license
+10. Option to search again, switch OU, or exit
 
 ### Connect to a Foundation server (SSM session)
 ```
@@ -76,21 +66,21 @@ Flow:
 
 ## Files
 
-| File | Where | Purpose |
-|------|-------|---------|
-| `~/.aws/config` | Already updated | Has `PALegacySharedServices` profile |
-| `rds_license_reset.py` | Run from your machine | Main CLI tool |
-| `connectto_foundation.ps1` | Run from your machine | SSM connect helper |
-| `ssm-doc.json` | Used once to create SSM doc | SSM document definition |
-| `Reset-RDSGracePeriod.ps1` | Reference only | Standalone PS1 (embedded in ssm-doc.json) |
-| `aws-configs/config_Foundation` | Reference only | All Foundation OU profiles for future use |
+| File | Purpose |
+|------|---------|
+| `rds_license_reset.py` | Main CLI tool — OU picker, wildcard search, grace check, reset |
+| `connectto_foundation.ps1` | SSM connect helper |
+| `ssm-doc.json` | SSM document definition (reference) |
+| `Reset-RDSGracePeriod.ps1` | Standalone PS1 (reference — embedded in ssm-doc.json) |
+| `aws-configs/config_Foundation` | All Foundation OU profiles for reference |
+| `requirements.txt` | Python dependencies |
 
 ---
 
 ## What gets created in AWS
 
-| Resource | Region(s) | Account | Description |
-|----------|-----------|---------|-------------|
-| SSM Document `Reset-RDSGracePeriod` | us-east-1 + us-west-2 | 361362055558 (PALegacySharedServices) | The PowerShell script that resets the registry key and reboots |
+| Resource | Region(s) | Description |
+|----------|-----------|-------------|
+| SSM Document `Reset-RDSGracePeriod` | us-east-1 + us-west-2 | PowerShell script that resets the registry key and reboots |
 
-That's it. No Lambda, no EC2, no IAM roles to create. Just one SSM document per region.
+The SSM document is auto-created in whichever region(s) you select when running the tool.

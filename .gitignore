@@ -3,3 +3,12 @@ mgmt-microsoft/changedns-ms_*.log
 # LM credentials
 .env
 *.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
