@@ -1,0 +1,46 @@
+[
+    {
+    "name": "iis01.corp.local",
+    "vendor": "IIS",
+    "connectionType": "REMOTE_WIN_RM",
+    "ip": "10.0.0.30",
+    "port": 5985,
+    "username": "svc-sectigo",
+    "password": "REPLACE_ME"
+  },
+    {
+    "name": "iis02.corp.local",
+    "vendor": "IIS",
+    "connectionType": "REMOTE_LEGACY_NATIVE_API",
+    "ip": "10.0.0.31",
+    "username": "svc-sectigo",
+    "password": "REPLACE_ME"
+  },
+  {
+  "name": "f5-lb01.example.com",
+  "vendor": "F5_BIG_IP",
+  "connectionType": "REMOTE_LEGACY_NATIVE_API",
+  "ip": "10.0.0.50",
+  "port": 443,
+  "username": "sectigo-api",
+  "password": "REPLACE_ME"
+},
+{
+  "name": "f5-lb02.example.com",
+  "vendor": "F5_BIG_IP",
+  "connectionType": "REMOTE_REST_API",
+  "ip": "10.0.0.51",
+  "port": 443,
+  "username": "sectigo-api",
+  "password": "REPLACE_ME"
+},
+{
+    "name": "web01.example.com",
+    "vendor": "APACHE_2",
+    "connectionType": "REMOTE_SSH",
+    "ip": "10.0.0.21",
+    "port": 22,
+    "username": "deploy",
+    "password": "REPLACE_ME"
+  }
+]
