@@ -50,6 +50,34 @@ Re-run this after pulling changes to the canonical file.
 
 ---
 
+## Using Kiro (IDE) Alongside Claude Code
+
+Management has standardized on **Kiro** as the team IDE. Kiro is a VS Code fork, which means the **Claude Code VS Code extension installs inside it** — same engine, same `CLAUDE.md`, no separate rule system to learn.
+
+**Team posture: Kiro is the IDE; Claude Code is the assistant; this file is the law.**
+
+### Setup in Kiro (after the symlink/copy setup above)
+
+1. Open Kiro → Extensions panel → search **"Claude Code"** → install.
+2. The extension reads `%USERPROFILE%\.claude\CLAUDE.md` automatically — the same symlink you already created. No extra config.
+3. Open the `cloudops` folder in Kiro and start a Claude Code session from the extension's sidebar.
+
+### When to reach for the CLI vs the Kiro IDE
+
+| Scenario | Preferred tool |
+|---|---|
+| Incident response, fleet ops, `! <cmd>` inline | CLI |
+| Scaffolding a new script with visual diff/approve | Kiro + extension |
+| Multi-step tool design (spec → code → review) | Claude Code Plan mode (CLI or IDE — pick one) |
+| Quick edits and one-off questions | Either |
+| Anything touching prod, AD, AWS, or Azure | Claude Code + **Plan mode required** |
+
+### Kiro-native features (Specs, Agent Steering, Hooks)
+
+Treat these as **opt-in extras** — useful if a teammate finds them genuinely valuable, but not team-mandatory. **Do not commit `.kiro/steering/`, `.kiro/specs/`, or `.kiro/hooks/` to the repo** — those paths are `.gitignore`d. Keep this file as the single source of truth; maintaining parallel Kiro steering that mirrors this file creates drift and extra maintenance.
+
+---
+
 ## AI Etiquette — How to Work with Claude
 
 These rules govern how Claude should behave on this team's work.

@@ -12,3 +12,8 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+
+# Kiro — user-specific config stays local, not in the repo
+.kiro/steering/
+.kiro/specs/
+.kiro/hooks/
