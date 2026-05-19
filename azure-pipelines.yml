@@ -32,11 +32,6 @@ stages:
             inputs:
               provider: azurerm
               command: init
-              backendServiceArm: "Azure-Service-Connection"
-              backendAzureRmResourceGroupName: $(TF_BACKEND_RG)
-              backendAzureRmStorageAccountName: $(TF_BACKEND_STORAGE)
-              backendAzureRmContainerName: tfstate
-              backendAzureRmKey: "$(TF_ENV).terraform.tfstate"
 
           - task: TerraformTaskV4@4
             displayName: "Terraform Validate"
@@ -74,11 +69,6 @@ stages:
                   inputs:
                     provider: azurerm
                     command: init
-                    backendServiceArm: "Azure-Service-Connection"
-                    backendAzureRmResourceGroupName: $(TF_BACKEND_RG)
-                    backendAzureRmStorageAccountName: $(TF_BACKEND_STORAGE)
-                    backendAzureRmContainerName: tfstate
-                    backendAzureRmKey: "$(TF_ENV).terraform.tfstate"
 
                 - task: TerraformTaskV4@4
                   displayName: "Terraform Apply"
