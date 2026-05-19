@@ -1,0 +1,19 @@
+resource_group_name = "rg-dev-windows-vm"
+location            = "East US"
+vm_name             = "vm-dev-win2022"
+vm_size             = "Standard_B2s"
+admin_username      = "azureadmin"
+admin_password      = ""  # Min 12 chars: uppercase, lowercase, number, special char
+
+storage_account_name        = ""  # Globally unique, lowercase alphanumeric, 3-24 chars
+alert_email                 = ""
+
+devops_org_url              = "https://dev.azure.com/YOUR_ORG_NAME"
+devops_pat                  = ""
+devops_project_name         = "azure-vm-infrastructure"
+devops_service_principal_id  = ""
+devops_service_principal_key = ""
+
+azure_subscription_id   = ""
+azure_subscription_name = ""
+azure_tenant_id         = ""

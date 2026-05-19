@@ -1,0 +1,9 @@
+# Copy this file to terraform.tfvars and fill in your values
+# terraform.tfvars is gitignored to protect sensitive data
+
+resource_group_name = "rg-windows-vm"
+location            = "East US"
+vm_name             = "vm-win2022"
+vm_size             = "Standard_B2s"
+admin_username      = "azureadmin"
+admin_password      = "REPLACE_WITH_SECURE_PASSWORD"  # Min 12 chars, must include uppercase, lowercase, number, and special char
