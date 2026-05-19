@@ -28,19 +28,39 @@ Re-run this after pulling changes to the canonical file.
 
 ---
 
-## Authoritative References
+## Onboarding — New Teammate Quick Start
 
-For in-repo work, these `.kiro/steering/` files are the **primary standards source** and supersede this file where they conflict. Read them before asking Claude to design or write automation:
+**Key built-in commands:**
+| Command | What it does |
+|---------|-------------|
+| `/help` | List available commands |
+| `/clear` | Reset the conversation context |
+| `/fast` | Toggle fast mode (Opus with faster output) |
+| `! <cmd>` | Run a shell command inline and put the output into the conversation |
 
-| File | Covers |
-|------|--------|
-| `.kiro/steering/sre-automation.md` | Core operating principles, safety, idempotency, observability |
-| `.kiro/steering/sre-security.md` | Security guardrails, secrets, least privilege, destructive ops |
-| `.kiro/steering/sre-tech.md` | Language standards, PowerShell style, error handling, cloud tooling |
-| `User_Management/Disable_users_4Domains.ps1` | Gold-standard PowerShell script to reference when writing new scripts |
-| `.kiro/templates/powershell-automation/` | Scaffolding template — use this when creating new scripts |
+**Plan mode:** Start a session with Plan mode on for any design-first or prod-touching work. Claude will research, draft a plan for your review, and only act after you approve.
 
-This file fills the gap for **cross-repo and ad-hoc work** where the steering files are not present.
+**Memory:** Claude builds a persistent memory index at `~/.claude/projects/.../memory/`. It loads automatically each session and grows over time with context about how you work. Review it periodically — sensitive context should not live there.
+
+**Skills:** The team can define reusable prompts as skills in `~/.claude/skills/`. Invoke them with `/<skill-name>`. If you find yourself typing the same prompt repeatedly (e.g., "scaffold a disable-user script for domain X"), promote it to a skill.
+
+**If Claude drifts:** Paste the relevant section of this file into the chat as a reminder, or file a PR to add a rule. The file is the source of truth.
+
+**If you find a mistake in this file:** Open a PR in the `cloudops` repo. One teammate review minimum before merge.
+
+---
+
+## AI Etiquette — How to Work with Claude
+
+These rules govern how Claude should behave on this team's work.
+
+- **Use Plan mode before writing any script that touches production, AD, AWS, or Azure resources.** Plan mode is invoked by starting a session with `/plan` or pressing the Plan toggle. Claude will design before acting. Quick README edits and local-only refactors do not require it.
+- **Ask before acting on anything irreversible:** user disables, object deletions, permission revocations, role changes, mass updates, or anything that would use `-Confirm:$false` or `-Force`. Surface the action explicitly and wait for approval.
+- **Interpret ambiguous requests as questions.** If the user asks "can you do X?", answer the question before doing anything. Don't assume "can you" means "please do."
+- **Surface assumptions before acting.** If a target account, region, AD domain, or environment is not specified, ASK. Do not guess or default silently.
+- **Scaffold new scripts to the standard.** Follow the PowerShell structure defined in the Platform Guidance section above — required header, `[CmdletBinding(SupportsShouldProcess)]`, strict mode, error action, comment-based help, and input validation.
+- **Treat unattended execution targets (pipelines, scheduled tasks, crons) with extra scrutiny.** The 3am test applies double. State blast radius and failure modes explicitly before generating.
+- **Automation that is functional but unsafe is incorrect.** Do not ship the first working version if it violates security or safety rules. Fix it first.
 
 ---
 
@@ -120,7 +140,6 @@ param(
 - MUST exit with non-zero codes on failure: `exit 1`.
 - MUST support non-interactive execution (no blocking `Read-Host` unless `-Interactive` is an explicit flag).
 - MUST validate inputs early — fail fast before touching any remote system.
-- Reference `User_Management/Disable_users_4Domains.ps1` as the gold-standard example when in the `cloudops` repo.
 
 ### AWS (EC2 and Adjacent Services)
 
@@ -157,46 +176,6 @@ Bash is acceptable **only** for Linux-only targets (e.g., `AWS-DX/`). It is not 
 - **PR descriptions:** MUST include a brief summary and a test plan. Operational scripts MUST flag blast radius (e.g., "affects all users in all four domains — dry-run output attached").
 - **Claude MUST NOT** run `git push`, create PRs, close PRs, or merge branches without an explicit instruction from the user **in the current turn**. A prior approval does not carry forward.
 - **NEVER use `--no-verify`** to skip hooks. NEVER amend a commit that has already been pushed. NEVER `--force` push without explicit user approval in the same turn.
-
----
-
-## AI Etiquette — How to Work with Claude
-
-These rules govern how Claude should behave on this team's work.
-
-- **Use Plan mode before writing any script that touches production, AD, AWS, or Azure resources.** Plan mode is invoked by starting a session with `/plan` or pressing the Plan toggle. Claude will design before acting. Quick README edits and local-only refactors do not require it.
-- **Ask before acting on anything irreversible:** user disables, object deletions, permission revocations, role changes, mass updates, or anything that would use `-Confirm:$false` or `-Force`. Surface the action explicitly and wait for approval.
-- **Interpret ambiguous requests as questions.** If the user asks "can you do X?", answer the question before doing anything. Don't assume "can you" means "please do."
-- **Surface assumptions before acting.** If a target account, region, AD domain, or environment is not specified, ASK. Do not guess or default silently.
-- **Scaffold new scripts from the template.** When in the `cloudops` repo, check `.kiro/templates/powershell-automation/` first.
-- **Treat unattended execution targets (pipelines, scheduled tasks, crons) with extra scrutiny.** The 3am test applies double. State blast radius and failure modes explicitly before generating.
-- **Automation that is functional but unsafe is incorrect.** Do not ship the first working version if it violates security or safety rules. Fix it first.
-
----
-
-## Onboarding — New Teammate Quick Start
-
-**Getting Claude Code:**
-- Install via `npm install -g @anthropic/claude-code` or download the desktop app.
-- Run `claude` in any terminal to start. Run `/help` for built-in commands.
-
-**Key built-in commands:**
-| Command | What it does |
-|---------|-------------|
-| `/help` | List available commands |
-| `/clear` | Reset the conversation context |
-| `/fast` | Toggle fast mode (Opus with faster output) |
-| `! <cmd>` | Run a shell command inline and put the output into the conversation |
-
-**Plan mode:** Start a session with Plan mode on for any design-first or prod-touching work. Claude will research, draft a plan for your review, and only act after you approve.
-
-**Memory:** Claude builds a persistent memory index at `~/.claude/projects/.../memory/`. It loads automatically each session and grows over time with context about how you work. Review it periodically — sensitive context should not live there.
-
-**Skills:** The team can define reusable prompts as skills in `~/.claude/skills/`. Invoke them with `/<skill-name>`. If you find yourself typing the same prompt repeatedly (e.g., "scaffold a disable-user script for domain X"), promote it to a skill.
-
-**If Claude drifts:** Paste the relevant section of this file into the chat as a reminder, or file a PR to add a rule. The file is the source of truth.
-
-**If you find a mistake in this file:** Open a PR in the `cloudops` repo. One teammate review minimum before merge.
 
 ---
 
