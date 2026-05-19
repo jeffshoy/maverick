@@ -6,7 +6,7 @@ terraform {
     }
     azuredevops = {
       source  = "microsoft/azuredevops"
-      version = "~> 1.0"
+      version = "~> 1.3"
     }
   }
   required_version = ">= 1.3.0"
@@ -17,6 +17,5 @@ provider "azurerm" {
 }
 
 provider "azuredevops" {
-  org_service_url       = var.devops_org_url
-  personal_access_token = var.devops_pat
+  # Reads AZDO_ORG_SERVICE_URL and AZDO_PERSONAL_ACCESS_TOKEN from environment
 }

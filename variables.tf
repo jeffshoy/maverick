@@ -44,17 +44,6 @@ variable "alert_email" {
   type        = string
 }
 
-variable "devops_org_url" {
-  description = "Azure DevOps organization URL (e.g. https://dev.azure.com/myorg)"
-  type        = string
-}
-
-variable "devops_pat" {
-  description = "Azure DevOps Personal Access Token"
-  type        = string
-  sensitive   = true
-}
-
 variable "devops_project_name" {
   description = "Name of the Azure DevOps project to create"
   type        = string

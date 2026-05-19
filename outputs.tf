@@ -25,5 +25,5 @@ output "log_analytics_workspace_id" {
 
 output "devops_project_url" {
   description = "URL of the Azure DevOps project"
-  value       = "https://dev.azure.com/${urlencode(split("/", var.devops_org_url)[length(split("/", var.devops_org_url)) - 1])}/${urlencode(azuredevops_project.project.name)}"
+  value       = "https://dev.azure.com/jazurehoy/${azuredevops_project.project.name}"
 }
