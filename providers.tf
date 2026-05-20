@@ -18,5 +18,6 @@ provider "azurerm" {
 }
 
 provider "azuredevops" {
-  # Reads AZDO_ORG_SERVICE_URL and AZDO_PERSONAL_ACCESS_TOKEN from environment
+  org_service_url       = "https://dev.azure.com/jazurehoy"
+  personal_access_token = var.devops_pat
 }
