@@ -44,6 +44,12 @@ variable "alert_email" {
   type        = string
 }
 
+variable "devops_pat" {
+  description = "Azure DevOps Personal Access Token"
+  type        = string
+  sensitive   = true
+}
+
 variable "devops_project_name" {
   description = "Name of the Azure DevOps project to create"
   type        = string
@@ -73,4 +79,21 @@ variable "azure_subscription_name" {
 variable "azure_tenant_id" {
   description = "Azure AD tenant ID"
   type        = string
+}
+
+variable "func_storage_account_name" {
+  description = "Globally unique storage account name for the Function App (3-24 chars, lowercase alphanumeric)"
+  type        = string
+}
+
+variable "vmss_name" {
+  description = "Name of the VMSS to create and autoscale"
+  type        = string
+  default     = "vmss-dev-win2022"
+}
+
+variable "vmss_instance_count" {
+  description = "Initial number of VMSS instances"
+  type        = number
+  default     = 2
 }
