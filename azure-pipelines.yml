@@ -22,30 +22,35 @@ stages:
       - job: Plan
         displayName: "Init, Validate & Plan"
         steps:
-          - task: TerraformInstaller@1
+          - script: |
+              wget -q -O /tmp/terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+              unzip -q /tmp/terraform.zip -d /usr/local/bin
+              terraform version
             displayName: "Install Terraform $(TF_VERSION)"
-            inputs:
-              terraformVersion: $(TF_VERSION)
 
-          - task: TerraformTaskV4@4
+          - script: terraform init
             displayName: "Terraform Init"
-            inputs:
-              provider: azurerm
-              command: init
+            workingDirectory: $(System.DefaultWorkingDirectory)
+            env:
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
 
-          - task: TerraformTaskV4@4
+          - script: terraform validate
             displayName: "Terraform Validate"
-            inputs:
-              provider: azurerm
-              command: validate
+            workingDirectory: $(System.DefaultWorkingDirectory)
 
-          - task: TerraformTaskV4@4
+          - script: terraform plan -var-file=$(TF_ENV).tfvars
             displayName: "Terraform Plan"
-            inputs:
-              provider: azurerm
-              command: plan
-              environmentServiceNameAzureRM: "Azure-Service-Connection"
-              commandOptions: "-var-file=$(TF_ENV).tfvars"
+            workingDirectory: $(System.DefaultWorkingDirectory)
+            env:
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
+              AZDO_ORG_SERVICE_URL: $(AZDO_ORG_SERVICE_URL)
+              AZDO_PERSONAL_ACCESS_TOKEN: $(AZDO_PERSONAL_ACCESS_TOKEN)
 
   - stage: Apply
     displayName: "Terraform Apply"
@@ -59,21 +64,28 @@ stages:
           runOnce:
             deploy:
               steps:
-                - task: TerraformInstaller@1
+                - script: |
+                    wget -q -O /tmp/terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+                    unzip -q /tmp/terraform.zip -d /usr/local/bin
+                    terraform version
                   displayName: "Install Terraform $(TF_VERSION)"
-                  inputs:
-                    terraformVersion: $(TF_VERSION)
 
-                - task: TerraformTaskV4@4
+                - script: terraform init
                   displayName: "Terraform Init"
-                  inputs:
-                    provider: azurerm
-                    command: init
+                  workingDirectory: $(System.DefaultWorkingDirectory)
+                  env:
+                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+                    ARM_TENANT_ID: $(ARM_TENANT_ID)
 
-                - task: TerraformTaskV4@4
+                - script: terraform apply -var-file=$(TF_ENV).tfvars -auto-approve
                   displayName: "Terraform Apply"
-                  inputs:
-                    provider: azurerm
-                    command: apply
-                    environmentServiceNameAzureRM: "Azure-Service-Connection"
-                    commandOptions: "-var-file=$(TF_ENV).tfvars -auto-approve"
+                  workingDirectory: $(System.DefaultWorkingDirectory)
+                  env:
+                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+                    ARM_TENANT_ID: $(ARM_TENANT_ID)
+                    AZDO_ORG_SERVICE_URL: $(AZDO_ORG_SERVICE_URL)
+                    AZDO_PERSONAL_ACCESS_TOKEN: $(AZDO_PERSONAL_ACCESS_TOKEN)
