@@ -12,8 +12,11 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  TF_VERSION: "1.7.0"
-  TF_ENV: dev
+  - group: terraform-vars
+  - name: TF_VERSION
+    value: "1.7.0"
+  - name: TF_ENV
+    value: dev
 
 stages:
   - stage: Plan
