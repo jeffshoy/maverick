@@ -95,6 +95,11 @@ resource "azurerm_monitor_action_group" "autoscale_ag" {
   resource_group_name = azurerm_resource_group.rg.name
   short_name          = "vmss-scale"
 
+  email_receiver {
+    name          = "admin"
+    email_address = var.alert_email
+  }
+
   azure_function_receiver {
     name                     = "vmss-scale-function"
     function_app_resource_id = azurerm_linux_function_app.func_app.id
