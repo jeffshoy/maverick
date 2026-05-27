@@ -1,261 +1,297 @@
-# Add Servers to a Sectigo Network Agent
+# Sectigo Mass Server Add — SSL Cert Renewal Toolset
 
-A small Python script for bulk-registering one or more servers with an existing
-Sectigo SCM **Network Agent**. Wraps the official endpoint:
+A collection of Python scripts for bulk-registering IIS servers with Sectigo SCM
+Network Agents and auditing certificate deployment across ~80 AWS accounts.
 
-```
-POST /api/agent/v1/network/{agentId}/server
-```
+Built for the annual ASPGov SSL cert renewal cycle. The workflow migrates servers
+from the old multi-SAN `*.aspgov.com` cert to per-client split certs
+(`*.{client}cloud.aspgov.com`) and confirms the migration is complete.
 
-API reference: <https://scm.devx.sectigo.com/reference/add-server-to-network-agent>
+---
+
+## Scripts at a Glance
+
+| Script | Purpose |
+|--------|---------|
+| `verify_accounts.py` | Confirm AWS SSO profiles are valid before any bulk run |
+| `verify_domains.py` | SSM into instances to confirm local AD domain names match the CSV |
+| `build_server_list.py` | Discover EC2 instances by name filter and write a Sectigo import JSON |
+| `add_servers_to_agent.py` | POST one or more servers to a Sectigo Network Agent |
+| `batch_add_servers.py` | Drive `build_server_list` + `add_servers_to_agent` across all CSV accounts |
+| `get_cert_locations.py` | Export the server locations for a single cert to CSV |
+| `audit_split_certs.py` | Report which servers on the old `*.aspgov.com` cert have/haven't migrated |
+| `list_agent_nodes.py` | Flat list of every server node on both agents with cert name and order number |
+| `verify_iis_certs.py` | SSM into each server and confirm the expected cert is bound in IIS |
 
 ---
 
 ## Requirements
 
-### Python
+- **Python 3.8+** — `python --version` to check (Windows: `python`, not `python3`)
+- **boto3** — required by `batch_add_servers.py`, `verify_accounts.py`,
+  `verify_domains.py`, and `verify_iis_certs.py`
 
-- **Python 3.8 or newer** (CPython). Tested on 3.8, 3.10, 3.11, and 3.12.
-- Python 3.7 will *not* work — the script uses syntax and standard-library
-  behavior introduced in 3.8.
-- Check your version with `python3 --version`.
+  ```powershell
+  pip install boto3
+  ```
 
-### Third-party packages
+- All other scripts use only the Python standard library — no extra packages.
 
-**None.** The script uses only modules from the Python standard library:
-
-| Module               | Purpose                                |
-| -------------------- | -------------------------------------- |
-| `argparse`           | command-line argument parsing          |
-| `dataclasses`        | typed credentials container            |
-| `json`               | reading the input file, building bodies, parsing API errors |
-| `os`                 | reading credentials from environment variables |
-| `sys`                | exit codes, stdin / stderr             |
-| `urllib.request` / `urllib.error` | HTTPS calls to the Sectigo API |
-
-There is nothing to `pip install`, no virtual environment to create, and no
-`requirements.txt` to manage.
-
-### Operating system
-
-Runs on Linux, macOS, and Windows — any platform with a supported Python
-build. No OS-specific commands are invoked.
-
-### Sectigo / network
-
-- Outbound HTTPS (TCP 443) reachability to your Sectigo SCM host
-  (default: `https://cert-manager.com`). If your environment requires a
-  proxy, set the standard `HTTPS_PROXY` environment variable before running
-  the script — `urllib` honors it automatically.
-- An SCM account with permission to manage Network Agents, and the
-  `customerUri` value for your SCM tenant.
-
----
-
-## Setup
-
-### 1. Download the script
-
-Place `add_servers_to_agent.py` anywhere on the machine that will run it.
-
-### 2. Set authentication environment variables
-
-The script uses Sectigo's **legacy header authentication** (`login` /
-`password` / `customerUri`). Credentials are read from environment variables so
-they are never visible on the command line or in shell history.
-
-```sh
-export SECTIGO_LOGIN='your_scm_username'
-export SECTIGO_PASSWORD='your_scm_password'
-export SECTIGO_CUSTOMER_URI='your_customer_uri'
-```
-
-Optional — override only if Sectigo has provisioned you a non-default host:
-
-```sh
-export SECTIGO_BASE_URL='https://cert-manager.com'
-```
-
-On Windows PowerShell:
+### Environment variables (all Sectigo scripts)
 
 ```powershell
-$env:SECTIGO_LOGIN = 'your_scm_username'
-$env:SECTIGO_PASSWORD = 'your_scm_password'
-$env:SECTIGO_CUSTOMER_URI = 'your_customer_uri'
+$env:SECTIGO_LOGIN        = 'your_scm_username'
+$env:SECTIGO_PASSWORD     = 'your_scm_password'
+$env:SECTIGO_CUSTOMER_URI = 'centralsquare'
+# Optional — only if your base URL differs:
+$env:SECTIGO_BASE_URL     = 'https://cert-manager.com'
 ```
+
+### AWS credentials
+
+Scripts that call AWS use boto3 profile-based auth (AWS SSO). Profiles must be
+configured in `~/.aws/config` and active (`aws sso login --profile <name>`).
+
+### Network agents
+
+| Region | Agent ID |
+|--------|----------|
+| us-east-1 | 18227 |
+| us-west-2 | 18247 |
+
+### Tracking spreadsheet
+
+`ASPGOV_SSLCertRenewal_2026-2027.csv` — master list of all client SANs.
+Key columns:
+
+| Column | Meaning |
+|--------|---------|
+| `SAN` | Certificate subject alternative name (e.g. `*.ancocloud.aspgov.com`) |
+| `In Use?` | `yes` = account is active, process it |
+| `split cert already created?` | `yes` = a split cert has been issued in Sectigo |
+| `us-east-1 or us-west-2` | Which region (and therefore which agent) this account uses |
+| `client_id` | Short client code (e.g. `ANCO`) |
+| `aws_profile` | AWS SSO profile name (e.g. `PALegacyFinEntANCO`) |
+| `local_domain` | AD domain used for FQDN construction (e.g. `anco.cloud.lcl`) |
+| `servers_added` | `yes` = servers already imported into Sectigo for this account |
+| `name_filters` | EC2 Name-tag substrings to include (e.g. `trkwb,etawb`) |
 
 ---
 
-## Input file format
+## Workflow
 
-The script reads a single JSON file. That file must contain **either** one
-server object **or** a JSON array of server objects.
+### Phase 1 — Import servers into Sectigo Network Agents
 
-### Single server
+Run once per account group to register servers so they can receive certs.
 
-```json
-{
-  "name": "web01.example.com",
-  "vendor": "APACHE_2",
-  "connectionType": "REMOTE_SSH",
-  "ip": "10.0.0.21",
-  "port": 22,
-  "username": "deploy",
-  "password": "REPLACE_ME",
-  "path": "/usr/sbin/apachectl"
-}
+**Step 1: Verify AWS profiles**
+
+```powershell
+python verify_accounts.py
 ```
 
-### Multiple servers (bulk)
+Checks every `In Use? = yes` row: confirms the AWS SSO profile is valid and
+credentials are not expired. Fix any `FAIL` rows before proceeding.
 
-```json
-[
-  {
-    "name": "web01.example.com",
-    "vendor": "APACHE_2",
-    "connectionType": "REMOTE_SSH",
-    "ip": "10.0.0.21",
-    "port": 22,
-    "username": "deploy",
-    "password": "REPLACE_ME"
-  },
-  {
-    "name": "iis01.corp.local",
-    "vendor": "IIS",
-    "connectionType": "REMOTE_WIN_RM",
-    "ip": "10.0.0.30",
-    "port": 5985,
-    "username": "svc-sectigo",
-    "password": "REPLACE_ME"
-  }
-]
+**Step 2: Verify local domain names**
+
+```powershell
+python verify_domains.py
 ```
 
-### F5 BIG-IP (REST API)
+SSMs into one running instance per account and runs
+`(Get-WmiObject Win32_ComputerSystem).Domain` to confirm the `local_domain`
+value in the CSV is correct. Correct any `MISMATCH` rows before proceeding.
 
-F5 BIG-IP is **always** managed via its iControl REST API, so `connectionType`
-must be `REMOTE_REST_API` and `port` is required (443 in almost all
-deployments). The script enforces this combination — any other
-`connectionType` paired with `F5_BIG_IP` will fail local validation.
+**Step 3: Dry-run the import**
 
-```json
-{
-  "name": "f5-lb01.example.com",
-  "vendor": "F5_BIG_IP",
-  "connectionType": "REMOTE_REST_API",
-  "ip": "10.0.0.50",
-  "port": 443,
-  "username": "sectigo-api",
-  "password": "REPLACE_ME"
-}
+```powershell
+# All accounts in CSV
+python batch_add_servers.py --dry-run
+
+# Single account
+python batch_add_servers.py --profile PALegacyFinEntANCO --dry-run
 ```
 
-Notes:
+Review the output. Confirm the right servers are discovered and FQDNs look correct.
 
-- The `username` / `password` must be a service account on the BIG-IP that has
-  permission to read and replace certificates via iControl REST.
-- The account typically needs the **Certificate Manager** role (or equivalent)
-  on the relevant partition.
+**Step 4: Import**
 
-### IIS over remote legacy native API
-
-For IIS specifically, the `REMOTE_LEGACY_NATIVE_API` connection type does
-**not** require a `port` — the SCM web UI omits the field for this exact
-combination and the API accepts the request without it.
-
-```json
-{
-  "name": "iis-legacy01.corp.local",
-  "vendor": "IIS",
-  "connectionType": "REMOTE_LEGACY_NATIVE_API",
-  "ip": "10.0.0.31",
-  "username": "svc-sectigo",
-  "password": "REPLACE_ME"
-}
+```powershell
+python batch_add_servers.py
 ```
 
-### Field reference
-
-| Field            | Type    | Required                                   | Notes                                                                                  |
-| ---------------- | ------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `name`           | string  | **Yes**                                    | Display name for the server. 1–512 characters, must not be blank.                      |
-| `vendor`         | string  | **Yes**                                    | One of `APACHE_2`, `IIS`, `TOMCAT`, `F5_BIG_IP`.                                       |
-| `connectionType` | string  | No                                         | One of `LOCAL`, `LOCAL_LEGACY_NATIVE_API`, `REMOTE_REST_API`, `REMOTE_SSH`, `REMOTE_WIN_RM`, `REMOTE_LEGACY_NATIVE_API`. |
-| `ip`             | string  | Required for remote connections            | Hostname or IP of the target server.                                                   |
-| `port`           | int     | Required for remote connections (one exception below) | Service port on the target server (e.g. 22 for SSH, 5985 HTTP / 5986 HTTPS for WinRM, 443 for REST). **Exception:** when `vendor` is `IIS` and `connectionType` is `REMOTE_LEGACY_NATIVE_API`, the port is *not* required (the SCM UI itself omits the field). All other remote combinations — including IIS over WinRM — must include a port, otherwise the API returns error `-6009`. |
-| `path`           | string  | No                                         | Tomcat root dir, or path to the `apachectl` executable for Apache.                     |
-| `altPathForCert` | string  | No                                         | Alternative directory where the server stores certificates.                            |
-| `privateKeyPath` | string  | No                                         | Directory where the Network Agent stores the private key.                              |
-| `passPhrase`     | string  | No                                         | Keystore passphrase, if applicable.                                                    |
-| `username`       | string  | No                                         | Login used by the agent to reach the server (≤ 64 characters).                         |
-| `password`       | string  | No                                         | Password for the above username.                                                       |
-| `storeName`      | string  | No                                         | Store name for keystore-based access.                                                  |
-| `storeCredId`    | string  | No                                         | Store credential ID for keystore-based access.                                         |
-
-The script rejects any field name not in this list, so typos like
-`connection_type` (snake_case) or `Vendor` (wrong case) will be reported before
-any request is sent.
+Writes a timestamped report: `sectigo_servers_added_YYYYMMDD_HHMMSS.csv`.
+Output files `servers_*.json` contain plaintext credentials — delete them after the run.
 
 ---
 
-## Usage
+### Phase 2 — Audit certificate deployment
 
-### Validate without sending (recommended first run)
+After split certs have been issued and auto-installed, use these scripts to
+confirm every server has migrated off the old `*.aspgov.com` cert.
 
-```sh
-python add_servers_to_agent.py --agent-id 1234 servers.json --dry-run
+**Audit migration status (primary tool)**
+
+```powershell
+python audit_split_certs.py
 ```
 
-`--dry-run` parses and validates the input file and prints the requests that
-*would* be sent. Passwords and pass-phrases are redacted in this output, so the
-log is safe to share for troubleshooting.
+- Fetches all server FQDNs from old cert 14546938 (what the agent currently sees)
+- For every in-use client SAN, searches Sectigo for the split cert and fetches its location list
+- Reports per server:
 
-### Add the servers for real
+  | Status | Meaning |
+  |--------|---------|
+  | `MIGRATED` | Server appears in split cert locations — agent found the new cert |
+  | `STILL_OLD_CERT` | Server NOT in any split cert — old cert still bound |
+  | `NO_SPLIT_CERT` | No split cert found in Sectigo yet for this account |
+  | `NO_CSV_MATCH` | FQDN doesn't match any `local_domain` in the CSV |
 
-```sh
-python add_servers_to_agent.py --agent-id 1234 servers.json
+- Writes `audit_split_certs_YYYYMMDD_HHMMSS.csv`
+- Exits non-zero if any `STILL_OLD_CERT` entries are found
+
+**Full node inventory (by agent)**
+
+```powershell
+python list_agent_nodes.py
 ```
 
-Where `1234` is the **Network Agent ID** that the servers should be attached
-to. You can find this ID in the SCM web UI under *Discovery → Network Agents*.
-
-### Example output
+Paginates through all certs on both agents (18227 + 18247), fetches locations
+and order numbers for each cert, and writes a flat report:
 
 ```
-Adding 2 server(s) to agent 1234 via https://cert-manager.com...
-[OK  ] web01.example.com: created (id=88102)
-[FAIL] iis01.corp.local: HTTP 400: {"code":-1402,"description":"..."}
-
-Done. 1 succeeded, 1 failed.
+server_fqdn, cert_common_name, order_number, cert_id, agent_id, agent_name
 ```
 
-The script exits with:
+Also prints to console any server showing up under **multiple certs** — these
+are servers mid-migration that still have both old and new certs bound.
 
-- `0` — every server was added successfully.
-- `1` — one or more servers failed (details printed above the summary).
-- `2` — the input file failed local validation; no requests were sent.
+Output: `agent_nodes_YYYYMMDD_HHMMSS.csv`
+
+**Export locations for a specific cert**
+
+```powershell
+python get_cert_locations.py --cert-id 14546938
+python get_cert_locations.py --cert-id 15020263 --debug
+```
+
+Writes `cert_locations_{cert_id}_{timestamp}.csv`.
+Use `--debug` to dump the raw API response when locations look wrong.
+
+**Verify IIS bindings via SSM (optional deep check)**
+
+```powershell
+python verify_iis_certs.py --cert-id 15020263
+```
+
+For every server in a cert's location list, SSMs in and queries `IIS:\SslBindings`
+to confirm the correct cert thumbprint is actually bound. Requires SSM online.
+Writes `verify_iis_certs_{cert_id}_{timestamp}.csv`.
+
+---
+
+## Script Reference
+
+### `add_servers_to_agent.py`
+
+Low-level script. POSTs one or more servers from a JSON file to a Sectigo
+Network Agent.
+
+```powershell
+# Dry run
+python add_servers_to_agent.py --agent-id 18227 servers.json --dry-run
+
+# Real run
+python add_servers_to_agent.py --agent-id 18227 servers.json
+```
+
+See `example_servers.json` for the input file format.
+
+Exit codes: `0` = all succeeded, `1` = partial failure, `2` = input validation error.
+
+### `build_server_list.py`
+
+Discovers EC2 instances by Name-tag substring across regions and writes a
+Sectigo-formatted JSON for `add_servers_to_agent.py`. Called automatically
+by `batch_add_servers.py`.
+
+```powershell
+python build_server_list.py `
+  --profile PALegacyFinEntANCO `
+  --domain anco.cloud.lcl `
+  --username "CLOUD\sectigo_svc" `
+  --password-env SECTIGO_SVC_PASSWORD `
+  --output-prefix servers_anco `
+  --name-filters onsjb,onsap,onsrp,onsol,pxsf `
+  --dry-run
+```
+
+Produces per-region files: `servers_anco_us-east-1.json`, `servers_anco_us-west-2.json`.
+Delete output files after import — they contain plaintext passwords.
+
+### `batch_add_servers.py`
+
+Runs the full build → add pipeline for every qualifying row in the CSV.
+
+```powershell
+# All qualifying accounts
+python batch_add_servers.py
+
+# Single account
+python batch_add_servers.py --profile PALegacyFinEntBRENT
+
+# Dry run (no API calls)
+python batch_add_servers.py --dry-run
+```
+
+Qualifying rows: `In Use? = yes`, `servers_added` not `yes`.
+
+Report columns: `account, san, fqdn, region, agent_id, status, message`.
+
+### `verify_accounts.py`
+
+```powershell
+python verify_accounts.py
+python verify_accounts.py --skip-dns
+```
+
+Reports: `OK`, `WARN` (DNS check failed), `FAIL` (auth failed).
+
+### `verify_domains.py`
+
+```powershell
+python verify_domains.py
+python verify_domains.py --profile PALegacyFinEntANCO
+```
+
+Reports: `Match`, `Mismatch`, `No SSM`, `Auth fail`.
+Tries all matching instances per account until one SSM-reachable instance is found.
+
+---
+
+## Security Notes
+
+- **Never commit `servers_*.json` files** — they contain plaintext server passwords.
+  These are gitignored. Delete them after each import run.
+- `sectigo_servers_added_*.csv` report files are also gitignored.
+- Sectigo credentials are read from environment variables only — never from files
+  or command-line arguments.
+- The service account password (`SECTIGO_SVC_PASSWORD`) must be set as an
+  environment variable before running `build_server_list.py` or `batch_add_servers.py`.
+  Retrieve it from the NPM password manager.
 
 ---
 
 ## Troubleshooting
 
-| Symptom                                                | Likely cause / fix                                                                       |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `Missing required environment variable: SECTIGO_LOGIN` | One of the three required env vars is not set in the current shell.                      |
-| `HTTP 401`                                             | `login`, `password`, or `customerUri` is incorrect, or the account lacks API access.     |
-| `HTTP 404`                                             | The `--agent-id` does not exist, or your account does not have access to it.             |
-| `HTTP 400` with a field name                           | The Sectigo API rejected a field value. Re-check enum spelling and field constraints.    |
-| `HTTP 400 code:-6009 "Target server requires host and port configuration"` | The server's `connectionType` is remote but `port` is missing. Add a `port` field (e.g. `5985` for WinRM, `22` for SSH, `443` for REST). |
-| `network error`                                        | The host in `SECTIGO_BASE_URL` is unreachable. Check firewall / proxy / DNS.             |
-
----
-
-## Security notes
-
-- Credentials never appear on the command line — they are read only from
-  environment variables.
-- `--dry-run` output redacts `password` and `passPhrase` fields.
-- The input JSON file may contain server credentials. Store it on an
-  appropriately restricted filesystem and delete it after a successful run.
-- The script makes only outbound HTTPS requests to the configured
-  `SECTIGO_BASE_URL` (default `https://cert-manager.com`).
+| Symptom | Fix |
+|---------|-----|
+| `Missing required environment variable: SECTIGO_LOGIN` | Set the three Sectigo env vars in the current shell |
+| `HTTP 401` | Wrong `login`, `password`, or `customerUri` |
+| `HTTP 404` on agent endpoint | Agent ID doesn't exist or account lacks access |
+| `HTTP 400 code:-6009` | `port` missing for a remote connection type |
+| `ProfileNotFound` | Run `aws sso login --profile <name>` |
+| `ForbiddenException` from AWS | Profile config issue — check `~/.aws/config` |
+| `python3` not found | Use `python` on Windows |
+| `servers_*.json` not generated | Check `--dry-run` isn't set, and that `SECTIGO_SVC_PASSWORD` is set |

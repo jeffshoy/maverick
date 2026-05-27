@@ -4,6 +4,16 @@ mgmt-microsoft/changedns-ms_*.log
 .env
 *.env
 
+# Sectigo — output files contain plaintext service account passwords
+Sectigo/MassServerAdd/servers_*.json
+# Sectigo — timestamped output CSVs and spreadsheets (run artifacts, not source)
+Sectigo/MassServerAdd/sectigo_servers_added_*.csv
+Sectigo/MassServerAdd/cert_locations_*.csv
+Sectigo/MassServerAdd/audit_split_certs_*.csv
+Sectigo/MassServerAdd/agent_nodes_*.csv
+Sectigo/MassServerAdd/verify_iis_certs_*.csv
+Sectigo/MassServerAdd/*.xlsx
+
 # Python
 __pycache__/
 *.pyc
