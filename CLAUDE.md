@@ -136,9 +136,6 @@ Every non-trivial script MUST include:
 
 ```powershell
 #Requires -Modules <ModuleName>
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
-
 <#
 .SYNOPSIS
     One-line summary.
@@ -161,6 +158,9 @@ param(
     [Parameter()]
     [switch] $WhatIf
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 ```
 
 - MUST use `try/catch` with terminating errors (`-ErrorAction Stop` on cmdlets inside `try` blocks).
