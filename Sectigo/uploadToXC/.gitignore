@@ -1,0 +1,6 @@
+# Certificate files contain private keys - never commit to source control
+certs/
+*.pfx
+*.p12
+*.key
+*.pem
