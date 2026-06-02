@@ -119,9 +119,124 @@ The script stops on the first failed update so the fleet is never silently left 
 
 ---
 
-## Cert Renewal Workflow (annual)
+---
 
-1. Obtain new cert files from Sectigo and place them in `certs\<year>\`
+## Update-C2gApacheCert.ps1
+
+Renews Apache TLS certificates on c2g* EC2 instances in **PALegacyCzp** via AWS SSM Run
+Command. Replaces the old vSphere-based workflow. Cert files are embedded directly in the
+SSM payload (no S3 required) — the instances have no outbound internet access.
+
+Targets all `*C2GWB*` instances across `us-east-1` and `us-west-2` by default.
+
+> **Legacy reference:** `c2g-cert-update.ps1` in this folder is the original vSphere-era
+> script, kept for historical reference only. It is no longer used and should not be run.
+
+### Prerequisites
+
+- AWS CLI v2 in PATH
+- Active SSO session for the `PALegacyCzp` profile:
+  ```powershell
+  aws sso login --profile PALegacyCzp
+  ```
+- Cert files staged locally (see file list below)
+
+### Cert files required
+
+| Parameter | Example filename | Description |
+|-----------|-----------------|-------------|
+| `-CertFile` | `star_aspgov_com_2026pt2.crt` | Leaf certificate (PEM) |
+| `-KeyFile` | `star_aspgov_com_2026pt2-decrypted.key` | Unencrypted private key (PEM) |
+| `-Intermediate` | `Sectigo_intermediate.crt` | Sectigo intermediate CA |
+| `-TrustedRoot` | `Sectigo_CA_root.crt` | USERTrust root CA |
+| `-CaCerts` | `cacerts` | Java truststore (reuse from prior year if chain unchanged) |
+
+> **Note on cert naming:** Certs are now issued on a 180-day cycle with suffixes like
+> `2026pt2`. There are no hardcoded defaults — filenames must be supplied at run time.
+
+Stage the files into a local directory, e.g. `C:\temp\ASPGOV_Cert_Renewal\2026pt2\CertFiles\`.
+
+### Step 1 — Dry-run (always run this first)
+
+```powershell
+.\Update-C2gApacheCert.ps1 `
+    -CertSourceDir 'C:\temp\ASPGOV_Cert_Renewal\2026pt2\CertFiles' `
+    -CertFile      'star_aspgov_com_2026pt2.crt' `
+    -KeyFile       'star_aspgov_com_2026pt2-decrypted.key' `
+    -Intermediate  'Sectigo_intermediate.crt' `
+    -TrustedRoot   'Sectigo_CA_root.crt' `
+    -WhatIf
+```
+
+Review the instance list and SSM reachability output before proceeding.
+
+### Step 2 — Single-server smoke test
+
+Pick one non-production server and run without `-WhatIf`, scoped to that host:
+
+```powershell
+.\Update-C2gApacheCert.ps1 `
+    -CertSourceDir 'C:\temp\ASPGOV_Cert_Renewal\2026pt2\CertFiles' `
+    -CertFile      'star_aspgov_com_2026pt2.crt' `
+    -KeyFile       'star_aspgov_com_2026pt2-decrypted.key' `
+    -Intermediate  'Sectigo_intermediate.crt' `
+    -TrustedRoot   'Sectigo_CA_root.crt' `
+    -NameTagFilter 'STPE-TC2GWB001' `
+    -Regions       'us-east-1'
+```
+
+Verify the summary shows `Result=success`, `Writes=5`, and `ConfigChanges=2`. Run a second
+time to confirm idempotency (`ConfigChanges=0`, `Backup=exists`).
+
+### Step 3 — Fleet cert delivery (no restart)
+
+```powershell
+.\Update-C2gApacheCert.ps1 `
+    -CertSourceDir 'C:\temp\ASPGOV_Cert_Renewal\2026pt2\CertFiles' `
+    -CertFile      'star_aspgov_com_2026pt2.crt' `
+    -KeyFile       'star_aspgov_com_2026pt2-decrypted.key' `
+    -Intermediate  'Sectigo_intermediate.crt' `
+    -TrustedRoot   'Sectigo_CA_root.crt'
+```
+
+This pushes certs to all 173 instances across both regions (~15–20 min). Apache is **not**
+restarted — the new files land on disk but the running service still serves the old cert
+until restarted. Results are saved to `%TEMP%\c2g-cert-update\<year>\<run>\results.csv`.
+
+### Step 4 — Fleet Apache restart (after hours)
+
+Once cert delivery is confirmed, restart Apache fleet-wide at a scheduled maintenance window:
+
+```powershell
+.\Update-C2gApacheCert.ps1 -RestartApacheOnly
+```
+
+Dry-run first to confirm the target list:
+
+```powershell
+.\Update-C2gApacheCert.ps1 -RestartApacheOnly -WhatIf
+```
+
+Servers without Apache on `D:\Apache24\conf` or `C:\Apache24\conf` are gracefully skipped
+and noted in the summary as `skipped` — they are not application servers and can be ignored.
+
+### Summary output
+
+| Column | Meaning |
+|--------|---------|
+| `Result` | `success` / `skipped` / `failed` |
+| `Backup` | `created` (first run) or `exists` (subsequent runs) |
+| `Downloads` | Number of cert files written (expect 5) |
+| `ConfigChanges` | Number of `httpd.conf`/`httpd-custom.conf` regex replacements (expect 2 on first run, 0 on re-runs) |
+| `ApacheRestart` | `skipped`, `restarted`, or `n/a` |
+
+---
+
+## Cert Renewal Workflow
+
+### F5 XC load balancers
+
+1. Obtain new cert files from Sectigo and place them in `certs\<year_suffix>\`
 2. Run `Upload-XCCertificate.ps1 -WhatIf` to verify payload looks correct
 3. Run `Upload-XCCertificate.ps1` to create the new cert object in XC
 4. Verify the cert appears in the XC console under **Certificate Management → TLS Certificates**
@@ -129,10 +244,21 @@ The script stops on the first failed update so the fleet is never silently left 
 6. Run `Update-XCLoadBalancerCert.ps1` to swing all LBs to the new cert
 7. Spot-check one or two LBs in the XC console to confirm the cert reference updated
 
+### c2g Apache servers (AWS EC2 / PALegacyCzp)
+
+1. Obtain new cert files from Sectigo; stage in `C:\temp\ASPGOV_Cert_Renewal\<suffix>\CertFiles\`
+2. Dry-run `Update-C2gApacheCert.ps1 -WhatIf` to review instance list
+3. Smoke test against one non-prod server (`-NameTagFilter`)
+4. Fleet cert delivery (Step 3 above) — no service disruption, Apache not restarted
+5. Verify certs on a sample of servers via `openssl s_client`
+6. Fleet Apache restart after hours (`-RestartApacheOnly`)
+
 ## Notes
 
 - Cert files are excluded from this repo via `.gitignore`. Store them in a secure location
   (e.g., a team-shared encrypted store or retrieve fresh from Sectigo at renewal time).
-- The API token is never written to disk or logged. Always pass it via `XC_API_TOKEN`.
-- Both scripts require `-WhatIf` to be run and reviewed before live execution — treat this
-  as mandatory, not optional.
+- The F5 XC API token is never written to disk or logged. Always pass it via `XC_API_TOKEN`.
+- All scripts support `-WhatIf` — always run a dry-run and review the output before executing
+  against production. Treat this as mandatory, not optional.
+- Logs for each `Update-C2gApacheCert.ps1` run are written to
+  `%TEMP%\c2g-cert-update\<year>\<timestamp>\` including a transcript and per-host SSM output.
