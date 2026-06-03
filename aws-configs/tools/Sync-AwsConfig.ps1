@@ -36,7 +36,6 @@ $awsDir       = Join-Path $HOME '.aws'
 
 if (-not (Test-Path $sourceConfig)) {
     Write-Error "Source config not found: $sourceConfig"
-    exit 1
 }
 
 # ---------------------------------------------------------------------------
@@ -162,9 +161,8 @@ $newContent = $newLines -join "`n"
 # ---------------------------------------------------------------------------
 # Diff summary
 # ---------------------------------------------------------------------------
-$oldContent = Get-Content $targetConfig -Raw
-$addedHeaders   = ($managed   | Select-Object -ExpandProperty Header) -join "`n"
-$keptHeaders    = ($personal   | Select-Object -ExpandProperty Header) -join "`n"
+$oldContent  = Get-Content $targetConfig -Raw
+$keptHeaders = ($personal | Select-Object -ExpandProperty Header) -join "`n"
 
 Write-Host "Managed blocks (from cloudops.config): $($managed.Count)"
 Write-Host "Personal blocks preserved:             $($personal.Count)"

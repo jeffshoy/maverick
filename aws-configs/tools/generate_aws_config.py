@@ -15,9 +15,7 @@ Run monthly or whenever a teammate hits a missing-account error, then submit a P
 
 import argparse
 import datetime
-import glob
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -181,7 +179,7 @@ def generate(dry_run: bool = False) -> None:
     config_text = "\n".join(config_parts)
 
     accounts_json = {
-        "generatedAt": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generatedAt": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "ssoSessions": {s["name"]: {"startUrl": s["startUrl"], "region": s["region"], "role": s["role"]} for s in SSO_SESSIONS},
         "accounts": all_accounts,
     }

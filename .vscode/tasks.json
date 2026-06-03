@@ -103,6 +103,19 @@
 
     // ─── AWS ──────────────────────────────────────────────────────────────
     {
+      "label": "AWS: RDP to Instance",
+      "detail": "Port-forward RDP via SSM and launch mstsc (fuzzy account name)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/scripts/aws/Connect-RDP.ps1",
+        "-ServerName", "${input:serverName}",
+        "-Account",    "${input:awsAccount}"
+      ],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
       "label": "AWS: Connect to Instance",
       "type": "shell",
       "command": "pwsh",
@@ -299,7 +312,12 @@
     {
       "id": "serverName",
       "type": "promptString",
-      "description": "Server name (e.g. ARCT-PTRKRD001)"
+      "description": "Server name (e.g. CLD-PPLSAPM001, ARCT-PTRKRD001)"
+    },
+    {
+      "id": "awsAccount",
+      "type": "promptString",
+      "description": "Account name or nickname — fuzzy match (e.g. PLUS, SharedServices, PALegacyPlus)"
     },
     {
       "id": "awsProfile",
