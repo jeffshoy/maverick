@@ -10,6 +10,7 @@ Python automation for Sectigo SCM (cert-manager.com) bulk operations.
 |-----------------|-----------|---------|
 | `MassCertRevoke/` | `Sectigo: Mass Cert Revoke` | Revoke SSL certificates in bulk by ID |
 | `MassServerAdd/` | `Sectigo: Mass Server Add` | Bulk-register servers with a Sectigo Network Agent |
+| `aspgov-cert-management/` | — | F5 XC and c2g Apache cert renewal scripts for ASPGov |
 
 ---
 
