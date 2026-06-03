@@ -124,9 +124,9 @@ $sourceBlocks   = Split-AwsConfig -Path $sourceConfig
 # a personal profile was previously set up with its own per-profile SSO session that has since been
 # migrated into the canonical foundation/legacy sessions.
 $managedNames = $sourceBlocks | ForEach-Object { $_.Name }
-$personal = $existingBlocks | Where-Object {
+$personal = @($existingBlocks | Where-Object {
     (-not (Test-ManagedBlock $_)) -and ($_.Name -notin $managedNames)
-}
+})
 $managed  = $sourceBlocks    # canonical source replaces all managed blocks
 
 # ---------------------------------------------------------------------------
