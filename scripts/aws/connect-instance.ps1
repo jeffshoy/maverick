@@ -39,11 +39,30 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- Get Instance ID ---
+# Try exact name first, then UPPERCASE variant, before giving up on this region.
+# Returns $null if not found, writes the CLI error to stderr and exits if the call itself fails.
+function Find-InstanceId {
+    param([string]$Name, [string]$Profile, [string]$Region)
+    $output = aws ec2 describe-instances `
+        --filters "Name=instance-state-name,Values=running" "Name=tag:Name,Values=$Name" `
+        --output text --query "Reservations[*].Instances[*].InstanceId" `
+        --profile $Profile --region $Region 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "" # newline after the "Looking up..." prompt
+        Write-Host "AWS CLI error: $output" -ForegroundColor Red
+        exit 1
+    }
+    return $output
+}
+
 Write-Host "Looking up '$server_name' in $aws_region... " -ForegroundColor Yellow -NoNewLine
-$instance_id = aws ec2 describe-instances `
-    --filters "Name=instance-state-name,Values=running" "Name=tag:Name,Values=$server_name" `
-    --output text --query "Reservations[*].Instances[*].InstanceId" `
-    --profile $aws_profile --region $aws_region
+$instance_id = Find-InstanceId -Name $server_name -Profile $aws_profile -Region $aws_region
+if (-not $instance_id) {
+    $upper = $server_name.ToUpper()
+    if ($upper -ne $server_name) {
+        $instance_id = Find-InstanceId -Name $upper -Profile $aws_profile -Region $aws_region
+    }
+}
 
 if (-not $instance_id) {
     Write-Host "$cross NOT FOUND" -ForegroundColor Red

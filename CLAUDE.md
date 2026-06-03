@@ -7,6 +7,8 @@ This file is the authoritative Claude Code configuration for the **CloudOps SRE 
 **Canonical source:** `C:\repos\cloudops\CLAUDE.md` (version-controlled, PR-reviewable).
 Each teammate mirrors it to `%USERPROFILE%\.claude\CLAUDE.md` using the setup instructions below.
 
+**Repo layout & invocation:** see [`README.md`](README.md) for the folder map and how to run scripts via the Kiro task launcher. **AWS SSO setup:** see [`aws-configs/README.md`](aws-configs/README.md).
+
 ---
 
 ## Setup — One-Time Per Teammate
@@ -136,6 +138,7 @@ Every non-trivial script MUST include:
 
 ```powershell
 #Requires -Modules <ModuleName>
+
 <#
 .SYNOPSIS
     One-line summary.

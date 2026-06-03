@@ -1,0 +1,70 @@
+# cloudops
+
+SRE automation for the CloudOps team — PowerShell, Python, and Bash scripts for Windows/AWS fleet operations, Active Directory management, and related tooling.
+
+---
+
+## First-time setup
+
+1. **Install Kiro + Claude Code extension** — see [`CLAUDE.md`](CLAUDE.md) for setup instructions and team standards.
+2. **Sync your AWS config** — in Kiro, run `Ctrl+Shift+P → Tasks: Run Task → Setup: Sync AWS Config`. This installs all team AWS profiles into your `~/.aws/config`.
+3. **Log in to AWS SSO** — run both:
+   - `Setup: AWS SSO Login (foundation)` — new org (300+ accounts, role `cst-comm-cloudadmin`)
+   - `Setup: AWS SSO Login (legacy)` — CentralSquare org (role `Cloud-Administrator`, being migrated)
+
+---
+
+## Run a script in 10 seconds
+
+1. Open this repo in Kiro.
+2. Press **`Ctrl+Shift+P`** → **Tasks: Run Task**.
+3. Pick a task from the list (prefixed by domain: `AD:`, `AWS:`, `ADSSP:`, `Sectigo:`, `DNS:`, `Setup:`).
+
+The task will prompt for any required inputs and open a dedicated terminal.
+
+**CLI fallback:** scripts live at stable paths under `scripts/`. Example:
+```powershell
+pwsh -NoProfile -File scripts/ad/Disable_users_4Domains.ps1
+```
+
+---
+
+## Folder map
+
+| Folder | Contents |
+|--------|----------|
+| `scripts/ad/` | Active Directory user management (disable, create) |
+| `scripts/adssp/` | ADSS+ tooling — user sync, IBMi groups, RADIUS/NPS setup |
+| `scripts/aws/` | AWS EC2/SSM fleet operations — disk expand, server reboot, service restart, site monitor, RDS license reset |
+| `scripts/aws-dx/` | AWS Direct Connect route-table helpers (Bash) |
+| `scripts/sectigo/` | Certificate lifecycle — mass revoke, mass server registration |
+| `scripts/dns/` | DNS record management |
+| `aws-configs/` | Team AWS CLI config — both SSO sessions, all 300+ accounts. Source of truth for `~/.aws/config`. |
+| `runbooks/` | Incident and operational playbooks, each paired with a Kiro task |
+| `inventory/` | Environment metadata — AD domains, SSM documents, OU paths |
+
+---
+
+## Adding a new script
+
+Every new script must include:
+- [ ] The standard scaffold from [`CLAUDE.md`](CLAUDE.md) Platform Guidance (`Set-StrictMode`, `[CmdletBinding(SupportsShouldProcess)]`, comment-based help, etc.)
+- [ ] An entry in `.vscode/tasks.json` under the appropriate domain prefix
+- [ ] A row in the relevant `scripts/<area>/README.md`
+- [ ] A runbook in `runbooks/` (or an update to an existing one)
+
+---
+
+## Adding a runbook or inventory entry
+
+- **Runbook:** add a `.md` file to `runbooks/` following the template in [`runbooks/README.md`](runbooks/README.md).
+- **New AWS accounts:** run `aws-configs/tools/generate_aws_config.py`, commit the updated `aws-configs/cloudops.config` via PR, and teammates run `Setup: Sync AWS Config`.
+- **AD domains / SSM docs / OUs:** edit the relevant YAML in `inventory/`.
+
+---
+
+## References
+
+- [`CLAUDE.md`](CLAUDE.md) — team AI standards, PowerShell scaffold, security rules
+- [`aws-configs/README.md`](aws-configs/README.md) — AWS SSO setup and config refresh procedure
+- [`runbooks/README.md`](runbooks/README.md) — runbook index

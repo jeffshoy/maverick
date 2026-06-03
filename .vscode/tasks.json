@@ -1,0 +1,318 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ─── AD ───────────────────────────────────────────────────────────────
+    {
+      "label": "AD: Disable User (4 Domains)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/ad/Disable_users_4Domains.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AD: Find User (All Domains)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/ad/Find-UserAllDomains.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AD: Create FE Centroid User",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/ad/FE_User_Creation_Client_Centroid.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AD: Create Aptean Citizen User",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/ad/Aptean_User_Management/Create-Apteanps-CitizenUser.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AD: Create Centroid Aptean User",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/ad/Aptean_User_Management/Create-Centroid-Aptean-Users.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+
+    // ─── ADSSP ────────────────────────────────────────────────────────────
+    {
+      "label": "ADSSP: Test Connection",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/msad/adssp-conntest.ps1"],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADSSP: Get Users",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/msad/adssp-getusers.ps1"],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADSSP: Create Users",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/msad/adssp-createusers.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADSSP: Manage IBMi Groups",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/msad/adssp-manageibmigroups.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADSSP: Sort Users",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/msad/adssp-sortusers.ps1"],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADSSP: Setup RADIUS",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/radius/adssp-setupradius.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADSSP: Install NPS Extension",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/adssp/radius/setupNpsExtension.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+
+    // ─── AWS ──────────────────────────────────────────────────────────────
+    {
+      "label": "AWS: Connect to Instance",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/scripts/aws/connect-instance.ps1",
+        "-server_name", "${input:serverName}",
+        "-aws_profile", "${input:awsProfile}",
+        "-aws_region", "${input:awsRegion}"
+      ],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    },
+    {
+      "label": "AWS: Reset RDS License Grace Period",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/rds-license-reset/rds_license_reset.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AWS: Expand Disk",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/disk-expand/expand_disk.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AWS: Reboot Server",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/server-reboot/reboot_server.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AWS: Restart Service",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/service-restart/restart_services.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AWS: Investigate Site",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/site-monitor/investigate.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+
+    // ─── Sectigo ─────────────────────────────────────────────────────────
+    {
+      "label": "Sectigo: Mass Cert Revoke",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassCertRevoke/revoke_certs.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Mass Server Add",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/add_servers_to_agent.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+
+    // ─── Sectigo (2026 renewal toolset) ──────────────────────────────────
+    {
+      "label": "Sectigo: Batch Add Servers (all accounts)",
+      "detail": "Runs build_server_list + add_servers_to_agent across all accounts",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/batch_add_servers.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Build Server List (one account)",
+      "detail": "Builds a Sectigo server-add JSON from EC2 instances in one AWS account",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/build_server_list.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Audit Split Certs",
+      "detail": "Report servers still carrying the old *.aspgov.com cert",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/audit_split_certs.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Get Cert Locations",
+      "detail": "Export server locations for a Sectigo certificate to CSV",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/get_cert_locations.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: List Agent Nodes",
+      "detail": "List all server nodes on Sectigo network agents with their associated cert",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/list_agent_nodes.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Verify Accounts",
+      "detail": "Verify AWS profiles and local domain DNS for all accounts in the CSV",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/verify_accounts.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Verify Domains",
+      "detail": "Verify local AD domain names by SSM-ing into one EC2 per account",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/verify_domains.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sectigo: Verify IIS Certs",
+      "detail": "Verify IIS on each server is using the expected Sectigo certificate",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/sectigo/MassServerAdd/verify_iis_certs.py"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+
+    // ─── DNS ──────────────────────────────────────────────────────────────
+    {
+      "label": "DNS: Change MS DNS Record",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/dns/change-dns-ms.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "DNS: Find Mobile DNS Records",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/dns/Find-MobileDnsRecords.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+
+    // ─── Setup ────────────────────────────────────────────────────────────
+    {
+      "label": "Setup: Sync AWS Config",
+      "detail": "Merges aws-configs/cloudops.config into ~/.aws/config (preserves personal profiles)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/aws-configs/tools/Sync-AwsConfig.ps1"],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup: AWS SSO Login (foundation)",
+      "detail": "Log in to the foundation SSO session (role: cst-comm-cloudadmin)",
+      "type": "shell",
+      "command": "aws",
+      "args": ["sso", "login", "--sso-session", "foundation"],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup: AWS SSO Login (legacy)",
+      "detail": "Log in to the legacy CentralSquare SSO session (role: Cloud-Administrator)",
+      "type": "shell",
+      "command": "aws",
+      "args": ["sso", "login", "--sso-session", "legacy"],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "serverName",
+      "type": "promptString",
+      "description": "Server name (e.g. ARCT-PTRKRD001)"
+    },
+    {
+      "id": "awsProfile",
+      "type": "promptString",
+      "description": "AWS profile name from ~/.aws/config (e.g. PALegacySharedServices)",
+      "default": "PALegacySharedServices"
+    },
+    {
+      "id": "awsRegion",
+      "type": "pickString",
+      "description": "AWS region",
+      "options": ["us-east-1", "us-west-2", "ca-central-1"],
+      "default": "us-east-1"
+    }
+  ]
+}

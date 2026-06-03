@@ -1,0 +1,3174 @@
+{
+  "generatedAt": "2026-06-03T02:16:40Z",
+  "ssoSessions": {
+    "foundation": {
+      "startUrl": "https://d-9067f93f22.awsapps.com/start",
+      "region": "us-east-1",
+      "role": "cst-comm-cloudadmin"
+    },
+    "legacy": {
+      "startUrl": "https://centralsquare.awsapps.com/start",
+      "region": "us-east-1",
+      "role": "Cloud-Administrator"
+    }
+  },
+  "accounts": [
+    {
+      "name": "911Dev",
+      "accountId": "896406199441",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "911Dev"
+    },
+    {
+      "name": "911DevGC",
+      "accountId": "891376935477",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "911DevGC"
+    },
+    {
+      "name": "911Prd",
+      "accountId": "635806369698",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "911Prd"
+    },
+    {
+      "name": "911PrdGC",
+      "accountId": "257394493746",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "911PrdGC"
+    },
+    {
+      "name": "911TestPrd",
+      "accountId": "787345512932",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "911TestPrd"
+    },
+    {
+      "name": "ACSAPrdFE",
+      "accountId": "234334048495",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ACSAPrdFE"
+    },
+    {
+      "name": "AIPOCDev",
+      "accountId": "216989118172",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "AIPOCDev"
+    },
+    {
+      "name": "ATF-CENTRALSQUARE-Dev",
+      "accountId": "522681761295",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ATF-CENTRALSQUARE-Dev"
+    },
+    {
+      "name": "AWSObservability",
+      "accountId": "578710291151",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "AWSObservability"
+    },
+    {
+      "name": "Audit",
+      "accountId": "339713002954",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Audit"
+    },
+    {
+      "name": "Audit",
+      "accountId": "705712180988",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Audit"
+    },
+    {
+      "name": "AuditGC",
+      "accountId": "730335467172",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "AuditGC"
+    },
+    {
+      "name": "C3Development",
+      "accountId": "992382628857",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3Development"
+    },
+    {
+      "name": "C3DevelopmentGC",
+      "accountId": "730335356709",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3DevelopmentGC"
+    },
+    {
+      "name": "C3Production",
+      "accountId": "905418435467",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3Production"
+    },
+    {
+      "name": "C3ProductionGC",
+      "accountId": "590184014474",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3ProductionGC"
+    },
+    {
+      "name": "C3ProductionTrGC",
+      "accountId": "071338670409",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3ProductionTrGC"
+    },
+    {
+      "name": "C3Sandbox",
+      "accountId": "471112599884",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3Sandbox"
+    },
+    {
+      "name": "C3SandboxGC",
+      "accountId": "471112878321",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "C3SandboxGC"
+    },
+    {
+      "name": "CCEDev",
+      "accountId": "792302462158",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CCEDev"
+    },
+    {
+      "name": "CCRDev",
+      "accountId": "312831649175",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CCRDev"
+    },
+    {
+      "name": "CIMProdCA",
+      "accountId": "201111819588",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CIMProdCA"
+    },
+    {
+      "name": "CIMProdUS",
+      "accountId": "687846870983",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CIMProdUS"
+    },
+    {
+      "name": "CLOUD-APS-SAAS",
+      "accountId": "244029740462",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CLOUD-APS-SAAS"
+    },
+    {
+      "name": "CLOUD-ClinicalLink-SAAS",
+      "accountId": "853766473731",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CLOUD-ClinicalLink-SAAS"
+    },
+    {
+      "name": "CLOUD-Concord-Engage-PROD",
+      "accountId": "562218614843",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CLOUD-Concord-Engage-PROD"
+    },
+    {
+      "name": "CLOUD-Jurisdiction-Online",
+      "accountId": "677071966006",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CLOUD-Jurisdiction-Online"
+    },
+    {
+      "name": "CLOUD-Medworxx",
+      "accountId": "106743530214",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CLOUD-Medworxx"
+    },
+    {
+      "name": "CLOUD-Stardyne-SAAS",
+      "accountId": "300512157817",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CLOUD-Stardyne-SAAS"
+    },
+    {
+      "name": "CLOUD-jurisdictiononline-s3a",
+      "accountId": "110569534166",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CLOUD-jurisdictiononline-s3a"
+    },
+    {
+      "name": "CLOUD-jurisdictiononline-s3b",
+      "accountId": "106617903453",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CLOUD-jurisdictiononline-s3b"
+    },
+    {
+      "name": "COMPPrdFE",
+      "accountId": "680486335452",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "COMPPrdFE"
+    },
+    {
+      "name": "CPFRPrdFE",
+      "accountId": "334139665882",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CPFRPrdFE"
+    },
+    {
+      "name": "CS Pro DevOps",
+      "accountId": "693224262766",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CS Pro DevOps"
+    },
+    {
+      "name": "CST-Bedrock-AI",
+      "accountId": "328879699902",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CST-Bedrock-AI"
+    },
+    {
+      "name": "CST-InternalHub",
+      "accountId": "192734865080",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CST-InternalHub"
+    },
+    {
+      "name": "CST-Management-Prd",
+      "accountId": "105680322993",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CST-Management-Prd"
+    },
+    {
+      "name": "CST-Observability",
+      "accountId": "510978032531",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CST-Observability"
+    },
+    {
+      "name": "CSTBedrockSandbox",
+      "accountId": "385864240531",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTBedrockSandbox"
+    },
+    {
+      "name": "CSTCloudPortal",
+      "accountId": "930936104985",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTCloudPortal"
+    },
+    {
+      "name": "CSTCloudPortalPrd",
+      "accountId": "869096797359",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTCloudPortalPrd"
+    },
+    {
+      "name": "CSTHomeProd",
+      "accountId": "378743674153",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTHomeProd"
+    },
+    {
+      "name": "CSTHomeProdCA",
+      "accountId": "423147398635",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTHomeProdCA"
+    },
+    {
+      "name": "CSTHomeSandbox",
+      "accountId": "058264502926",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTHomeSandbox"
+    },
+    {
+      "name": "CSTHomeSandboxGC",
+      "accountId": "381491928474",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTHomeSandboxGC"
+    },
+    {
+      "name": "CSTHomedev",
+      "accountId": "111236691499",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTHomedev"
+    },
+    {
+      "name": "CSTOneDev",
+      "accountId": "557393770182",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTOneDev"
+    },
+    {
+      "name": "CSTOneProd",
+      "accountId": "996553104321",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTOneProd"
+    },
+    {
+      "name": "CSTPaymentsCZPDev",
+      "accountId": "912404676010",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTPaymentsCZPDev"
+    },
+    {
+      "name": "CSTPaymentsCZPProdCA",
+      "accountId": "897762590251",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTPaymentsCZPProdCA"
+    },
+    {
+      "name": "CSTPaymentsCZPProdUS",
+      "accountId": "290008131374",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTPaymentsCZPProdUS"
+    },
+    {
+      "name": "CSTProduction",
+      "accountId": "371447792466",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTProduction"
+    },
+    {
+      "name": "CSTWebsiteBackendCache",
+      "accountId": "490004618281",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTWebsiteBackendCache"
+    },
+    {
+      "name": "CSTWorkspaces",
+      "accountId": "795488789787",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTWorkspaces"
+    },
+    {
+      "name": "CZPDev",
+      "accountId": "060212350401",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CZPDev"
+    },
+    {
+      "name": "CenterlineDev",
+      "accountId": "129271358951",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CenterlineDev"
+    },
+    {
+      "name": "CenterlinePrd",
+      "accountId": "512138916590",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CenterlinePrd"
+    },
+    {
+      "name": "CentralIntelligenceDashboard",
+      "accountId": "471112977649",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CentralIntelligenceDashboard"
+    },
+    {
+      "name": "CentralSquare",
+      "accountId": "453498544693",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CentralSquare"
+    },
+    {
+      "name": "ChocolateCityDev",
+      "accountId": "352383909052",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ChocolateCityDev"
+    },
+    {
+      "name": "CimDevUS",
+      "accountId": "936998755740",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CimDevUS"
+    },
+    {
+      "name": "Cloud Data Protection Services",
+      "accountId": "832071262165",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Cloud Data Protection Services"
+    },
+    {
+      "name": "Cloud-Sandbox",
+      "accountId": "394894302491",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Cloud-Sandbox"
+    },
+    {
+      "name": "CloudApper-Prod",
+      "accountId": "767116502928",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CloudApper-Prod"
+    },
+    {
+      "name": "CloudApper-Stage",
+      "accountId": "709058502667",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CloudApper-Stage"
+    },
+    {
+      "name": "CloudDevSRE",
+      "accountId": "323612677988",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CloudDevSRE"
+    },
+    {
+      "name": "CloudDevSREGC",
+      "accountId": "183295449886",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CloudDevSREGC"
+    },
+    {
+      "name": "CoffeeandCodeDev",
+      "accountId": "628132820958",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CoffeeandCodeDev"
+    },
+    {
+      "name": "CommDev-Prod",
+      "accountId": "260032096987",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CommDev-Prod"
+    },
+    {
+      "name": "CrimeView-Prod",
+      "accountId": "081557494613",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-CrimeView-Prod"
+    },
+    {
+      "name": "DEMO-Enterprise-PA",
+      "accountId": "756772597711",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "DEMO-Enterprise-PA"
+    },
+    {
+      "name": "DEV-APS-SAAS",
+      "accountId": "851332079688",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-DEV-APS-SAAS"
+    },
+    {
+      "name": "DEV-Concord-Engage",
+      "accountId": "256667951073",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-DEV-Concord-Engage"
+    },
+    {
+      "name": "DEV-FDM",
+      "accountId": "504214265831",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-DEV-FDM"
+    },
+    {
+      "name": "DEV-Medworxx",
+      "accountId": "146908500015",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "DEV-Medworxx"
+    },
+    {
+      "name": "DEV-PA-PropertyTax",
+      "accountId": "277000701942",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "DEV-PA-PropertyTax"
+    },
+    {
+      "name": "DEV-PSJ-GSC",
+      "accountId": "016014444335",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-DEV-PSJ-GSC"
+    },
+    {
+      "name": "DEV-USTI",
+      "accountId": "053266950795",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-DEV-USTI"
+    },
+    {
+      "name": "DataCenterMigrationPrd",
+      "accountId": "490004655163",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "DataCenterMigrationPrd"
+    },
+    {
+      "name": "Devops-internal",
+      "accountId": "314819346110",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Devops-internal"
+    },
+    {
+      "name": "DhsrPrdFE",
+      "accountId": "106403001274",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "DhsrPrdFE"
+    },
+    {
+      "name": "EASOPrdFE",
+      "accountId": "385704849256",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EASOPrdFE"
+    },
+    {
+      "name": "ECBPrdFE",
+      "accountId": "162452196300",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ECBPrdFE"
+    },
+    {
+      "name": "ECCPrdFE",
+      "accountId": "962088872955",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ECCPrdFE"
+    },
+    {
+      "name": "EastBatonRougeLA911Prd",
+      "accountId": "219336314568",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EastBatonRougeLA911Prd"
+    },
+    {
+      "name": "EngageSandbox",
+      "accountId": "982534377440",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EngageSandbox"
+    },
+    {
+      "name": "EntCADDev",
+      "accountId": "284038850309",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntCADDev"
+    },
+    {
+      "name": "EntCADDevGC",
+      "accountId": "590184126360",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntCADDevGC"
+    },
+    {
+      "name": "EntCADQA",
+      "accountId": "509505637753",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntCADQA"
+    },
+    {
+      "name": "EntCADQAGC",
+      "accountId": "533267421602",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntCADQAGC"
+    },
+    {
+      "name": "EntRMSDev",
+      "accountId": "899013845730",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntRMSDev"
+    },
+    {
+      "name": "EntRMSDevGC",
+      "accountId": "992382597189",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntRMSDevGC"
+    },
+    {
+      "name": "EntRMSQA",
+      "accountId": "822722434857",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntRMSQA"
+    },
+    {
+      "name": "EntRMSQAGC",
+      "accountId": "730335631109",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "EntRMSQAGC"
+    },
+    {
+      "name": "FATPOT Technologies",
+      "accountId": "750407890194",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-FATPOT Technologies"
+    },
+    {
+      "name": "FEDemo",
+      "accountId": "344859353537",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FEDemo"
+    },
+    {
+      "name": "FEDev",
+      "accountId": "871265417820",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FEDev"
+    },
+    {
+      "name": "FESmshProd",
+      "accountId": "850756191955",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FESmshProd"
+    },
+    {
+      "name": "FTWBPrdFE",
+      "accountId": "438294253924",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FTWBPrdFE"
+    },
+    {
+      "name": "FieldOps Commercial",
+      "accountId": "687049393369",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FieldOps Commercial"
+    },
+    {
+      "name": "FinanceEnterpriseDemo",
+      "accountId": "831926627714",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FinanceEnterpriseDemo"
+    },
+    {
+      "name": "FinanceEnterpriseDev",
+      "accountId": "619071318358",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FinanceEnterpriseDev"
+    },
+    {
+      "name": "FirstTwoDev",
+      "accountId": "232351199962",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FirstTwoDev"
+    },
+    {
+      "name": "FirstTwoPrd",
+      "accountId": "564203970243",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FirstTwoPrd"
+    },
+    {
+      "name": "GlennPrdFE",
+      "accountId": "216731772819",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "GlennPrdFE"
+    },
+    {
+      "name": "HARRPrdFE",
+      "accountId": "546155105244",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "HARRPrdFE"
+    },
+    {
+      "name": "HeritageTRAKiT-PROD",
+      "accountId": "433501008207",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-HeritageTRAKiT-PROD"
+    },
+    {
+      "name": "IQSearchDev",
+      "accountId": "116904975141",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "IQSearchDev"
+    },
+    {
+      "name": "IQSearchPrdGC",
+      "accountId": "903187543240",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "IQSearchPrdGC"
+    },
+    {
+      "name": "InternalIT",
+      "accountId": "992364732897",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "InternalIT"
+    },
+    {
+      "name": "JurisdictionOnline-DEV",
+      "accountId": "573426578423",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "JurisdictionOnline-DEV"
+    },
+    {
+      "name": "LZAtestingAccount",
+      "accountId": "139923077263",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "LZAtestingAccount"
+    },
+    {
+      "name": "LZAtestingAccount2",
+      "accountId": "279635434788",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "LZAtestingAccount2"
+    },
+    {
+      "name": "LapoPrdFE",
+      "accountId": "862369800593",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "LapoPrdFE"
+    },
+    {
+      "name": "Log Archive",
+      "accountId": "891377303291",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Log Archive"
+    },
+    {
+      "name": "Log Archive",
+      "accountId": "786744540535",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Log Archive"
+    },
+    {
+      "name": "LogArchiveGC",
+      "accountId": "905418047865",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "LogArchiveGC"
+    },
+    {
+      "name": "Lucity AWS-Test",
+      "accountId": "694327170733",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Lucity AWS-Test"
+    },
+    {
+      "name": "Lucity Internal",
+      "accountId": "234419661784",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Lucity Internal"
+    },
+    {
+      "name": "LucityCloud Prod Env",
+      "accountId": "159403314761",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "LucityCloud Prod Env"
+    },
+    {
+      "name": "Marketplace-Prod",
+      "accountId": "533267094065",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Marketplace-Prod"
+    },
+    {
+      "name": "ModPrdFE",
+      "accountId": "582360921531",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ModPrdFE"
+    },
+    {
+      "name": "NCRTDPrdFE",
+      "accountId": "765607524545",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NCRTDPrdFE"
+    },
+    {
+      "name": "NavilineDev",
+      "accountId": "623874869381",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineDev"
+    },
+    {
+      "name": "NavilineDevCA",
+      "accountId": "561605471407",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineDevCA"
+    },
+    {
+      "name": "NavilineEdgewater",
+      "accountId": "986263532653",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineEdgewater"
+    },
+    {
+      "name": "NavilineGuelphCA",
+      "accountId": "613426352658",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineGuelphCA"
+    },
+    {
+      "name": "NavilineOwasso",
+      "accountId": "192722010352",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineOwasso"
+    },
+    {
+      "name": "NavilineProdCA",
+      "accountId": "423308949780",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineProdCA"
+    },
+    {
+      "name": "NavilineSharedServices",
+      "accountId": "468490946977",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineSharedServices"
+    },
+    {
+      "name": "NavilineTarponSprings",
+      "accountId": "070638634768",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineTarponSprings"
+    },
+    {
+      "name": "NetFoundryGC",
+      "accountId": "978285405610",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NetFoundryGC"
+    },
+    {
+      "name": "Network",
+      "accountId": "891376993117",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Network"
+    },
+    {
+      "name": "NetworkGC",
+      "accountId": "654654603788",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NetworkGC"
+    },
+    {
+      "name": "ONSBranchCountyCDMIPrd",
+      "accountId": "441250065200",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSBranchCountyCDMIPrd"
+    },
+    {
+      "name": "ONSBurlesonPoliceTXPrdGC",
+      "accountId": "971114369079",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSBurlesonPoliceTXPrdGC"
+    },
+    {
+      "name": "ONSCaldwellCountyNCPrd",
+      "accountId": "683123961475",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSCaldwellCountyNCPrd"
+    },
+    {
+      "name": "ONSCecilCountyDESMDPrdGC",
+      "accountId": "822043432683",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSCecilCountyDESMDPrdGC"
+    },
+    {
+      "name": "ONSDemoPrdG",
+      "accountId": "277707131769",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSDemoPrdG"
+    },
+    {
+      "name": "ONSDunwoodyPDGAPrdGC",
+      "accountId": "829010674122",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSDunwoodyPDGAPrdGC"
+    },
+    {
+      "name": "ONSEastPointGAPrdG",
+      "accountId": "307946636318",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSEastPointGAPrdG"
+    },
+    {
+      "name": "ONSEvansvilleINPrdG",
+      "accountId": "509399603677",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSEvansvilleINPrdG"
+    },
+    {
+      "name": "ONSFairbanksAKPrdG",
+      "accountId": "051826708890",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSFairbanksAKPrdG"
+    },
+    {
+      "name": "ONSFortMillPoliceSCPrd",
+      "accountId": "247794288887",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSFortMillPoliceSCPrd"
+    },
+    {
+      "name": "ONSFultonCountyGAPrdGC",
+      "accountId": "418272791031",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSFultonCountyGAPrdGC"
+    },
+    {
+      "name": "ONSGainesvillePDGAPrd",
+      "accountId": "444853191158",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSGainesvillePDGAPrd"
+    },
+    {
+      "name": "ONSHerndonPDVAPrd",
+      "accountId": "106189426885",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSHerndonPDVAPrd"
+    },
+    {
+      "name": "ONSHumbleTXPrdG",
+      "accountId": "864981732306",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSHumbleTXPrdG"
+    },
+    {
+      "name": "ONSIsleWghtCntySOVAPrdGC",
+      "accountId": "900867815355",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSIsleWghtCntySOVAPrdGC"
+    },
+    {
+      "name": "ONSJeffersonCntySOTXPrd",
+      "accountId": "119764646095",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSJeffersonCntySOTXPrd"
+    },
+    {
+      "name": "ONSJohnstonCntySONCPrd",
+      "accountId": "114639006153",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSJohnstonCntySONCPrd"
+    },
+    {
+      "name": "ONSKannapolisCityPDNCPrd",
+      "accountId": "077024820601",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSKannapolisCityPDNCPrd"
+    },
+    {
+      "name": "ONSKarnesCntySOTXPrd",
+      "accountId": "876169278411",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSKarnesCntySOTXPrd"
+    },
+    {
+      "name": "ONSMadisonCntySOTNPrd",
+      "accountId": "254192664739",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSMadisonCntySOTNPrd"
+    },
+    {
+      "name": "ONSMariettaPoliceGAPrdGC",
+      "accountId": "702975097330",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSMariettaPoliceGAPrdGC"
+    },
+    {
+      "name": "ONSMontgomeryCSALPrd",
+      "accountId": "259743166948",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSMontgomeryCSALPrd"
+    },
+    {
+      "name": "ONSOpaLockaPoliceFLPrdGC",
+      "accountId": "042722599579",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSOpaLockaPoliceFLPrdGC"
+    },
+    {
+      "name": "ONSParkerCntySOTXPrd",
+      "accountId": "829163697687",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSParkerCntySOTXPrd"
+    },
+    {
+      "name": "ONSRockyMountPoliceNCPrd",
+      "accountId": "867490540098",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSRockyMountPoliceNCPrd"
+    },
+    {
+      "name": "ONSRossTwnshpPDPAPrd",
+      "accountId": "946055849155",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSRossTwnshpPDPAPrd"
+    },
+    {
+      "name": "ONSSunnyIslesBeachPFLPrd",
+      "accountId": "714412036552",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSSunnyIslesBeachPFLPrd"
+    },
+    {
+      "name": "ONSUTAustinTXPrd",
+      "accountId": "486296873287",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "ONSUTAustinTXPrd"
+    },
+    {
+      "name": "OneSolutionDev",
+      "accountId": "793976186538",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "OneSolutionDev"
+    },
+    {
+      "name": "OneSolutionDevGC",
+      "accountId": "471112752256",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "OneSolutionDevGC"
+    },
+    {
+      "name": "OneSolutionQAGC",
+      "accountId": "471112909665",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "OneSolutionQAGC"
+    },
+    {
+      "name": "OrcaSecurityGC",
+      "accountId": "448049816012",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "OrcaSecurityGC"
+    },
+    {
+      "name": "PA-PropertyTax-PROD",
+      "accountId": "293178957018",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PA-PropertyTax-PROD"
+    },
+    {
+      "name": "PA-PropertyTax-STG",
+      "accountId": "443269275255",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PA-PropertyTax-STG"
+    },
+    {
+      "name": "PACloudDev",
+      "accountId": "286972226986",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PACloudDev"
+    },
+    {
+      "name": "PACloudSandbox",
+      "accountId": "557690582456",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PACloudSandbox"
+    },
+    {
+      "name": "PALegacyAnalytics",
+      "accountId": "179934977755",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyAnalytics"
+    },
+    {
+      "name": "PALegacyCommDev",
+      "accountId": "852998999214",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyCommDev"
+    },
+    {
+      "name": "PALegacyCzp",
+      "accountId": "797320052894",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyCzp"
+    },
+    {
+      "name": "PALegacyFinEntANCO",
+      "accountId": "624248574417",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntANCO"
+    },
+    {
+      "name": "PALegacyFinEntBELT",
+      "accountId": "926725308215",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntBELT"
+    },
+    {
+      "name": "PALegacyFinEntBRENT",
+      "accountId": "189696722428",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntBRENT"
+    },
+    {
+      "name": "PALegacyFinEntBRUN",
+      "accountId": "183248602092",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntBRUN"
+    },
+    {
+      "name": "PALegacyFinEntCALCO",
+      "accountId": "516624750060",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCALCO"
+    },
+    {
+      "name": "PALegacyFinEntCAM",
+      "accountId": "296336226691",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCAM"
+    },
+    {
+      "name": "PALegacyFinEntCAMCO",
+      "accountId": "356240508841",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCAMCO"
+    },
+    {
+      "name": "PALegacyFinEntCAS",
+      "accountId": "836683584222",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCAS"
+    },
+    {
+      "name": "PALegacyFinEntCCWD",
+      "accountId": "742508967661",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCCWD"
+    },
+    {
+      "name": "PALegacyFinEntCDRF",
+      "accountId": "710146770100",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCDRF"
+    },
+    {
+      "name": "PALegacyFinEntCMV",
+      "accountId": "222066942213",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCMV"
+    },
+    {
+      "name": "PALegacyFinEntCOA",
+      "accountId": "000936194892",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCOA"
+    },
+    {
+      "name": "PALegacyFinEntCOMP",
+      "accountId": "862191734212",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCOMP"
+    },
+    {
+      "name": "PALegacyFinEntCOSC",
+      "accountId": "330994198597",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCOSC"
+    },
+    {
+      "name": "PALegacyFinEntCOSM",
+      "accountId": "880961130429",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCOSM"
+    },
+    {
+      "name": "PALegacyFinEntCOW",
+      "accountId": "824190116370",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCOW"
+    },
+    {
+      "name": "PALegacyFinEntCRCT",
+      "accountId": "692744833570",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCRCT"
+    },
+    {
+      "name": "PALegacyFinEntCloud",
+      "accountId": "196900110770",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntCloud"
+    },
+    {
+      "name": "PALegacyFinEntDALY",
+      "accountId": "434562740830",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntDALY"
+    },
+    {
+      "name": "PALegacyFinEntDCSC",
+      "accountId": "512378128179",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntDCSC"
+    },
+    {
+      "name": "PALegacyFinEntDENT",
+      "accountId": "540334252762",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntDENT"
+    },
+    {
+      "name": "PALegacyFinEntDHILL",
+      "accountId": "784486495262",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntDHILL"
+    },
+    {
+      "name": "PALegacyFinEntEBPRK",
+      "accountId": "186582695548",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntEBPRK"
+    },
+    {
+      "name": "PALegacyFinEntELGR",
+      "accountId": "464478944305",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntELGR"
+    },
+    {
+      "name": "PALegacyFinEntELGR-DCI",
+      "accountId": "826297868806",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntELGR-DCI"
+    },
+    {
+      "name": "PALegacyFinEntELKO",
+      "accountId": "681623867230",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntELKO"
+    },
+    {
+      "name": "PALegacyFinEntENC",
+      "accountId": "677930909982",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntENC"
+    },
+    {
+      "name": "PALegacyFinEntFIT",
+      "accountId": "718219276052",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntFIT"
+    },
+    {
+      "name": "PALegacyFinEntGGB",
+      "accountId": "447199793878",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntGGB"
+    },
+    {
+      "name": "PALegacyFinEntGLENN",
+      "accountId": "882145599737",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntGLENN"
+    },
+    {
+      "name": "PALegacyFinEntHIC",
+      "accountId": "976048299571",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntHIC"
+    },
+    {
+      "name": "PALegacyFinEntIMP",
+      "accountId": "928998604702",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntIMP"
+    },
+    {
+      "name": "PALegacyFinEntISB",
+      "accountId": "166463094979",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntISB"
+    },
+    {
+      "name": "PALegacyFinEntJACO",
+      "accountId": "018882982033",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntJACO"
+    },
+    {
+      "name": "PALegacyFinEntJERS",
+      "accountId": "915233243810",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntJERS"
+    },
+    {
+      "name": "PALegacyFinEntKETT",
+      "accountId": "209668699377",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntKETT"
+    },
+    {
+      "name": "PALegacyFinEntLAPO",
+      "accountId": "245775074687",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntLAPO"
+    },
+    {
+      "name": "PALegacyFinEntLKWO",
+      "accountId": "565092613725",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntLKWO"
+    },
+    {
+      "name": "PALegacyFinEntLVRN",
+      "accountId": "070410863625",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntLVRN"
+    },
+    {
+      "name": "PALegacyFinEntLWCL",
+      "accountId": "213679840389",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntLWCL"
+    },
+    {
+      "name": "PALegacyFinEntMADC",
+      "accountId": "526442642474",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMADC"
+    },
+    {
+      "name": "PALegacyFinEntMAUI",
+      "accountId": "154146317456",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMAUI"
+    },
+    {
+      "name": "PALegacyFinEntMDDL",
+      "accountId": "477655840032",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMDDL"
+    },
+    {
+      "name": "PALegacyFinEntMDDLI",
+      "accountId": "030342421747",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMDDLI"
+    },
+    {
+      "name": "PALegacyFinEntMERI",
+      "accountId": "466967047678",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMERI"
+    },
+    {
+      "name": "PALegacyFinEntMTC",
+      "accountId": "258219590286",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMTC"
+    },
+    {
+      "name": "PALegacyFinEntMUKI",
+      "accountId": "036338177430",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMUKI"
+    },
+    {
+      "name": "PALegacyFinEntMURR",
+      "accountId": "491766120276",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntMURR"
+    },
+    {
+      "name": "PALegacyFinEntNCRTD",
+      "accountId": "024697547769",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntNCRTD"
+    },
+    {
+      "name": "PALegacyFinEntNUC",
+      "accountId": "327285291655",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntNUC"
+    },
+    {
+      "name": "PALegacyFinEntOCLS",
+      "accountId": "043031296181",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntOCLS"
+    },
+    {
+      "name": "PALegacyFinEntOWA",
+      "accountId": "020510964797",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntOWA"
+    },
+    {
+      "name": "PALegacyFinEntPIETD",
+      "accountId": "814817358652",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntPIETD"
+    },
+    {
+      "name": "PALegacyFinEntPLCNT",
+      "accountId": "934860272059",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntPLCNT"
+    },
+    {
+      "name": "PALegacyFinEntPOCA",
+      "accountId": "650681344239",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntPOCA"
+    },
+    {
+      "name": "PALegacyFinEntRACO",
+      "accountId": "842609633498",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntRACO"
+    },
+    {
+      "name": "PALegacyFinEntRCKC",
+      "accountId": "226610659577",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntRCKC"
+    },
+    {
+      "name": "PALegacyFinEntSANA",
+      "accountId": "524522256410",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSANA"
+    },
+    {
+      "name": "PALegacyFinEntSCR",
+      "accountId": "505789306231",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSCR"
+    },
+    {
+      "name": "PALegacyFinEntSDSP",
+      "accountId": "405028355774",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSDSP"
+    },
+    {
+      "name": "PALegacyFinEntSJRTD",
+      "accountId": "550429145130",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSJRTD"
+    },
+    {
+      "name": "PALegacyFinEntSJS",
+      "accountId": "790087872923",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSJS"
+    },
+    {
+      "name": "PALegacyFinEntSLT",
+      "accountId": "929690601141",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSLT"
+    },
+    {
+      "name": "PALegacyFinEntSMIA",
+      "accountId": "640698236228",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSMIA"
+    },
+    {
+      "name": "PALegacyFinEntSOL",
+      "accountId": "944777361415",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSOL"
+    },
+    {
+      "name": "PALegacyFinEntSTPB",
+      "accountId": "691443742007",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntSTPB"
+    },
+    {
+      "name": "PALegacyFinEntTCA",
+      "accountId": "555035388709",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntTCA"
+    },
+    {
+      "name": "PALegacyFinEntTEH",
+      "accountId": "606357619300",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntTEH"
+    },
+    {
+      "name": "PALegacyFinEntTML",
+      "accountId": "004407157654",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntTML"
+    },
+    {
+      "name": "PALegacyFinEntTRIN",
+      "accountId": "381443105384",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntTRIN"
+    },
+    {
+      "name": "PALegacyFinEntTUKW",
+      "accountId": "910322382555",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntTUKW"
+    },
+    {
+      "name": "PALegacyFinEntTUOL",
+      "accountId": "172613389231",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntTUOL"
+    },
+    {
+      "name": "PALegacyFinEntUNM",
+      "accountId": "491975703086",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntUNM"
+    },
+    {
+      "name": "PALegacyFinEntVALL",
+      "accountId": "390489711178",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntVALL"
+    },
+    {
+      "name": "PALegacyFinEntWASHC",
+      "accountId": "391957224958",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntWASHC"
+    },
+    {
+      "name": "PALegacyFinEntWEST",
+      "accountId": "728629253423",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntWEST"
+    },
+    {
+      "name": "PALegacyFinEntYAVA",
+      "accountId": "946554700152",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyFinEntYAVA"
+    },
+    {
+      "name": "PALegacyMedworxxTST",
+      "accountId": "121431344102",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyMedworxxTST"
+    },
+    {
+      "name": "PALegacyNaviLine",
+      "accountId": "939043423019",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyNaviLine"
+    },
+    {
+      "name": "PALegacyNetwork",
+      "accountId": "638500336745",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyNetwork"
+    },
+    {
+      "name": "PALegacyPlus",
+      "accountId": "939845564306",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyPlus"
+    },
+    {
+      "name": "PALegacyPlusDev",
+      "accountId": "775732269626",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacyPlusDev"
+    },
+    {
+      "name": "PALegacySharedServices",
+      "accountId": "361362055558",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PALegacySharedServices"
+    },
+    {
+      "name": "PROD-PA-Pro",
+      "accountId": "911318933593",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PROD-PA-Pro"
+    },
+    {
+      "name": "PROD-Tellus",
+      "accountId": "592467246169",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PROD-Tellus"
+    },
+    {
+      "name": "PSJ-Emergitech-Prod",
+      "accountId": "958334053586",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSJ-Emergitech-Prod"
+    },
+    {
+      "name": "PSJ-LETG-Prod",
+      "accountId": "652776727729",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSJ-LETG-Prod"
+    },
+    {
+      "name": "PSJ-Pro-Backups-Prod",
+      "accountId": "905418371664",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSJ-Pro-Backups-Prod"
+    },
+    {
+      "name": "PSJCrimeViewDev",
+      "accountId": "643067045548",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJCrimeViewDev"
+    },
+    {
+      "name": "PSJCrimeViewPrdGC",
+      "accountId": "127393434557",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJCrimeViewPrdGC"
+    },
+    {
+      "name": "PSJEntDev",
+      "accountId": "879937385711",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJEntDev"
+    },
+    {
+      "name": "PSJEntDevGC",
+      "accountId": "730335558417",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJEntDevGC"
+    },
+    {
+      "name": "PSJEntQA",
+      "accountId": "345115395612",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJEntQA"
+    },
+    {
+      "name": "PSJEntQAGC",
+      "accountId": "851725472181",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJEntQAGC"
+    },
+    {
+      "name": "PSJLETGDevGC",
+      "accountId": "396913721413",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJLETGDevGC"
+    },
+    {
+      "name": "PSJLETGPrdGC",
+      "accountId": "296062574031",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJLETGPrdGC"
+    },
+    {
+      "name": "PSJLegacyCrywolf",
+      "accountId": "965314206439",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJLegacyCrywolf"
+    },
+    {
+      "name": "PSJProALMorganEMCD",
+      "accountId": "200915316027",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProALMorganEMCD"
+    },
+    {
+      "name": "PSJProARStFrancis911",
+      "accountId": "630243422053",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProARStFrancis911"
+    },
+    {
+      "name": "PSJProAZEloyPD",
+      "accountId": "051370627411",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProAZEloyPD"
+    },
+    {
+      "name": "PSJProBuilds",
+      "accountId": "058264350890",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProBuilds"
+    },
+    {
+      "name": "PSJProBuildsGC",
+      "accountId": "851725480283",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProBuildsGC"
+    },
+    {
+      "name": "PSJProCOArapahoeSO",
+      "accountId": "354793419864",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProCOArapahoeSO"
+    },
+    {
+      "name": "PSJProCOKitcarsonSO",
+      "accountId": "484485197124",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProCOKitcarsonSO"
+    },
+    {
+      "name": "PSJProCOLasanimas911GC",
+      "accountId": "922157569203",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProCOLasanimas911GC"
+    },
+    {
+      "name": "PSJProConnectiveDev",
+      "accountId": "241766333737",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProConnectiveDev"
+    },
+    {
+      "name": "PSJProConnectiveDevGC",
+      "accountId": "564401631420",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProConnectiveDevGC"
+    },
+    {
+      "name": "PSJProConnectiveGC",
+      "accountId": "380894490851",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProConnectiveGC"
+    },
+    {
+      "name": "PSJProConnectivePrd",
+      "accountId": "150911080230",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProConnectivePrd"
+    },
+    {
+      "name": "PSJProDev",
+      "accountId": "454640698118",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProDev"
+    },
+    {
+      "name": "PSJProDevGC",
+      "accountId": "961341523261",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProDevGC"
+    },
+    {
+      "name": "PSJProGADekalbSDGC",
+      "accountId": "417589271190",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGADekalbSDGC"
+    },
+    {
+      "name": "PSJProGADekalbschoolPSGC",
+      "accountId": "195216431769",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGADekalbschoolPSGC"
+    },
+    {
+      "name": "PSJProGAFloydPD",
+      "accountId": "956574163249",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGAFloydPD"
+    },
+    {
+      "name": "PSJProGAFloydSO",
+      "accountId": "923516173232",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGAFloydSO"
+    },
+    {
+      "name": "PSJProGAValdostaUniversityPD",
+      "accountId": "386403273629",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGAValdostaUniversityPD"
+    },
+    {
+      "name": "PSJProIACerroGordoSO",
+      "accountId": "838829464199",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProIACerroGordoSO"
+    },
+    {
+      "name": "PSJProIAClintonSO",
+      "accountId": "906513712892",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProIAClintonSO"
+    },
+    {
+      "name": "PSJProIAIowaSO",
+      "accountId": "351885857564",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProIAIowaSO"
+    },
+    {
+      "name": "PSJProIALee911",
+      "accountId": "445201507589",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProIALee911"
+    },
+    {
+      "name": "PSJProIAPoweshiekSO",
+      "accountId": "032163755775",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProIAPoweshiekSO"
+    },
+    {
+      "name": "PSJProKSMiamiSO",
+      "accountId": "770688009271",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProKSMiamiSO"
+    },
+    {
+      "name": "PSJProLABienvilleSO",
+      "accountId": "346568122411",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProLABienvilleSO"
+    },
+    {
+      "name": "PSJProLAStMarySO",
+      "accountId": "559313351209",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProLAStMarySO"
+    },
+    {
+      "name": "PSJProMAConcordPD",
+      "accountId": "131904956477",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMAConcordPD"
+    },
+    {
+      "name": "PSJProMAMountAuburn911",
+      "accountId": "208297280148",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMAMountAuburn911"
+    },
+    {
+      "name": "PSJProMANatickPD",
+      "accountId": "420924156051",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMANatickPD"
+    },
+    {
+      "name": "PSJProMAPittsfieldPD",
+      "accountId": "259946925763",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMAPittsfieldPD"
+    },
+    {
+      "name": "PSJProMNIsantiSO",
+      "accountId": "728393074096",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMNIsantiSO"
+    },
+    {
+      "name": "PSJProMNRamseySO",
+      "accountId": "263050932693",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMNRamseySO"
+    },
+    {
+      "name": "PSJProMNStevensSO",
+      "accountId": "982689565096",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMNStevensSO"
+    },
+    {
+      "name": "PSJProMOCooperSO",
+      "accountId": "877231426073",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOCooperSO"
+    },
+    {
+      "name": "PSJProMOHigginsvillePD",
+      "accountId": "947095430818",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOHigginsvillePD"
+    },
+    {
+      "name": "PSJProMOJacksonSO",
+      "accountId": "204485030437",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOJacksonSO"
+    },
+    {
+      "name": "PSJProMOMarion911",
+      "accountId": "385000657327",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOMarion911"
+    },
+    {
+      "name": "PSJProMONECOMMPD",
+      "accountId": "756660955116",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMONECOMMPD"
+    },
+    {
+      "name": "PSJProMONWRCC911",
+      "accountId": "251198450378",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMONWRCC911"
+    },
+    {
+      "name": "PSJProMOPettisSO",
+      "accountId": "808537413297",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOPettisSO"
+    },
+    {
+      "name": "PSJProMOVernonSO",
+      "accountId": "208569836293",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOVernonSO"
+    },
+    {
+      "name": "PSJProMTChouteauSO",
+      "accountId": "066949449407",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMTChouteauSO"
+    },
+    {
+      "name": "PSJProMTLincolnSO",
+      "accountId": "584779375565",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMTLincolnSO"
+    },
+    {
+      "name": "PSJProNEAlliancePD",
+      "accountId": "234401109107",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNEAlliancePD"
+    },
+    {
+      "name": "PSJProNEBoydHolt911",
+      "accountId": "744087688163",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNEBoydHolt911"
+    },
+    {
+      "name": "PSJProNEPerkins911",
+      "accountId": "503353479556",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNEPerkins911"
+    },
+    {
+      "name": "PSJProNHCarrollPD",
+      "accountId": "470999030193",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNHCarrollPD"
+    },
+    {
+      "name": "PSJProNHHillsboroughDoC",
+      "accountId": "761288222098",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNHHillsboroughDoC"
+    },
+    {
+      "name": "PSJProNHMerrimackDOC",
+      "accountId": "077575609804",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNHMerrimackDOC"
+    },
+    {
+      "name": "PSJProNJSaSJ911",
+      "accountId": "960870764899",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNJSaSJ911"
+    },
+    {
+      "name": "PSJProNYRamapoPD",
+      "accountId": "925271162504",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNYRamapoPD"
+    },
+    {
+      "name": "PSJProNYScarsdalePDGC",
+      "accountId": "398996574304",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNYScarsdalePDGC"
+    },
+    {
+      "name": "PSJProNYStonyBrookPD",
+      "accountId": "748134080691",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNYStonyBrookPD"
+    },
+    {
+      "name": "PSJProOHCincinnatiPDGC",
+      "accountId": "815283997212",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOHCincinnatiPDGC"
+    },
+    {
+      "name": "PSJProOHHocking911",
+      "accountId": "802096227074",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOHHocking911"
+    },
+    {
+      "name": "PSJProOHMedinaSO",
+      "accountId": "142388772484",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOHMedinaSO"
+    },
+    {
+      "name": "PSJProOHMonroePD",
+      "accountId": "204485030418",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOHMonroePD"
+    },
+    {
+      "name": "PSJProOHPerry911",
+      "accountId": "275333454441",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOHPerry911"
+    },
+    {
+      "name": "PSJProOKClevelandSO",
+      "accountId": "207963326988",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOKClevelandSO"
+    },
+    {
+      "name": "PSJProOKLefloreEMSGC",
+      "accountId": "455162986579",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOKLefloreEMSGC"
+    },
+    {
+      "name": "PSJProPutnamWV911Prd",
+      "accountId": "455820317292",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProPutnamWV911Prd"
+    },
+    {
+      "name": "PSJProSCClemsonPD",
+      "accountId": "707188165096",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSCClemsonPD"
+    },
+    {
+      "name": "PSJProSCKershaw911",
+      "accountId": "315702089617",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSCKershaw911"
+    },
+    {
+      "name": "PSJProSDButteSO",
+      "accountId": "378050920295",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSDButteSO"
+    },
+    {
+      "name": "PSJProSDMarshallSO",
+      "accountId": "537997491805",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSDMarshallSO"
+    },
+    {
+      "name": "PSJProSDUnionSO",
+      "accountId": "200159633229",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSDUnionSO"
+    },
+    {
+      "name": "PSJProSDZTInterface",
+      "accountId": "680191163249",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSDZTInterface"
+    },
+    {
+      "name": "PSJProServicesGC",
+      "accountId": "445567110264",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProServicesGC"
+    },
+    {
+      "name": "PSJProSharedServices",
+      "accountId": "402996622577",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSharedServices"
+    },
+    {
+      "name": "PSJProSharedServicesGC",
+      "accountId": "638596943253",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSharedServicesGC"
+    },
+    {
+      "name": "PSJProSharedServicesInternal",
+      "accountId": "067969188896",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSharedServicesInternal"
+    },
+    {
+      "name": "PSJProSharedServicesInternalGC",
+      "accountId": "423656921708",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSharedServicesInternalGC"
+    },
+    {
+      "name": "PSJProSuiteTesting",
+      "accountId": "547520640023",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSuiteTesting"
+    },
+    {
+      "name": "PSJProTNBedford911",
+      "accountId": "065571033873",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTNBedford911"
+    },
+    {
+      "name": "PSJProTXFreeportPD",
+      "accountId": "774676933390",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTXFreeportPD"
+    },
+    {
+      "name": "PSJProTXKatyISDPD",
+      "accountId": "640083578097",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTXKatyISDPD"
+    },
+    {
+      "name": "PSJProTXLamarISD",
+      "accountId": "174715754411",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTXLamarISD"
+    },
+    {
+      "name": "PSJProTXPecosPD",
+      "accountId": "867490540592",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTXPecosPD"
+    },
+    {
+      "name": "PSJProTXReevesESD",
+      "accountId": "982758651006",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTXReevesESD"
+    },
+    {
+      "name": "PSJProTerrebonneParishLA",
+      "accountId": "495021264065",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProTerrebonneParishLA"
+    },
+    {
+      "name": "PSJProToolsPrd",
+      "accountId": "841149291862",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProToolsPrd"
+    },
+    {
+      "name": "PSJProVAAugustaSO",
+      "accountId": "891340030466",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProVAAugustaSO"
+    },
+    {
+      "name": "PSJProVAMathewsSO",
+      "accountId": "072707626329",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProVAMathewsSO"
+    },
+    {
+      "name": "PSJProWVBoone911",
+      "accountId": "742476388680",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProWVBoone911"
+    },
+    {
+      "name": "PSJProWVWetzel911",
+      "accountId": "302222526736",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProWVWetzel911"
+    },
+    {
+      "name": "PSJProZTCloudQA",
+      "accountId": "863760761236",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProZTCloudQA"
+    },
+    {
+      "name": "PSJRMSDevGC",
+      "accountId": "891377368358",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJRMSDevGC"
+    },
+    {
+      "name": "PSJUnifyDev",
+      "accountId": "741907364173",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJUnifyDev"
+    },
+    {
+      "name": "PSSE-Boulder-PROD",
+      "accountId": "480170040993",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSSE-Boulder-PROD"
+    },
+    {
+      "name": "PSSE-Fort Bend County Sheriff-TX-Prod",
+      "accountId": "397887684283",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSSE-Fort Bend County Sheriff-TX-Prod"
+    },
+    {
+      "name": "PSSE-LongmontPolice-CO-Prod",
+      "accountId": "925895471125",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSSE-LongmontPolice-CO-Prod"
+    },
+    {
+      "name": "PSSE-MinistryOfHealth-Sandbox",
+      "accountId": "982214410693",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSE-MinistryOfHealth-Sandbox"
+    },
+    {
+      "name": "PSSE-Murrieta-CA-ProdGC",
+      "accountId": "058264070543",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSE-Murrieta-CA-ProdGC"
+    },
+    {
+      "name": "PSSE-SantaBarbaraCoFire-Test",
+      "accountId": "597142638934",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-PSSE-SantaBarbaraCoFire-Test"
+    },
+    {
+      "name": "PSSEAlbany-DaughteryGAPrdG",
+      "accountId": "442426879328",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEAlbany-DaughteryGAPrdG"
+    },
+    {
+      "name": "PSSEAlleghenyPAPrdG",
+      "accountId": "615299728600",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEAlleghenyPAPrdG"
+    },
+    {
+      "name": "PSSEBastropTXPrdGC",
+      "accountId": "575108955603",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEBastropTXPrdGC"
+    },
+    {
+      "name": "PSSEBayCountyFLPrdGC",
+      "accountId": "180294189116",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEBayCountyFLPrdGC"
+    },
+    {
+      "name": "PSSEBaySctWhtHlthTXPrdGC",
+      "accountId": "216545191634",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEBaySctWhtHlthTXPrdGC"
+    },
+    {
+      "name": "PSSEBoulderCOPrdGC",
+      "accountId": "640168432667",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEBoulderCOPrdGC"
+    },
+    {
+      "name": "PSSEBryanTXPrd",
+      "accountId": "637043415957",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEBryanTXPrd"
+    },
+    {
+      "name": "PSSEButlerCntyShfOHPrdGC",
+      "accountId": "470951427938",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEButlerCntyShfOHPrdGC"
+    },
+    {
+      "name": "PSSECaDeptFishWldCAPrdGC",
+      "accountId": "746669215417",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSECaDeptFishWldCAPrdGC"
+    },
+    {
+      "name": "PSSEChathamCountyGAPrdGC",
+      "accountId": "122610490395",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEChathamCountyGAPrdGC"
+    },
+    {
+      "name": "PSSEChattanoogaPolTNPrd",
+      "accountId": "985823270590",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEChattanoogaPolTNPrd"
+    },
+    {
+      "name": "PSSEClarksvilleTNPrdGC",
+      "accountId": "842675991522",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEClarksvilleTNPrdGC"
+    },
+    {
+      "name": "PSSEClaytonCountyGAPrdGC",
+      "accountId": "047719650148",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEClaytonCountyGAPrdGC"
+    },
+    {
+      "name": "PSSEClevelandBradTNPrdG",
+      "accountId": "337909783593",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEClevelandBradTNPrdG"
+    },
+    {
+      "name": "PSSEColliervilleTNPrd",
+      "accountId": "764416829136",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEColliervilleTNPrd"
+    },
+    {
+      "name": "PSSEDesPlainesINPrdG",
+      "accountId": "137068251537",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEDesPlainesINPrdG"
+    },
+    {
+      "name": "PSSEEastBatonRShfLAPrdGC",
+      "accountId": "849611540395",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEEastBatonRShfLAPrdGC"
+    },
+    {
+      "name": "PSSEEnterpriseDemoPrdG",
+      "accountId": "329599614302",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEEnterpriseDemoPrdG"
+    },
+    {
+      "name": "PSSEFairfaxCountyVAPrdG",
+      "accountId": "970547382156",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEFairfaxCountyVAPrdG"
+    },
+    {
+      "name": "PSSEFortBendTXPrdGC",
+      "accountId": "050451386869",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEFortBendTXPrdGC"
+    },
+    {
+      "name": "PSSEFrederickCntyMDPrdGC",
+      "accountId": "774305586284",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEFrederickCntyMDPrdGC"
+    },
+    {
+      "name": "PSSEHanoverCOVAPrd",
+      "accountId": "889474144527",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEHanoverCOVAPrd"
+    },
+    {
+      "name": "PSSEJohnsonCEMCKSPrd",
+      "accountId": "983145326595",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEJohnsonCEMCKSPrd"
+    },
+    {
+      "name": "PSSEKansasCtyFireMOPrd",
+      "accountId": "912928333014",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEKansasCtyFireMOPrd"
+    },
+    {
+      "name": "PSSELongmontCOPrdG",
+      "accountId": "619071349551",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSELongmontCOPrdG"
+    },
+    {
+      "name": "PSSELongviewTXPrdG",
+      "accountId": "727646477974",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSELongviewTXPrdG"
+    },
+    {
+      "name": "PSSEMARTAPrdGC",
+      "accountId": "490004627952",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEMARTAPrdGC"
+    },
+    {
+      "name": "PSSEMontgomeryPolALPrd",
+      "accountId": "065727387161",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEMontgomeryPolALPrd"
+    },
+    {
+      "name": "PSSENYMTAPrdGC",
+      "accountId": "890742561396",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSENYMTAPrdGC"
+    },
+    {
+      "name": "PSSENewbergDundeeORPrdGC",
+      "accountId": "712395067627",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSENewbergDundeeORPrdGC"
+    },
+    {
+      "name": "PSSEOrangeCAPDPrdGC",
+      "accountId": "844605843989",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEOrangeCAPDPrdGC"
+    },
+    {
+      "name": "PSSEOrangeCntyDACAPrdGC",
+      "accountId": "626635432152",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEOrangeCntyDACAPrdGC"
+    },
+    {
+      "name": "PSSEOrangePDCAPrdGC",
+      "accountId": "742604758267",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEOrangePDCAPrdGC"
+    },
+    {
+      "name": "PSSEParkerCOPrdG",
+      "accountId": "474668405916",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEParkerCOPrdG"
+    },
+    {
+      "name": "PSSEPlanoTXPrdG",
+      "accountId": "794038232632",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEPlanoTXPrdG"
+    },
+    {
+      "name": "PSSERemsaNVPrd",
+      "accountId": "246727182701",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSERemsaNVPrd"
+    },
+    {
+      "name": "PSSESCCrashPrdGC",
+      "accountId": "664418994408",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSESCCrashPrdGC"
+    },
+    {
+      "name": "PSSESanJoaquinCAPrdGC",
+      "accountId": "390403884802",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSESanJoaquinCAPrdGC"
+    },
+    {
+      "name": "PSSESanRamonCAPrd",
+      "accountId": "016170083521",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSESanRamonCAPrd"
+    },
+    {
+      "name": "PSSESouthFultonGAPrdGC",
+      "accountId": "920372987485",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSESouthFultonGAPrdGC"
+    },
+    {
+      "name": "PSSEStLouisFireMOPrd",
+      "accountId": "645188829364",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEStLouisFireMOPrd"
+    },
+    {
+      "name": "PSSEStaffordCOVAPrd",
+      "accountId": "279127167065",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEStaffordCOVAPrd"
+    },
+    {
+      "name": "PSSEStamfordCTPrdGC",
+      "accountId": "311141535477",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEStamfordCTPrdGC"
+    },
+    {
+      "name": "PSSESuffolkVAPrdG",
+      "accountId": "288761735683",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSESuffolkVAPrdG"
+    },
+    {
+      "name": "PSSETravisCntyShfTXPrdGC",
+      "accountId": "852303476954",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSETravisCntyShfTXPrdGC"
+    },
+    {
+      "name": "PSSEUplandPoliceCAPrd",
+      "accountId": "499689292989",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEUplandPoliceCAPrd"
+    },
+    {
+      "name": "PSSEWacoTXPrdG",
+      "accountId": "879381247735",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEWacoTXPrdG"
+    },
+    {
+      "name": "PSSEWashingtonCSMNPrd",
+      "accountId": "584673484506",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEWashingtonCSMNPrd"
+    },
+    {
+      "name": "PSSEWestCom911IAPrdGC",
+      "accountId": "406816180509",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEWestCom911IAPrdGC"
+    },
+    {
+      "name": "PSSEWoodCountyOHPrdG",
+      "accountId": "253490766912",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEWoodCountyOHPrdG"
+    },
+    {
+      "name": "PSSEYuhaaviatamSMCAPrd",
+      "accountId": "179388324690",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEYuhaaviatamSMCAPrd"
+    },
+    {
+      "name": "Pa-pro-dev",
+      "accountId": "645478643471",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Pa-pro-dev"
+    },
+    {
+      "name": "Pa-pro-qa",
+      "accountId": "306467395362",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Pa-pro-qa"
+    },
+    {
+      "name": "Pa-pro-staging",
+      "accountId": "553030370815",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Pa-pro-staging"
+    },
+    {
+      "name": "PanaPrdFE",
+      "accountId": "881601365129",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PanaPrdFE"
+    },
+    {
+      "name": "PrfPrdFE",
+      "accountId": "706004250256",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PrfPrdFE"
+    },
+    {
+      "name": "Prod-P2P-Comm",
+      "accountId": "395393843633",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Prod-P2P-Comm"
+    },
+    {
+      "name": "Prod-Tempest",
+      "accountId": "304811054607",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Prod-Tempest"
+    },
+    {
+      "name": "PropertyTaxDevCA",
+      "accountId": "033058308712",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PropertyTaxDevCA"
+    },
+    {
+      "name": "PropertyTaxProdCA",
+      "accountId": "032163755283",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PropertyTaxProdCA"
+    },
+    {
+      "name": "PropertyTaxProdUS",
+      "accountId": "781150885319",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PropertyTaxProdUS"
+    },
+    {
+      "name": "RMS-Cloud-QA",
+      "accountId": "687275721279",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-RMS-Cloud-QA"
+    },
+    {
+      "name": "SJRTDPrdFE",
+      "accountId": "919968175523",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SJRTDPrdFE"
+    },
+    {
+      "name": "SMIAPrdFE",
+      "accountId": "259851212355",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SMIAPrdFE"
+    },
+    {
+      "name": "Shared Services",
+      "accountId": "343823317319",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Shared Services"
+    },
+    {
+      "name": "SharedServices",
+      "accountId": "590183938156",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SharedServices"
+    },
+    {
+      "name": "SharedServicesGC",
+      "accountId": "905418176771",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SharedServicesGC"
+    },
+    {
+      "name": "SharedServicesInternal",
+      "accountId": "533267430380",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SharedServicesInternal"
+    },
+    {
+      "name": "SharedServicesInternalGC",
+      "accountId": "637423332267",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SharedServicesInternalGC"
+    },
+    {
+      "name": "SupDevFE",
+      "accountId": "340303437613",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "SupDevFE"
+    },
+    {
+      "name": "TMLPrdFE",
+      "accountId": "516116818200",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "TMLPrdFE"
+    },
+    {
+      "name": "TehPrdFE",
+      "accountId": "176048536483",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "TehPrdFE"
+    },
+    {
+      "name": "Tools-dev",
+      "accountId": "922845407478",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Tools-dev"
+    },
+    {
+      "name": "Tools-prod",
+      "accountId": "277660576486",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Tools-prod"
+    },
+    {
+      "name": "Tritech GovCloud",
+      "accountId": "092047055039",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Tritech GovCloud"
+    },
+    {
+      "name": "VallPrdFE",
+      "accountId": "739951718792",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "VallPrdFE"
+    },
+    {
+      "name": "VanillaCityDev",
+      "accountId": "603860469597",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "VanillaCityDev"
+    },
+    {
+      "name": "VertexSMS",
+      "accountId": "133074139046",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "VertexSMS"
+    },
+    {
+      "name": "VertexSMSQA",
+      "accountId": "461483517061",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "VertexSMSQA"
+    },
+    {
+      "name": "WSPMNPrdFE",
+      "accountId": "285527662881",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "WSPMNPrdFE"
+    },
+    {
+      "name": "Zuercher DEM",
+      "accountId": "009613909440",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Zuercher DEM"
+    },
+    {
+      "name": "Zuercher Suite Servers",
+      "accountId": "208266374033",
+      "org": "legacy",
+      "ssoSession": "legacy",
+      "profile": "legacy-Zuercher Suite Servers"
+    },
+    {
+      "name": "blueline",
+      "accountId": "242050238694",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "blueline"
+    },
+    {
+      "name": "pa-pro-pdmo",
+      "accountId": "322042831014",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "pa-pro-pdmo"
+    },
+    {
+      "name": "prod-respond-comm",
+      "accountId": "401562911843",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "prod-respond-comm"
+    },
+    {
+      "name": "testaccountdev",
+      "accountId": "286918585600",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "testaccountdev"
+    }
+  ]
+}

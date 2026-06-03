@@ -35,6 +35,4 @@ The GUI dropdown automatically loads **all** profiles from `~/.aws/config` that 
 - `Shared`
 - And any future profiles you add
 
-To add more, either:
-- Manually append a profile to `~/.aws/config` with `sso_session = foundation`
-- Or run `python fetch_foundation_ous.py --pattern "YourPattern*"` to auto-generate the config block
+To add more accounts, run the **`Setup: Sync AWS Config`** Kiro task after pulling the latest `aws-configs/cloudops.config` from the repo, or see `aws-configs/README.md` for the manual refresh procedure.

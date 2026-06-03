@@ -17,7 +17,7 @@ Resets Terminal Server (RDS) grace licensing period to 120 days on remote EC2 in
 
 ### 1. AWS Config
 Ensure your `~/.aws/config` has Foundation OU profiles with `sso_session = foundation`.
-See `aws-configs/config_Foundation` for reference.
+Run the **`Setup: Sync AWS Config`** Kiro task (see repo root `README.md`) or see `aws-configs/cloudops.config` for reference.
 
 ### 2. Install boto3
 ```
@@ -57,9 +57,9 @@ Flow:
 
 ### Connect to a Foundation server (SSM session)
 ```
-.\connectto_foundation.ps1 -s ARCT-PTRKRD001
-.\connectto_foundation.ps1 -s ARCT-PTRKRD001 -r us-west-2
-.\connectto_foundation.ps1 -s ARCT-PTRKRD001 -p PALegacyFinEntANCO
+..\connect-instance.ps1 -s ARCT-PTRKRD001
+..\connect-instance.ps1 -s ARCT-PTRKRD001 -r us-west-2
+..\connect-instance.ps1 -s ARCT-PTRKRD001 -p PALegacyFinEntANCO
 ```
 
 ---
@@ -69,10 +69,10 @@ Flow:
 | File | Purpose |
 |------|---------|
 | `rds_license_reset.py` | Main CLI tool — OU picker, wildcard search, grace check, reset |
-| `connectto_foundation.ps1` | SSM connect helper |
+| `../connect-instance.ps1` | SSM connect helper |
 | `ssm-doc.json` | SSM document definition (reference) |
 | `Reset-RDSGracePeriod.ps1` | Standalone PS1 (reference — embedded in ssm-doc.json) |
-| `aws-configs/config_Foundation` | All Foundation OU profiles for reference |
+| `../../../aws-configs/cloudops.config` | All team AWS profiles (both SSO sessions) |
 | `requirements.txt` | Python dependencies |
 
 ---
