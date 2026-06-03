@@ -1,0 +1,33 @@
+# Organizational Unit (OU) Reference
+#
+# OU distinguished names used by user lifecycle scripts. Values are sourced
+# directly from the scripts — update here when OU structure changes.
+#
+# Used by: scripts/ad/Aptean_User_Management/Create-Apteanps-CitizenUser.ps1
+#          scripts/ad/Aptean_User_Management/Create-Centroid-Aptean-Users.ps1
+#          scripts/ad/Disable_users_4Domains.ps1
+
+ous:
+  apteanps.local:
+    - dn: "OU=OU - Citizens,DC=apteanps,DC=local"
+      purpose: Root container for citizen portal users. All citizen users live under org sub-OUs here.
+      used_by: Create-Apteanps-CitizenUser.ps1
+
+  centroid.cloud.lcl:
+    - dn: "OU=Customers,DC=centroid,DC=cloud,DC=lcl"
+      purpose: Root container for all customer org OUs.
+      used_by: Create-Centroid-Aptean-Users.ps1
+
+    - dn: "OU=<CompanyFolder>,OU=Customers,DC=centroid,DC=cloud,DC=lcl"
+      purpose: >
+        Per-company OU. CompanyFolder is the company name uppercased with non-letters
+        stripped (e.g. "Acme Corp" -> "ACMECORP"). Must exist before user creation.
+      used_by: Create-Centroid-Aptean-Users.ps1
+
+    - dn: "OU=Users,OU=<CompanyFolder>,OU=Customers,DC=centroid,DC=cloud,DC=lcl"
+      purpose: Users OU within a company tree. Must exist before user creation.
+      used_by: Create-Centroid-Aptean-Users.ps1
+
+    - dn: "OU=_Deprecated,OU=Users,OU=Cloud,DC=centroid,DC=cloud,DC=lcl"
+      purpose: Destination for disabled centroid.cloud.lcl users after offboarding.
+      used_by: Disable_users_4Domains.ps1

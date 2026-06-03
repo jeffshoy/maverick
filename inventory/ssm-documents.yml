@@ -1,0 +1,40 @@
+# SSM Documents — Team Script Registry
+#
+# Named AWS SSM documents used by CloudOps automation. All documents listed here
+# are AWS-managed (prefixed AWS-) and available in all supported regions without
+# any deployment step.
+#
+# Reference: scripts/aws/README.md, runbooks/disk-expansion.md, runbooks/rds-license-grace-period.md
+
+documents:
+  - name: AWS-RunPowerShellScript
+    type: Command
+    purpose: Run an arbitrary PowerShell script block on one or more Windows EC2 instances.
+    key_parameters:
+      commands: "List of PowerShell commands or script lines to execute."
+      executionTimeout: "Timeout in seconds (default 3600). Team scripts use 60-600."
+    used_by:
+      - scripts/aws/disk-expand/expand_disk.py
+      - scripts/aws/disk-expand/expand_disk_lm.py
+      - scripts/aws/rds-license-reset/rds_license_reset.py
+      - scripts/aws/server-reboot/reboot_server.py
+      - scripts/aws/service-restart/restart_services.py
+      - scripts/aws/site-monitor/investigate.py
+      - scripts/aws/site-monitor/investigate_recycle_fix.py
+    notes: >
+      Scripts send a command, poll for completion via get-command-invocation,
+      and parse stdout line-by-line. Pipe-delimited output format is the team
+      convention (e.g. "RESULT|C|10.5|2.0|12.5").
+
+  - name: AWS-StartPortForwardingSession
+    type: Session
+    purpose: Forward a local TCP port to a port on the remote EC2 instance via SSM Session Manager.
+    key_parameters:
+      portNumber: "Remote port to forward (e.g. 3389 for RDP)."
+      localPortNumber: "Local port to listen on (team default: 33389 for RDP)."
+    used_by:
+      - scripts/aws/Connect-RDP.ps1
+    notes: >
+      The SSM Session Manager plugin must be installed on the operator's machine.
+      The tunnel runs in a detached window titled "SSM RDP tunnel: <server> -> localhost:<port>".
+      Closing that window ends the session.

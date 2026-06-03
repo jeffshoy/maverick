@@ -1,0 +1,32 @@
+# AD Domains — User Management Scope
+#
+# This file covers the four Active Directory domains targeted by the user-management
+# scripts in scripts/ad/. It is NOT an exhaustive list of all CloudOps AD domains —
+# other domains exist in the environment but are outside the scope of these scripts.
+#
+# Used by: scripts/ad/Disable_users_4Domains.ps1, Find-UserAllDomains.ps1
+# Reference: runbooks/ad-user-disable.md
+
+domains:
+  - fqdn: cloud.lcl
+    netbios: CLOUD
+    preferred_dc: cloud.lcl
+    notes: Primary user domain.
+
+  - fqdn: aws.cloud.lcl
+    netbios: AWSCLOUD
+    preferred_dc: aws.cloud.lcl
+    notes: AWS workload child domain.
+
+  - fqdn: aspgov.pri
+    netbios: ASPGOV
+    preferred_dc: aspgov.pri
+    notes: ASPGov client domain.
+
+  - fqdn: centroid.cloud.lcl
+    netbios: CENTROID
+    preferred_dc: centroid.cloud.lcl
+    notes: >
+      Centroid client domain. Disabled users are moved to the _Deprecated OU
+      in addition to being disabled.
+    deprecated_ou: "OU=_Deprecated,OU=Users,OU=Cloud,DC=centroid,DC=cloud,DC=lcl"
