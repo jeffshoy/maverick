@@ -74,7 +74,7 @@ Key columns:
 | `aws_profile` | AWS SSO profile name (e.g. `PALegacyFinEntANCO`) |
 | `local_domain` | AD domain used for FQDN construction (e.g. `anco.cloud.lcl`) |
 | `servers_added` | `yes` = servers already imported into Sectigo for this account |
-| `name_filters` | EC2 Name-tag substrings to include (e.g. `trkwb,etawb`) |
+| `name_filters` | Comma-separated EC2 Name-tag substrings to include. FinEnt accounts use `onsjb,onsap,onsrp,onsol,pxsf` plus `trkwb,etawb` where applicable. Non-FinEnt accounts (Plus, NaviLine, etc.) use their own filters. **Required** — rows with an empty `name_filters` will match no instances. |
 
 ---
 
@@ -106,11 +106,13 @@ value in the CSV is correct. Correct any `MISMATCH` rows before proceeding.
 **Step 3: Dry-run the import**
 
 ```powershell
+$env:SECTIGO_SVC_PASSWORD = "password-from-npm"
+
 # All accounts in CSV
-python batch_add_servers.py --dry-run
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD --dry-run
 
 # Single account
-python batch_add_servers.py --profile PALegacyFinEntANCO --dry-run
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD --profile PALegacyFinEntANCO --dry-run
 ```
 
 Review the output. Confirm the right servers are discovered and FQDNs look correct.
@@ -118,7 +120,10 @@ Review the output. Confirm the right servers are discovered and FQDNs look corre
 **Step 4: Import**
 
 ```powershell
-python batch_add_servers.py
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD
+
+# Single account
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD --profile PALegacyFinEntANCO
 ```
 
 Writes a timestamped report: `sectigo_servers_added_YYYYMMDD_HHMMSS.csv`.
@@ -233,16 +238,17 @@ Delete output files after import — they contain plaintext passwords.
 ### `batch_add_servers.py`
 
 Runs the full build → add pipeline for every qualifying row in the CSV.
+Requires `--password-env` pointing to an env var holding the `CLOUD\sectigo_svc` password (retrieve from NPM).
 
 ```powershell
 # All qualifying accounts
-python batch_add_servers.py
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD
 
 # Single account
-python batch_add_servers.py --profile PALegacyFinEntBRENT
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD --profile PALegacyFinEntBRENT
 
-# Dry run (no API calls)
-python batch_add_servers.py --dry-run
+# Dry run (no API calls; --password-env still required but value not used)
+python batch_add_servers.py --password-env SECTIGO_SVC_PASSWORD --dry-run
 ```
 
 Qualifying rows: `In Use? = yes`, `servers_added` not `yes`.

@@ -27,7 +27,6 @@ from botocore.exceptions import ClientError, NoCredentialsError, ProfileNotFound
 SCRIPT_DIR = Path(__file__).parent
 CSV_PATH = SCRIPT_DIR / "ASPGOV_SSLCertRenewal_2026-2027.csv"
 
-NAME_FILTERS = ["onsjb", "onsap", "onsrp", "onsol", "pxsf"]
 REGIONS = ["us-east-1", "us-east-2", "us-west-1", "us-west-2"]
 
 SSM_TIMEOUT = 30  # seconds to wait for SSM command to complete
@@ -37,7 +36,7 @@ SSM_POLL_INTERVAL = 3
 PS_GET_DOMAIN = "(Get-WmiObject Win32_ComputerSystem).Domain"
 
 
-def find_all_instances(session: boto3.Session) -> list[dict[str, Any]]:
+def find_all_instances(session: boto3.Session, name_filters: list[str]) -> list[dict[str, Any]]:
     """Return all running EC2 instances matching name filters across all regions."""
     found = []
     for region in REGIONS:
@@ -53,7 +52,7 @@ def find_all_instances(session: boto3.Session) -> list[dict[str, Any]]:
                         (t["Value"] for t in inst.get("Tags", []) if t["Key"] == "Name"),
                         "",
                     )
-                    if any(f.lower() in name_tag.lower() for f in NAME_FILTERS):
+                    if any(f.lower() in name_tag.lower() for f in name_filters):
                         found.append({
                             "instance_id": inst["InstanceId"],
                             "name_tag": name_tag,
@@ -186,7 +185,8 @@ def main() -> None:
             auth_fail.append({"profile": profile, "san": san, "error": msg})
             continue
 
-        instances = find_all_instances(session)
+        name_filters = [f.strip() for f in row.get("name_filters", "").split(",") if f.strip()]
+        instances = find_all_instances(session, name_filters)
         if not instances:
             print("SKIP (no matching instances found)")
             no_ssm.append({"profile": profile, "san": san, "error": "no matching instances"})
