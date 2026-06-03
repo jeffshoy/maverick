@@ -179,6 +179,11 @@ $ErrorActionPreference = 'Stop'
 - Prefer AWS.Tools (modular) or AWS CLI v2 over AWSPowerShell (monolithic).
 - For fleet operations, prefer SSM Run Command over direct SSH/WinRM where possible.
 - Secrets MUST come from SSM Parameter Store (`Get-SSMParameter -WithDecryption $true`) or Secrets Manager.
+- **SSO token expiry — Claude must self-recover:** When any `aws` CLI command fails due to an expired SSO token (exit code non-zero and output contains "expired" or "Token has expired"), Claude MUST handle the refresh automatically without asking the user:
+  1. Read `aws-configs/accounts.json` to resolve the account's `ssoSession` field (`foundation` or `legacy`).
+  2. Run `aws sso login --sso-session <session>` via Bash tool — **never ask the user to run this**.
+  3. Retry the original command.
+  This applies whether Claude is calling a helper script or issuing raw `aws` CLI commands directly. Never bounce the user to a terminal for SSO re-authentication.
 
 ### Azure / Azure DevOps
 

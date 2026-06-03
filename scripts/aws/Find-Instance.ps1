@@ -6,8 +6,9 @@
 .DESCRIPTION
     Searches us-east-1, us-west-2, and ca-central-1 (in that order) for a running EC2
     instance whose Name tag matches the given server name. Stops at the first region
-    with a hit. If the exact name returns nothing, retries with the name uppercased
-    (EC2 Name tags are case-sensitive and many servers use all-caps convention).
+    with a hit. If the exact name returns nothing, fetches all running instances and filters
+    client-side with a case-insensitive comparison — the only reliable way to match any tag
+    casing (ALL-CAPS, all-lowercase, or mixed) since AWS tag filters are always case-sensitive.
 
     AWS CLI errors (expired token, missing profile, AccessDenied) are surfaced
     immediately and cause a non-zero exit — never silently swallowed.
@@ -68,23 +69,38 @@ function Invoke-DescribeInstances {
 }
 
 # ---------------------------------------------------------------------------
-# Search loop — priority regions, exact then uppercase fallback
+# Search loop — exact fast-path, then fetch-all + case-insensitive local filter
 # ---------------------------------------------------------------------------
 foreach ($region in $Regions) {
     Write-Verbose "Searching $region for '$ServerName'..."
 
+    # Phase 1: exact match — hits on the common case with a single API call
     $raw = Invoke-DescribeInstances -Name $ServerName -Profile $Profile -Region $region
 
-    # Uppercase retry if exact name returns nothing and differs from input
+    # Phase 2: AWS tag filters are case-sensitive and offer no case-insensitive option.
+    # Fetch all running instances and filter client-side so any casing of the tag matches.
     if (-not $raw) {
-        $upper = $ServerName.ToUpper()
-        if ($upper -ne $ServerName) {
-            Write-Verbose "  Retrying with uppercase '$upper'..."
-            $raw = Invoke-DescribeInstances -Name $upper -Profile $Profile -Region $region
+        Write-Verbose "  Exact match missed; fetching all running instances for case-insensitive search..."
+        $allRaw = aws ec2 describe-instances `
+            --filters "Name=instance-state-name,Values=running" `
+            --query "Reservations[*].Instances[*].[InstanceId,Tags[?Key=='Name'].Value|[0],State.Name,Placement.AvailabilityZone]" `
+            --output text `
+            --profile $Profile --region $region 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host ""
+            Write-Error "AWS CLI error (profile=$Profile, region=$region): $allRaw"
+            exit 1
         }
+
+        $searchLower = $ServerName.ToLower()
+        $raw = ($allRaw.Trim() -split "`n") |
+            Where-Object { $_ } |
+            Where-Object { ($_ -split "`t")[1].Trim().ToLower() -eq $searchLower } |
+            Out-String
     }
 
-    if ($raw) {
+    if ($raw -and $raw.Trim()) {
         # Parse tab-separated rows from --output text
         $results = $raw.Trim() -split "`n" | Where-Object { $_ } | ForEach-Object {
             $cols = $_ -split "`t"
