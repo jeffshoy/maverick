@@ -1,7 +1,6 @@
 {
   "version": "2.0.0",
   "tasks": [
-    // ─── AD ───────────────────────────────────────────────────────────────
     {
       "label": "AD: Disable User (4 Domains)",
       "type": "shell",
@@ -42,8 +41,6 @@
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
-
-    // ─── ADSSP ────────────────────────────────────────────────────────────
     {
       "label": "ADSSP: Test Connection",
       "type": "shell",
@@ -100,8 +97,6 @@
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
-
-    // ─── AWS ──────────────────────────────────────────────────────────────
     {
       "label": "AWS: RDP to Instance",
       "detail": "Port-forward RDP via SSM and launch mstsc (fuzzy account name)",
@@ -191,8 +186,6 @@
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
-
-    // ─── Sectigo ─────────────────────────────────────────────────────────
     {
       "label": "Sectigo: Mass Cert Revoke",
       "type": "shell",
@@ -209,8 +202,6 @@
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
-
-    // ─── Sectigo (2026 renewal toolset) ──────────────────────────────────
     {
       "label": "Sectigo: Batch Add Servers (all accounts)",
       "detail": "Runs build_server_list + add_servers_to_agent across all accounts",
@@ -283,8 +274,6 @@
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
-
-    // ─── DNS ──────────────────────────────────────────────────────────────
     {
       "label": "DNS: Change MS DNS Record",
       "type": "shell",
@@ -301,8 +290,6 @@
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
-
-    // ─── Setup ────────────────────────────────────────────────────────────
     {
       "label": "Setup: Sync AWS Config",
       "detail": "Merges aws-configs/cloudops.config into ~/.aws/config (preserves personal profiles)",
