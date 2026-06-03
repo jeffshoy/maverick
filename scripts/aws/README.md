@@ -1,28 +1,79 @@
 # scripts/aws — AWS EC2 / SSM
 
-Python and PowerShell automation for the Foundation OU Windows fleet. All tools use AWS SSM — no direct SSH/WinRM.
+Python and PowerShell automation for the CloudOps Windows fleet (both Foundation and Legacy orgs). All tools use AWS SSM — no direct SSH/WinRM.
 
-**Pre-requisite:** run `Setup: AWS SSO Login (foundation)` (or `legacy`) before any of these tools. See [`aws-configs/README.md`](../../aws-configs/README.md).
+**Pre-requisite:** run `Setup: Sync AWS Config` then `Setup: AWS SSO Login (foundation)` and/or `Setup: AWS SSO Login (legacy)` before using any of these tools. See [`aws-configs/README.md`](../../aws-configs/README.md).
+
+---
+
+## Quick start — RDP to a server
+
+```powershell
+# From CLI (account name is fuzzy-matched against accounts.json)
+.\Connect-RDP.ps1 -ServerName INF-PLOGIC018 -Account PALegacyPlus
+.\Connect-RDP.ps1 -s CLD-PPLSAPM001 -a PLUS   # prompts if "PLUS" matches multiple accounts
+
+# Or use the Kiro task: AWS: RDP to Instance
+```
+
+---
 
 ## Tools
 
+### Connection helpers (PowerShell)
+
+| Script | Kiro Task | Purpose |
+|--------|-----------|---------|
+| `Connect-RDP.ps1` | `AWS: RDP to Instance` | Port-forward RDP via SSM and auto-launch mstsc |
+| `connect-instance.ps1` | `AWS: Connect to Instance` | Open an interactive SSM shell session |
+| `Find-Instance.ps1` | *(utility)* | Resolve a server Name tag → instance ID across priority regions |
+| `Resolve-AwsAccount.ps1` | *(utility)* | Fuzzy-match an account name/nickname → profile + SSO session |
+
+### Operations scripts (Python — GUI picker or `--account` flag)
+
 | Script / Folder | Kiro Task | Purpose |
 |-----------------|-----------|---------|
-| `connect-instance.ps1` | `AWS: Connect to Instance` | Open an interactive SSM session to any server |
-| `disk-expand/` | `AWS: Expand Disk` | Expand an EC2 Windows disk via SSM |
+| `disk-expand/expand_disk.py` | `AWS: Expand Disk` | Expand an EBS volume and resize the OS partition via SSM |
+| `disk-expand/expand_disk_lm.py` | `AWS: Expand Disk (LM)` | Same, but parses the server/drive from a pasted LogicMonitor alert |
 | `rds-license-reset/` | `AWS: Reset RDS License Grace Period` | Reset the RDS 120-day grace period via SSM |
-| `server-reboot/` | `AWS: Reboot Server` | Reboot an EC2 instance via SSM |
+| `server-reboot/` | `AWS: Reboot Server` | Reboot an EC2 instance via SSM with health-check wait |
 | `service-restart/` | `AWS: Restart Service` | Restart a Windows service via SSM |
-| `site-monitor/` | `AWS: Investigate Site` | Investigate a site outage / IIS issue |
-| `fetch_foundation_ous.py` | *(run directly)* | List Foundation OU accounts from SSO — see `aws-configs/tools/generate_aws_config.py` |
+| `site-monitor/investigate.py` | `AWS: Investigate Site` | Investigate a site outage / IIS status via SSM |
+| `site-monitor/investigate_recycle_fix.py` | `AWS: Investigate Site (Recycle Fix)` | Diagnose and fix IIS app pool memory/recycle issues via SSM |
 
-## connect-instance.ps1
+### Internal shared module
+
+| File | Purpose |
+|------|---------|
+| `aws_sso_helper.py` | Shared SSO helpers used by all Python scripts: `resolve_account()`, `ensure_profile_session()`, `pick_profile_gui()`. Do not run directly. |
+| `fetch_foundation_ous.py` | List accounts accessible via an SSO session. Run directly: `python fetch_foundation_ous.py --account PLUS` |
+
+---
+
+## Account names (fuzzy matching)
+
+All tools accept informal account names. Matching is: exact → case-insensitive → substring → token overlap. If a name matches more than one account you will be asked to choose.
 
 ```powershell
-# Open an SSM session (profile defaults to PALegacySharedServices, region to us-east-1)
-.\connect-instance.ps1 -server_name ARCT-PTRKRD001
-.\connect-instance.ps1 -server_name ARCT-PTRKRD001 -aws_region us-west-2
-.\connect-instance.ps1 -server_name ARCT-PTRKRD001 -aws_profile PALegacyFinEntANCO
+# These all resolve to PALegacyPlus (939845564306):
+-Account PALegacyPlus
+-Account palegacyplus
+-Account PLUS          # substring match — prompts if PALegacyPlusDev also matches
 ```
 
-The script checks your SSO session and triggers `aws sso login --sso-session foundation` automatically if expired.
+The account registry lives in [`aws-configs/accounts.json`](../../aws-configs/README.md). Regenerate monthly or when accounts change:
+```
+python aws-configs/tools/generate_aws_config.py
+```
+
+---
+
+## SSO session management
+
+Scripts automatically detect whether the account belongs to the `foundation` or `legacy` SSO session and trigger the correct `aws sso login` when needed. You do not need to know which org an account is in.
+
+---
+
+## Priority regions
+
+When no region is specified, scripts search `us-east-1` → `us-west-2` → `ca-central-1` in that order and stop at the first hit.

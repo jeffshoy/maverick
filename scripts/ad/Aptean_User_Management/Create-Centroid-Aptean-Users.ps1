@@ -1,10 +1,36 @@
-﻿[CmdletBinding()]
+﻿#Requires -Modules ActiveDirectory
+
+<#
+.SYNOPSIS
+    Bulk-create Centroid/Aptean users in apteanps.local from a ticket-format input line.
+.DESCRIPTION
+    Parses a comma-separated ticket line (FullName, sAMAccountName, email, org) and
+    creates or recreates an AD user in apteanps.local under the appropriate org OU.
+    Enforces password policy, sets ProfilePath and HomeFolder, logs duplicate matches,
+    and prints copy-paste email/ticket blocks on success.
+.PARAMETER line
+    Optional ticket input line. If omitted, the script prompts interactively.
+.PARAMETER mappingcsv
+    Path to Org_OUs_with_Company.csv. Defaults to .\Org_OUs_with_Company.csv.
+.PARAMETER creds
+    Optional PSCredential. Uses current Kerberos logon if omitted.
+.EXAMPLE
+    .\Create-Centroid-Aptean-Users.ps1
+    .\Create-Centroid-Aptean-Users.ps1 -line "John Doe,jdoe,jdoe@example.com,ACME"
+.NOTES
+    Requires RSAT ActiveDirectory module. Run from the Aptean_User_Management folder
+    so relative CSV paths resolve correctly.
+#>
+
+[CmdletBinding(SupportsShouldProcess)]
 param(
   [string]$line,                                       # if omitted, you'll be prompted (trimmed)
   [string]$mappingcsv = ".\Org_OUs_with_Company.csv",  # mapping CSV in same folder
-  [pscredential]$creds = $null,                        # optional; otherwise current logon/Kerberos
-  [switch]$WhatIf
+  [pscredential]$creds = $null                         # optional; otherwise current logon/Kerberos
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 Import-Module ActiveDirectory -ErrorAction Stop
 

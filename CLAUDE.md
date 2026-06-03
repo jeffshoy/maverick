@@ -204,7 +204,23 @@ Bash is acceptable **only** for Linux-only targets (e.g., `AWS-DX/`). It is not 
 - **NEVER push directly to `main` or `master`.** All changes go through a feature or fix branch and a PR.
 - **Branch naming:** short and descriptive — `feature/<short-desc>`, `fix/<short-desc>`, or `<name>-<topic>` (e.g., `trent-disable-user-fix`).
 - **Commits:** imperative mood, what + why. Reference the AzDo work item or ticket number when applicable (e.g., `Add dry-run flag to Disable_users script (#1234)`).
-- **PR descriptions:** MUST include a brief summary and a test plan. Operational scripts MUST flag blast radius (e.g., "affects all users in all four domains — dry-run output attached").
+- **PR descriptions:** Every PR MUST have a markdown description. No exceptions. Use this structure:
+
+  ```markdown
+  ## Summary
+  - What changed and why (bullet points, one per logical change)
+  - Reference the ticket/work item if applicable (#1234)
+
+  ## Test plan
+  - [ ] Specific step to verify the change works
+  - [ ] Edge case or rollback check if relevant
+
+  ## Blast radius (operational scripts only)
+  - Scope: which accounts/domains/servers are affected
+  - Dry-run output or WhatIf evidence attached
+  ```
+
+  Claude MUST generate this description whenever it creates a PR via `az repos pr create`. A PR with no description or a one-liner will be rejected in review.
 - **Claude MUST NOT** run `git push`, create PRs, close PRs, or merge branches without an explicit instruction from the user **in the current turn**. A prior approval does not carry forward.
 - **NEVER use `--no-verify`** to skip hooks. NEVER amend a commit that has already been pushed. NEVER `--force` push without explicit user approval in the same turn.
 

@@ -9,7 +9,6 @@ Requires: pip install boto3
 
 import argparse
 import os
-import subprocess
 import sys
 import math
 import re
@@ -351,7 +350,7 @@ def main():
             acct = resolve_account(args.account)
         except ValueError as e:
             print(f"Error: {e}")
-            import sys; sys.exit(1)
+            sys.exit(1)
         profile = acct["profile"]
         sso_session = acct["ssoSession"]
         print(f"Account: {acct['name']} ({acct['org']}, {acct['accountId']})")

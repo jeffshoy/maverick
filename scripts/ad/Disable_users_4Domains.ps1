@@ -1,3 +1,30 @@
+#Requires -Modules ActiveDirectory
+
+<#
+.SYNOPSIS
+    Search for and disable user accounts across all four CloudOps AD domains.
+.DESCRIPTION
+    Searches cloud.lcl, aws.cloud.lcl, aspgov.pri, and centroid.cloud.lcl for a
+    user by name, email, or user ID. Displays matches, prompts for selection, then
+    disables the account and updates the Description field with the ticket number,
+    date, and SRE initials. Exports a CSV backup to the desktop before any changes.
+
+    Users in centroid.cloud.lcl are also moved to OU=_Deprecated after disabling.
+.PARAMETER None
+    All inputs are collected interactively.
+.EXAMPLE
+    .\Disable_users_4Domains.ps1
+.NOTES
+    Requires RSAT ActiveDirectory module. Validates domain reachability via
+    Get-ADRootDSE before searching. Exports a timestamped backup CSV to the
+    desktop before making any changes.
+#>
+
+[CmdletBinding(SupportsShouldProcess)]
+param()
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 # Define domains
 $domains = @(
@@ -148,11 +175,15 @@ if ($selectedIndexes.Count -gt 0) {
 
     foreach ($user in $selectedUsers) {
         try {
-            Set-ADUser -Identity $user.DN -Server $user.Server -Description $description -ErrorAction Stop
+            if ($PSCmdlet.ShouldProcess("$($user.'Full Name') ($($user.Domain))", 'Set Description')) {
+                Set-ADUser -Identity $user.DN -Server $user.Server -Description $description -ErrorAction Stop
+            }
 
             if ($user.Enabled -eq $true) {
-                Set-ADUser -Identity $user.DN -Server $user.Server -Enabled $false -ErrorAction Stop
-                Write-Host "Disabled user: $($user.'Full Name') in $($user.Domain) and added description." -ForegroundColor Green
+                if ($PSCmdlet.ShouldProcess("$($user.'Full Name') ($($user.Domain))", 'Disable Account')) {
+                    Set-ADUser -Identity $user.DN -Server $user.Server -Enabled $false -ErrorAction Stop
+                    Write-Host "Disabled user: $($user.'Full Name') in $($user.Domain) and added description." -ForegroundColor Green
+                }
             } else {
                 Write-Host "User already disabled: $($user.'Full Name') in $($user.Domain). Description updated." -ForegroundColor Yellow
             }
@@ -160,8 +191,10 @@ if ($selectedIndexes.Count -gt 0) {
             if ($user.Domain -eq "centroid.cloud.lcl") {
                 $targetOU = "OU=_Deprecated,OU=Users,OU=Cloud,DC=centroid,DC=cloud,DC=lcl"
                 try {
-                    Move-ADObject -Identity $user.DN -TargetPath $targetOU -Server $user.Server -ErrorAction Stop
-                    Write-Host "Moved user to _Deprecated OU in centroid.cloud.lcl." -ForegroundColor Cyan
+                    if ($PSCmdlet.ShouldProcess("$($user.'Full Name')", 'Move to _Deprecated OU')) {
+                        Move-ADObject -Identity $user.DN -TargetPath $targetOU -Server $user.Server -ErrorAction Stop
+                        Write-Host "Moved user to _Deprecated OU in centroid.cloud.lcl." -ForegroundColor Cyan
+                    }
                 } catch {
                     Write-Warning "Failed to move user to _Deprecated OU: $($_.Exception.Message)"
                 }

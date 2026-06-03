@@ -194,11 +194,19 @@ Write-Host ''
 # SSO preflight (pattern from Foundation\RDS-license-reset\connectto_foundation.ps1)
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host 'Checking SSO session... ' -ForegroundColor Yellow -NoNewline
-$null = Invoke-Aws sts get-caller-identity --profile $AwsProfile
+$null = Invoke-Aws sts get-caller-identity --profile $AwsProfile 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host 'expired' -ForegroundColor Red
     Write-Host 'Opening browser for SSO login...' -ForegroundColor Cyan
-    Invoke-Aws sso login --sso-session foundation
+    # Resolve the correct SSO session from accounts.json rather than hardcoding 'foundation'
+    $accountsJsonPath = Join-Path $PSScriptRoot '..\..\aws-configs\accounts.json'
+    $ssoSession = 'foundation'   # fallback
+    if (Test-Path $accountsJsonPath) {
+        $registry = Get-Content $accountsJsonPath -Raw | ConvertFrom-Json
+        $match = $registry.accounts | Where-Object { $_.profile -eq $AwsProfile } | Select-Object -First 1
+        if ($match) { $ssoSession = $match.ssoSession }
+    }
+    Invoke-Aws sso login --sso-session $ssoSession
     if ($LASTEXITCODE -ne 0) {
         Write-Error 'SSO login failed. Aborting.'
         Stop-Transcript

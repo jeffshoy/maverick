@@ -1,15 +1,33 @@
-﻿<#
-Creates a new AD user (Default or Clone) under apteanps.local/OU - Citizens/<Org-...>,
-enforces password policy, sets ProfilePath & HomeFolder, shows domain-wide duplicate matches,
-and prints two copy-paste blocks:
-  1) Email to end user (formal wording)
-  2) Ticket to Cloud team for centroid.cloud.lcl (MFA) with CSV header + one data line
+﻿#Requires -Modules ActiveDirectory
 
-Validation flow:
-- Full Name: trimmed, inner spaces collapsed, TitleCase; must be unique (R/X).
-- sAMAccountName: trimmed; must be unique (R/X).
-- Email: trimmed, lowercased; can proceed even if duplicate (Y/R/X).
+<#
+.SYNOPSIS
+    Create a new Aptean citizen portal user in apteanps.local.
+.DESCRIPTION
+    Creates a new AD user (Default or Clone) under apteanps.local/OU - Citizens/<Org-...>.
+    Enforces password policy, sets ProfilePath and HomeFolder, shows domain-wide duplicate
+    matches, and prints two copy-paste blocks on success:
+      1) Email to end user (formal wording)
+      2) Ticket to Cloud team for centroid.cloud.lcl (MFA) with CSV header + data line
+
+    Validation flow:
+      - Full Name: trimmed, inner spaces collapsed, TitleCase; must be unique.
+      - sAMAccountName: trimmed; must be unique.
+      - Email: trimmed, lowercased; can proceed even if duplicate.
+.PARAMETER None
+    All inputs are collected interactively.
+.EXAMPLE
+    .\Create-Apteanps-CitizenUser.ps1
+.NOTES
+    Requires RSAT ActiveDirectory module. Run from the Aptean_User_Management folder
+    so relative CSV paths resolve correctly.
 #>
+
+[CmdletBinding()]
+param()
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 Import-Module ActiveDirectory -ErrorAction Stop
 

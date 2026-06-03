@@ -1,3 +1,40 @@
+#Requires -Modules DnsServer
+
+<#
+.SYNOPSIS
+    Change DNS A records on Microsoft DNS servers across all CloudOps DNS servers.
+.DESCRIPTION
+    Supports three operation modes via switch parameters:
+      -precheck          Validates that oldip exists and newip does not yet exist in the zone.
+      -changedns         Replaces all A records with oldip with newip in the specified zone.
+      -cleardnsservercache  Flushes the DNS server cache on all CloudOps DNS servers via VMware.
+
+    Results are logged to a timestamped log file. Optional email notification via -mailto.
+.PARAMETER client
+    Client code used for log file naming (e.g. REDB).
+.PARAMETER oldip
+    The IP address to find and replace.
+.PARAMETER newip
+    The new IP address to assign.
+.PARAMETER zone
+    The DNS zone to search (e.g. aspgov.com).
+.PARAMETER server
+    The DNS server hosting the authoritative zone.
+.PARAMETER precheck
+    Run pre-change validation only — no records are modified.
+.PARAMETER changedns
+    Execute the DNS change from oldip to newip.
+.PARAMETER cleardnsservercache
+    Flush DNS cache on all CloudOps DNS servers via VMware Invoke-VMScript.
+.EXAMPLE
+    .\change-dns-ms.ps1 -client REDB -oldip 10.1.2.3 -newip 10.1.2.4 -zone aspgov.com -server inf-svrdns001 -precheck
+    .\change-dns-ms.ps1 -client REDB -oldip 10.1.2.3 -newip 10.1.2.4 -zone aspgov.com -server inf-svrdns001 -changedns
+.NOTES
+    Requires RSAT DnsServer module. -cleardnsservercache requires VMware PowerCLI.
+    All operations are logged to changedns-ms_<client>_<timestamp>.log.
+#>
+
+[CmdletBinding(SupportsShouldProcess)]
 param(
   [string]$timestamp=(get-date -f "yyyyMMdd-HHmmss"),
   [Parameter(Mandatory=$true)][string]$client, #set to the client code
@@ -51,7 +88,7 @@ function func_exit([string] $outputcode) {
 
 func_eventhandler "$timestamp : Begin changedns-ms script."
 
-$olddns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $oldip) -AND ($_.recorddata.ipv4address -ne $nul)}
+$olddns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $oldip) -AND ($_.recorddata.ipv4address -ne $null)}
 
 function func_dnscheck($action) {
   if ($action -eq "precheck") { 
@@ -74,7 +111,7 @@ function func_dnscheck($action) {
     func_eventhandler "$oldstatus  No Records on DNSServer=$server in Zone=$zone matching OLD IP of $oldip."
   }
 
-  $newdns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $newip) -AND ($_.recorddata.ipv4address -ne $nul)}
+  $newdns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $newip) -AND ($_.recorddata.ipv4address -ne $null)}
   if ($newdns) {
     func_eventhandler "$newstatus  Existing record found on DNSServer=$server in Zone=$zone matching NEW IP of $newip."
 	$foundnewip=$True
@@ -83,7 +120,7 @@ function func_dnscheck($action) {
     func_eventhandler "$oldstatus  No Records on DNSServer=$server in Zone=$zone matching Old IP of $oldip."
   }
 
-$outputcode=$nul
+$outputcode=$null
   
   if (($action -eq "precheck") -AND (($foundoldip -eq $false) -OR ($foundnewip -eq $true))) {
     $outputcode=1
@@ -131,7 +168,7 @@ function func_changedns {
     }
     set-dnsserverresourcerecord -newinputobject $n -oldinputobject $o -zonename $zone -computername $server
   }
-  $olddns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $oldip) -AND ($_.recorddata.ipv4address -ne $nul)}
+  $olddns=get-dnsserverresourcerecord -zonename $zone -computername $server | where-object {($_.recorddata.ipv4address -eq $oldip) -AND ($_.recorddata.ipv4address -ne $null)}
 
 }
 

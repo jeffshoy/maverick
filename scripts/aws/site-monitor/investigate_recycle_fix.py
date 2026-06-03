@@ -10,7 +10,6 @@ Requires: pip install boto3 colorama
 import argparse
 import os
 import re
-import subprocess
 import sys
 import time
 
@@ -507,24 +506,23 @@ def main():
             acct = resolve_account(args.account)
         except ValueError as e:
             print(f"Error: {e}")
-            import sys; sys.exit(1)
+            sys.exit(1)
         profile = acct["profile"]
         sso_session = acct["ssoSession"]
         print(f"Account: {acct['name']} ({acct['org']}, {acct['accountId']})")
-        ensure_profile_session(profile, sso_session)
     else:
         profiles = load_all_profiles()
-    if not profiles:
-        print("No foundation profiles found in ~/.aws/config")
-        sys.exit(1)
+        if not profiles:
+            print("No profiles found in accounts.json")
+            sys.exit(1)
+        print("\nOpening AWS OU selector...")
+        profile = pick_profile_gui(profiles)
+        if not profile:
+            sys.exit(0)
+        sso_session = get_sso_session_for_profile(profile)
 
-    # 1. Select OU
-    print("\nOpening AWS OU selector...")
-    profile = pick_profile_gui(profiles)
-    if not profile:
-        sys.exit(0)
-    print(f"Selected OU: {profile}")
-    ensure_profile_session(profile, get_sso_session_for_profile(profile))
+    print(f"\nSelected OU: {profile}")
+    ensure_profile_session(profile, sso_session)
 
     # 2. Get client codes
     client_input = input("\nEnter client code(s) separated by commas (e.g. AURO,DNTN,PIED,REDB): ").strip()

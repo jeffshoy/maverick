@@ -2,6 +2,8 @@
 
 PowerShell automation for the ADSS+ platform — Microsoft AD user sync, IBMi group management, and RADIUS/NPS setup.
 
+> **Note:** These scripts predate the team PowerShell standard (CLAUDE.md). They function correctly but do not yet have comment-based help, `[CmdletBinding()]`, `Set-StrictMode`, or `$ErrorActionPreference = 'Stop'`. Standardization is tracked as a future task.
+
 ## msad/
 
 | Script | Kiro Task | Purpose |

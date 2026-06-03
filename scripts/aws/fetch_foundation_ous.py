@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aws_sso_helper import (
     resolve_account,
     ensure_sso_login,
-    _get_sso_sessions,
+    get_sso_sessions,
 )
 
 # Default SSO session used when no --account is specified (backward compat)
@@ -69,7 +69,7 @@ def main():
             print(f"Error: {e}")
             sys.exit(1)
         sso_session = acct["ssoSession"]
-        sessions = _get_sso_sessions()
+        sessions = get_sso_sessions()
         region = sessions.get(sso_session, {}).get("region", _DEFAULT_REGION)
         print(f"Account: {acct['name']} ({acct['org']}, {acct['accountId']})")
         token = ensure_sso_login(sso_session)

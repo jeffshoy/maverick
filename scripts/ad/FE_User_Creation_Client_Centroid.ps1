@@ -1,3 +1,31 @@
+#Requires -Modules ActiveDirectory
+
+<#
+.SYNOPSIS
+    Provision a new FE/Centroid client user in Active Directory.
+.DESCRIPTION
+    Supports SINGLE and BULK (CSV) mode. In SINGLE mode, prompts for user details
+    and creates one account. In BULK mode, reads a CSV of users and creates each,
+    logging successes and failures to separate CSV files on the desktop.
+
+    Generates a random password meeting the domain policy, sets the Description,
+    Department, Company, and OU fields from client mappings, and prints a copy-paste
+    email template on success.
+.PARAMETER None
+    All inputs are collected interactively. Bulk mode reads from a user-selected CSV.
+.EXAMPLE
+    .\FE_User_Creation_Client_Centroid.ps1
+.NOTES
+    Requires RSAT ActiveDirectory module. clientMappings.csv must be in the same
+    directory as this script. bulkUserExample.csv shows the expected column format.
+#>
+
+[CmdletBinding(SupportsShouldProcess)]
+param()
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
 Add-Type -AssemblyName System.Windows.Forms
 
 # Mapping of client codes to Centroid customer OUs

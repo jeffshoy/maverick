@@ -9,9 +9,17 @@ Provides:
   - ensure_profile_session(...)  STS-probe + sso login + return boto3.Session (Pattern B)
   - load_all_profiles()          All profiles from accounts.json as {name: account_id}
   - pick_profile_gui(profiles)   Tkinter account picker
+
+Usage example (new scripts should follow this pattern):
+
+    from aws_sso_helper import resolve_account, ensure_profile_session
+
+    acct = resolve_account("PLUS")          # raises ValueError if ambiguous
+    session = ensure_profile_session(acct["profile"], acct["ssoSession"])
+    ec2 = session.client("ec2", region_name="us-east-1")
+    # ... use ec2 normally
 """
 
-import configparser
 import json
 import os
 import re
@@ -49,7 +57,7 @@ def load_accounts() -> list[dict]:
     return _load_registry()["accounts"]
 
 
-def _get_sso_sessions() -> dict:
+def get_sso_sessions() -> dict:
     """Return the ssoSessions block from accounts.json (cached)."""
     global _SSO_SESSIONS
     if not _SSO_SESSIONS:
@@ -165,7 +173,7 @@ def ensure_sso_login(sso_session: str, start_url: str | None = None) -> str:
 
     start_url is resolved from accounts.json when omitted.
     """
-    sessions = _get_sso_sessions()
+    sessions = get_sso_sessions()
     if start_url is None:
         if sso_session not in sessions:
             raise ValueError(f"Unknown SSO session '{sso_session}'. Check accounts.json.")
@@ -299,7 +307,7 @@ if __name__ == "__main__":
     print(f"accounts.json: {ACCOUNTS_JSON}")
     acct = resolve_account("PALegacyPlus")
     print(f"resolve_account('PALegacyPlus') -> {acct}")
-    sessions = _get_sso_sessions()
+    sessions = get_sso_sessions()
     print(f"SSO sessions: {list(sessions.keys())}")
     total = len(load_accounts())
     print(f"Total accounts: {total}")

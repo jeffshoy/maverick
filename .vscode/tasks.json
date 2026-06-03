@@ -147,6 +147,15 @@
       "problemMatcher": []
     },
     {
+      "label": "AWS: Expand Disk (LM)",
+      "detail": "Paste a LogicMonitor disk alert to auto-fill server/drive. Leave account blank for picker.",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/disk-expand/expand_disk_lm.py", "--account", "${input:awsAccount}"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
       "label": "AWS: Reboot Server",
       "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
@@ -170,6 +179,15 @@
       "type": "shell",
       "command": "python",
       "args": ["${workspaceFolder}/scripts/aws/site-monitor/investigate.py", "--account", "${input:awsAccount}"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AWS: Investigate Site (Recycle Fix)",
+      "detail": "Diagnose and fix IIS app pool memory/recycle issues. Leave account blank for picker.",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/site-monitor/investigate_recycle_fix.py", "--account", "${input:awsAccount}"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
