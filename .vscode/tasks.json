@@ -130,41 +130,46 @@
     },
     {
       "label": "AWS: Reset RDS License Grace Period",
+      "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
       "command": "python",
-      "args": ["${workspaceFolder}/scripts/aws/rds-license-reset/rds_license_reset.py"],
+      "args": ["${workspaceFolder}/scripts/aws/rds-license-reset/rds_license_reset.py", "--account", "${input:awsAccount}"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
     {
       "label": "AWS: Expand Disk",
+      "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
       "command": "python",
-      "args": ["${workspaceFolder}/scripts/aws/disk-expand/expand_disk.py"],
+      "args": ["${workspaceFolder}/scripts/aws/disk-expand/expand_disk.py", "--account", "${input:awsAccount}"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
     {
       "label": "AWS: Reboot Server",
+      "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
       "command": "python",
-      "args": ["${workspaceFolder}/scripts/aws/server-reboot/reboot_server.py"],
+      "args": ["${workspaceFolder}/scripts/aws/server-reboot/reboot_server.py", "--account", "${input:awsAccount}"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
     {
       "label": "AWS: Restart Service",
+      "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
       "command": "python",
-      "args": ["${workspaceFolder}/scripts/aws/service-restart/restart_services.py"],
+      "args": ["${workspaceFolder}/scripts/aws/service-restart/restart_services.py", "--account", "${input:awsAccount}"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
     {
       "label": "AWS: Investigate Site",
+      "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
       "command": "python",
-      "args": ["${workspaceFolder}/scripts/aws/site-monitor/investigate.py"],
+      "args": ["${workspaceFolder}/scripts/aws/site-monitor/investigate.py", "--account", "${input:awsAccount}"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },

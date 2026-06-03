@@ -6,127 +6,25 @@ Usage:  python expand_disk.py
 Requires: pip install boto3
 """
 
-import boto3
-import configparser
-import math
+import argparse
 import os
-import re
 import subprocess
 import sys
+import math
+import re
 import time
-import tkinter as tk
+import boto3
 
-SSO_SESSION = "foundation"
-REGIONS = ["us-east-1", "us-west-2"]
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from aws_sso_helper import (
+    resolve_account,
+    load_all_profiles,
+    ensure_profile_session,
+    get_sso_session_for_profile,
+    pick_profile_gui,
+)
 
-# SSM script to get drive letters and their sizes from inside the server
-GET_DRIVES_SCRIPT = r'''
-Get-Partition | Where-Object { $_.DriveLetter -ne "`0" } | ForEach-Object {
-    $letter = $_.DriveLetter
-    $diskNum = $_.DiskNumber
-    $sizeGB = [Math]::Round($_.Size / 1GB, 2)
-    $disk = Get-Disk -Number $diskNum
-    $serialRaw = $disk.SerialNumber
-    # AWS EBS volume IDs appear as vol0abc123 in serial, convert to vol-0abc123
-    $volId = ""
-    if ($serialRaw -match "^vol") {
-        $volId = $serialRaw -replace "^vol", "vol-"
-        $volId = $volId -replace '[._].*$', ''
-        $volId = $volId.Trim()
-    }
-    Write-Output "$letter|$diskNum|$sizeGB|$volId"
-}
-'''
-
-# SSM script to expand partition after EBS resize
-EXPAND_PARTITION_SCRIPT = r'''
-$DriveLetter = '{drive_letter}'
-$DiskNumber = (Get-Partition -DriveLetter $DriveLetter).DiskNumber
-Get-Disk -Number $DiskNumber | Update-Disk
-Start-Sleep -Seconds 2
-Resize-Partition -DriveLetter $DriveLetter -Size (Get-PartitionSupportedSize -DriveLetter $DriveLetter).SizeMax
-Start-Sleep -Seconds 2
-$drv = Get-PSDrive -Name $DriveLetter
-$used = [Math]::Round($drv.Used / 1GB, 2)
-$free = [Math]::Round($drv.Free / 1GB, 2)
-$total = [Math]::Round(($drv.Used + $drv.Free) / 1GB, 2)
-Write-Output "RESULT|$DriveLetter|$used|$free|$total"
-'''
-
-
-def load_foundation_profiles():
-    config = configparser.ConfigParser()
-    config.read(os.path.join(os.path.expanduser("~"), ".aws", "config"))
-    profiles = {}
-    for section in config.sections():
-        if section.startswith("profile "):
-            name = section.replace("profile ", "")
-            if config.get(section, "sso_session", fallback="") == "foundation":
-                profiles[name] = config.get(section, "sso_account_id", fallback="")
-    return profiles
-
-
-def pick_profile_gui(profiles):
-    selected = {"profile": None}
-    root = tk.Tk()
-    root.title("Select AWS OU")
-    root.geometry("500x400")
-    root.resizable(False, False)
-
-    tk.Label(root, text="Search and select AWS OU:", font=("Segoe UI", 11)).pack(pady=(15, 5))
-    search_var = tk.StringVar()
-    tk.Entry(root, textvariable=search_var, font=("Segoe UI", 10), width=50).pack(pady=5)
-
-    frame = tk.Frame(root)
-    frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    listbox = tk.Listbox(frame, font=("Consolas", 10), yscrollcommand=scrollbar.set, width=60)
-    listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    scrollbar.config(command=listbox.yview)
-
-    profile_list = sorted(profiles.keys())
-
-    def update_list(*_):
-        q = search_var.get().lower()
-        listbox.delete(0, tk.END)
-        for p in profile_list:
-            if q in p.lower():
-                listbox.insert(tk.END, f"{p}  ({profiles[p]})")
-
-    search_var.trace_add("write", update_list)
-    update_list()
-
-    def on_select(event=None):
-        sel = listbox.curselection()
-        if sel:
-            selected["profile"] = listbox.get(sel[0]).split("  (")[0]
-            root.destroy()
-
-    listbox.bind("<Double-Button-1>", lambda e: on_select())
-    root.bind("<Return>", lambda e: on_select() if listbox.curselection() else None)
-    tk.Button(root, text="Select", command=on_select, font=("Segoe UI", 10), width=15).pack(pady=10)
-    root.mainloop()
-    return selected["profile"]
-
-
-def sso_login(profile):
-    print(f"Checking SSO session for {profile}...", end=" ")
-    try:
-        session = boto3.Session(profile_name=profile)
-        identity = session.client("sts").get_caller_identity()
-        print(f"OK - {identity['Arn']}")
-        return True
-    except Exception:
-        print("expired.")
-        print("Opening browser for SSO login...")
-        ret = subprocess.run(["aws", "sso", "login", "--sso-session", SSO_SESSION])
-        if ret.returncode != 0:
-            print("SSO login failed.")
-            return False
-        print("SSO login successful.")
-        return True
-
+REGIONS = ["us-east-1", "us-west-2", "ca-central-1"]
 
 def find_instances(profile, search_code):
     all_instances = []
@@ -347,7 +245,24 @@ def expand_os_partition(profile, region, instance_id, drive_letter):
 
 def main():
     print("Loading Foundation OU profiles...")
-    profiles = load_foundation_profiles()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--account", metavar="NAME",
+                        help="Account name or nickname (e.g. PALegacyPlus, PLUS). "
+                             "Omit to use the interactive picker.")
+    args = parser.parse_args()
+
+    if args.account:
+        try:
+            acct = resolve_account(args.account)
+        except ValueError as e:
+            print(f"Error: {e}")
+            import sys; sys.exit(1)
+        profile = acct["profile"]
+        sso_session = acct["ssoSession"]
+        print(f"Account: {acct['name']} ({acct['org']}, {acct['accountId']})")
+        ensure_profile_session(profile, sso_session)
+    else:
+        profiles = load_all_profiles()
     if not profiles:
         print("No foundation profiles found in ~/.aws/config")
         sys.exit(1)
@@ -359,8 +274,7 @@ def main():
         sys.exit(0)
     print(f"\nSelected OU: {profile}")
 
-    if not sso_login(profile):
-        sys.exit(1)
+    ensure_profile_session(profile, get_sso_session_for_profile(profile))
 
     while True:
         # 1. Find server
@@ -382,8 +296,7 @@ def main():
                 if not profile:
                     sys.exit(0)
                 print(f"\nSelected OU: {profile}")
-                if not sso_login(profile):
-                    sys.exit(1)
+                ensure_profile_session(profile, get_sso_session_for_profile(profile))
                 continue
             else:
                 sys.exit(0)
@@ -415,8 +328,7 @@ def main():
                 if not profile:
                     sys.exit(0)
                 print(f"\nSelected OU: {profile}")
-                if not sso_login(profile):
-                    sys.exit(1)
+                ensure_profile_session(profile, get_sso_session_for_profile(profile))
                 continue
             else:
                 sys.exit(0)
@@ -523,8 +435,7 @@ def main():
             if not profile:
                 sys.exit(0)
             print(f"\nSelected OU: {profile}")
-            if not sso_login(profile):
-                sys.exit(1)
+            ensure_profile_session(profile, get_sso_session_for_profile(profile))
             continue
         else:
             break

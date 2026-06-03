@@ -7,14 +7,23 @@ Usage:  python investigate.py
 Requires: pip install boto3 colorama
 """
 
-import boto3
-import configparser
+import argparse
 import os
 import re
 import subprocess
 import sys
 import time
-import tkinter as tk
+
+import boto3
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from aws_sso_helper import (
+    resolve_account,
+    load_all_profiles,
+    ensure_profile_session,
+    get_sso_session_for_profile,
+    pick_profile_gui,
+)
 
 try:
     from colorama import init, Fore, Back, Style
@@ -30,8 +39,7 @@ except ImportError:
     print("Continuing without color highlighting.\n")
     HIGHLIGHT = RESET = YELLOW = GREEN = RED = CYAN = ""
 
-SSO_SESSION = "foundation"
-REGIONS = ["us-east-1", "us-west-2"]
+REGIONS = ["us-east-1", "us-west-2", "ca-central-1"]
 
 # ---------------------------------------------------------------------------
 # PowerShell scripts to run via SSM
@@ -178,75 +186,8 @@ def parse_alert():
 
 
 # ---------------------------------------------------------------------------
-# AWS helpers (same patterns as disk expand)
+# AWS helpers — delegated to aws_sso_helper
 # ---------------------------------------------------------------------------
-def load_foundation_profiles():
-    config = configparser.ConfigParser()
-    config.read(os.path.join(os.path.expanduser("~"), ".aws", "config"))
-    profiles = {}
-    for section in config.sections():
-        if section.startswith("profile "):
-            name = section.replace("profile ", "")
-            if config.get(section, "sso_session", fallback="") == "foundation":
-                profiles[name] = config.get(section, "sso_account_id", fallback="")
-    return profiles
-
-
-def pick_profile_gui(profiles):
-    selected = {"profile": None}
-    root = tk.Tk()
-    root.title("Select AWS OU")
-    root.geometry("500x400")
-    root.resizable(False, False)
-    tk.Label(root, text="Search and select AWS OU:", font=("Segoe UI", 11)).pack(pady=(15, 5))
-    search_var = tk.StringVar()
-    tk.Entry(root, textvariable=search_var, font=("Segoe UI", 10), width=50).pack(pady=5)
-    frame = tk.Frame(root)
-    frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    listbox = tk.Listbox(frame, font=("Consolas", 10), yscrollcommand=scrollbar.set, width=60)
-    listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    scrollbar.config(command=listbox.yview)
-    profile_list = sorted(profiles.keys())
-
-    def update_list(*_):
-        q = search_var.get().lower()
-        listbox.delete(0, tk.END)
-        for p in profile_list:
-            if q in p.lower():
-                listbox.insert(tk.END, f"{p}  ({profiles[p]})")
-    search_var.trace_add("write", update_list)
-    update_list()
-
-    def on_select(event=None):
-        sel = listbox.curselection()
-        if sel:
-            selected["profile"] = listbox.get(sel[0]).split("  (")[0]
-            root.destroy()
-    listbox.bind("<Double-Button-1>", lambda e: on_select())
-    root.bind("<Return>", lambda e: on_select() if listbox.curselection() else None)
-    tk.Button(root, text="Select", command=on_select, font=("Segoe UI", 10), width=15).pack(pady=10)
-    root.mainloop()
-    return selected["profile"]
-
-
-def sso_login(profile):
-    print(f"Checking SSO session for {profile}...", end=" ")
-    try:
-        session = boto3.Session(profile_name=profile)
-        identity = session.client("sts").get_caller_identity()
-        print(f"OK - {identity['Arn']}")
-        return True
-    except Exception:
-        print("expired.")
-        print("Opening browser for SSO login...")
-        ret = subprocess.run(["aws", "sso", "login", "--sso-session", SSO_SESSION])
-        if ret.returncode != 0:
-            print("SSO login failed.")
-            return False
-        print("SSO login successful.")
-        return True
 
 
 def find_instances(profile, search_code):
@@ -604,7 +545,24 @@ def offer_actions(profile, region, instance_id, server_name, app_pools, has_stop
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    profiles = load_foundation_profiles()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--account", metavar="NAME",
+                        help="Account name or nickname (e.g. PALegacyPlus, PLUS). "
+                             "Omit to use the interactive picker.")
+    args = parser.parse_args()
+
+    if args.account:
+        try:
+            acct = resolve_account(args.account)
+        except ValueError as e:
+            print(f"Error: {e}")
+            import sys; sys.exit(1)
+        profile = acct["profile"]
+        sso_session = acct["ssoSession"]
+        print(f"Account: {acct['name']} ({acct['org']}, {acct['accountId']})")
+        ensure_profile_session(profile, sso_session)
+    else:
+        profiles = load_all_profiles()
     if not profiles:
         print("No foundation profiles found in ~/.aws/config")
         sys.exit(1)
@@ -615,8 +573,7 @@ def main():
     if not profile:
         sys.exit(0)
     print(f"Selected OU: {profile}")
-    if not sso_login(profile):
-        sys.exit(1)
+    ensure_profile_session(profile, get_sso_session_for_profile(profile))
 
     # 2. Parse alert
     alert = parse_alert()

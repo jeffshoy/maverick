@@ -7,18 +7,25 @@ Usage:  python expand_disk_lm.py
 Requires: pip install boto3
 """
 
-import boto3
-import configparser
-import math
+import argparse
 import os
-import re
 import subprocess
 import sys
+import math
+import re
 import time
-import tkinter as tk
+import boto3
 
-SSO_SESSION = "foundation"
-REGIONS = ["us-east-1", "us-west-2"]
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from aws_sso_helper import (
+    resolve_account,
+    load_all_profiles,
+    ensure_profile_session,
+    get_sso_session_for_profile,
+    pick_profile_gui,
+)
+
+REGIONS = ["us-east-1", "us-west-2", "ca-central-1"]
 
 EXPAND_PARTITION_SCRIPT = r'''
 $DriveLetter = '{drive_letter}'
@@ -70,27 +77,21 @@ def parse_alert_input():
     print("Paste the alert info below (from LM email, Teams, or the alert page).")
     print("You can paste the full block or just answer the prompts.\n")
 
-    # Try to get host from pasted text or manual input
     print("Enter the Host/Server name from the alert")
     print("  (e.g. REDB-PTRKWB001.aspgov.pri or just REDB-PTRKWB001)")
     host = input("> ").strip()
-
-    # Extract server name (strip domain)
     server_name = host.split(".")[0] if host else None
 
-    # Get drive letter from datasource or manual
     print("\nEnter the Drive letter from the alert")
     print("  (e.g. C or E — look at the Datasource name like 'WinVolumeUsage-C:')")
     drive_letter = input("> ").strip().upper().replace(":", "")
 
-    # Get datacenter
     print("\nEnter Datacenter")
     print("  (e.g. Vegas or Voorhees — check the Group field in the alert)")
     datacenter = input("> ").strip()
     if not datacenter:
         datacenter = "Vegas"
 
-    # Get threshold/value info
     print("\nEnter the alert threshold or current usage % (optional, press Enter to skip)")
     threshold = input("> ").strip()
 
@@ -129,21 +130,17 @@ def parse_pasted_block():
         "threshold": None,
     }
 
-    # Parse Host
     host_match = re.search(r"Host[:\s]+(\S+)", text, re.IGNORECASE)
     if host_match:
         result["host_fqdn"] = host_match.group(1)
         result["server_name"] = host_match.group(1).split(".")[0]
 
-    # Parse drive letter from datasource
     ds_match = re.search(r"(?:Datasource|DataSource)[:\s]+(.*)", text, re.IGNORECASE)
     if ds_match:
-        ds_text = ds_match.group(1)
-        drive_match = re.search(r"([A-Z])[\:\\]", ds_text, re.IGNORECASE)
+        drive_match = re.search(r"([A-Z])[\:\\]", ds_match.group(1), re.IGNORECASE)
         if drive_match:
             result["drive_letter"] = drive_match.group(1).upper()
 
-    # Parse datacenter from Group
     group_match = re.search(r"Group[:\s]+(.*)", text, re.IGNORECASE)
     if group_match:
         group_text = group_match.group(1)
@@ -152,7 +149,6 @@ def parse_pasted_block():
         elif "voorhees" in group_text.lower():
             result["datacenter"] = "Voorhees"
 
-    # Parse threshold/value
     val_match = re.search(r"Value[:\s]+(\S+)", text, re.IGNORECASE)
     if val_match:
         result["threshold"] = val_match.group(1)
@@ -163,75 +159,6 @@ def parse_pasted_block():
 # =============================================================================
 # AWS / SSM helpers
 # =============================================================================
-def load_foundation_profiles():
-    config = configparser.ConfigParser()
-    config.read(os.path.join(os.path.expanduser("~"), ".aws", "config"))
-    profiles = {}
-    for section in config.sections():
-        if section.startswith("profile "):
-            name = section.replace("profile ", "")
-            if config.get(section, "sso_session", fallback="") == "foundation":
-                profiles[name] = config.get(section, "sso_account_id", fallback="")
-    return profiles
-
-
-def pick_profile_gui(profiles):
-    selected = {"profile": None}
-    root = tk.Tk()
-    root.title("Select AWS OU")
-    root.geometry("500x400")
-    root.resizable(False, False)
-    tk.Label(root, text="Search and select AWS OU:", font=("Segoe UI", 11)).pack(pady=(15, 5))
-    search_var = tk.StringVar()
-    tk.Entry(root, textvariable=search_var, font=("Segoe UI", 10), width=50).pack(pady=5)
-    frame = tk.Frame(root)
-    frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    listbox = tk.Listbox(frame, font=("Consolas", 10), yscrollcommand=scrollbar.set, width=60)
-    listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    scrollbar.config(command=listbox.yview)
-    profile_list = sorted(profiles.keys())
-
-    def update_list(*_):
-        q = search_var.get().lower()
-        listbox.delete(0, tk.END)
-        for p in profile_list:
-            if q in p.lower():
-                listbox.insert(tk.END, f"{p}  ({profiles[p]})")
-    search_var.trace_add("write", update_list)
-    update_list()
-
-    def on_select(event=None):
-        sel = listbox.curselection()
-        if sel:
-            selected["profile"] = listbox.get(sel[0]).split("  (")[0]
-            root.destroy()
-    listbox.bind("<Double-Button-1>", lambda e: on_select())
-    root.bind("<Return>", lambda e: on_select() if listbox.curselection() else None)
-    tk.Button(root, text="Select", command=on_select, font=("Segoe UI", 10), width=15).pack(pady=10)
-    root.mainloop()
-    return selected["profile"]
-
-
-def sso_login(profile):
-    print(f"Checking SSO session for {profile}...", end=" ")
-    try:
-        session = boto3.Session(profile_name=profile)
-        identity = session.client("sts").get_caller_identity()
-        print(f"OK - {identity['Arn']}")
-        return True
-    except Exception:
-        print("expired.")
-        print("Opening browser for SSO login...")
-        ret = subprocess.run(["aws", "sso", "login", "--sso-session", SSO_SESSION])
-        if ret.returncode != 0:
-            print("SSO login failed.")
-            return False
-        print("SSO login successful.")
-        return True
-
-
 def find_instances(profile, search_code):
     all_instances = []
     search_lower = search_code.lower()
@@ -413,10 +340,27 @@ Following the confluence page, we are increasing the storage based on the calcul
 # Main
 # =============================================================================
 def main():
-    profiles = load_foundation_profiles()
-    if not profiles:
-        print("No foundation profiles found in ~/.aws/config")
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--account", metavar="NAME",
+                        help="Account name or nickname (e.g. PALegacyPlus, PLUS). "
+                             "Omit to use the interactive picker.")
+    args = parser.parse_args()
+
+    if args.account:
+        try:
+            acct = resolve_account(args.account)
+        except ValueError as e:
+            print(f"Error: {e}")
+            import sys; sys.exit(1)
+        profile = acct["profile"]
+        sso_session = acct["ssoSession"]
+        print(f"Account: {acct['name']} ({acct['org']}, {acct['accountId']})")
+        ensure_profile_session(profile, sso_session)
+    else:
+        profiles = load_all_profiles()
+        if not profiles:
+            print("No profiles found in accounts.json")
+            sys.exit(1)
 
     # 1. Get alert details
     print("How do you want to provide alert details?")
@@ -456,8 +400,7 @@ def main():
     if not profile:
         sys.exit(0)
     print(f"Selected OU: {profile}")
-    if not sso_login(profile):
-        sys.exit(1)
+    ensure_profile_session(profile, get_sso_session_for_profile(profile))
 
     print(f"\nSearching for '{server_name}'...")
     instances = find_instances(profile, server_name)
