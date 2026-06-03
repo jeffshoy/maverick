@@ -389,6 +389,50 @@ foreach ($Region in $Regions) {
     }
 
     # â”€â”€ RestartApacheOnly: skip cert delivery, just restart the service â”€â”€â”€â”€â”€
+        # Helper: write a script string to a BOM-free ASCII JSON params file.
+        # Builds the JSON with [char]34 for double-quotes so no editor can
+        # silently swap them for curly/smart quotes.
+        function New-SsmParamsFile {
+            param([string]$Script)
+            $q       = [char]34
+            $escaped = $Script -replace '\\', '\\' -replace “$q”, “\$q” `
+                               -replace “`r”, '\r'  -replace “`n”, '\n' `
+                               -replace “`t”, '\t'
+            $json    = “{${q}commands${q}:[${q}${escaped}${q}]}”
+            $path    = [System.IO.Path]::GetTempFileName() + '.json'
+            [System.IO.File]::WriteAllBytes($path, [System.Text.Encoding]::ASCII.GetBytes($json))
+            return $path
+        }
+
+        # Helper: send one SSM command and poll to completion; returns invocation object
+        function Invoke-SsmCommand {
+            param([string]$InstanceId, [string]$ParamsFile, [string]$Comment)
+            $sendRaw = Invoke-Aws ssm send-command `
+                --document-name 'AWS-RunPowerShellScript' `
+                --instance-ids  $InstanceId `
+                --parameters    “file://$ParamsFile” `
+                --timeout-seconds $SsmTimeoutSeconds `
+                --comment       $Comment `
+                --output json `
+                --profile $AwsProfile --region $Region
+            if ($LASTEXITCODE -ne 0) { throw “send-command failed: $($sendRaw -join ' ')” }
+            $commandId = ($sendRaw | ConvertFrom-Json).Command.CommandId
+            $deadline  = (Get-Date).AddSeconds($SsmTimeoutSeconds + 60)
+            $inv       = $null
+            do {
+                Start-Sleep -Seconds 5
+                $raw = Invoke-Aws ssm get-command-invocation `
+                    --command-id  $commandId --instance-id $InstanceId `
+                    --output json --profile $AwsProfile --region $Region
+                if ($LASTEXITCODE -eq 0) { $inv = $raw | ConvertFrom-Json }
+            } while (
+                (-not $inv -or $inv.StatusDetails -notin @('Success','Failed','TimedOut','Cancelled')) -and
+                (Get-Date) -lt $deadline
+            )
+            if (-not $inv) { throw 'Timed out waiting for SSM command.' }
+            return $inv
+        }
+
     if ($RestartApacheOnly) {
         $restartOnlyScript = @”
 `$ErrorActionPreference = 'Stop'
@@ -653,50 +697,6 @@ $restartBlock
 }
 Write-Output ('__STATUS__:' + (`$status | ConvertTo-Json -Compress))
 “@
-
-        # Helper: write a script string to a BOM-free ASCII JSON params file.
-        # Builds the JSON with [char]34 for double-quotes so no editor can
-        # silently swap them for curly/smart quotes.
-        function New-SsmParamsFile {
-            param([string]$Script)
-            $q       = [char]34
-            $escaped = $Script -replace '\\', '\\' -replace “$q”, “\$q” `
-                               -replace “`r”, '\r'  -replace “`n”, '\n' `
-                               -replace “`t”, '\t'
-            $json    = “{${q}commands${q}:[${q}${escaped}${q}]}”
-            $path    = [System.IO.Path]::GetTempFileName() + '.json'
-            [System.IO.File]::WriteAllBytes($path, [System.Text.Encoding]::ASCII.GetBytes($json))
-            return $path
-        }
-
-        # Helper: send one SSM command and poll to completion; returns invocation object
-        function Invoke-SsmCommand {
-            param([string]$InstanceId, [string]$ParamsFile, [string]$Comment)
-            $sendRaw = Invoke-Aws ssm send-command `
-                --document-name 'AWS-RunPowerShellScript' `
-                --instance-ids  $InstanceId `
-                --parameters    “file://$ParamsFile” `
-                --timeout-seconds $SsmTimeoutSeconds `
-                --comment       $Comment `
-                --output json `
-                --profile $AwsProfile --region $Region
-            if ($LASTEXITCODE -ne 0) { throw “send-command failed: $($sendRaw -join ' ')” }
-            $commandId = ($sendRaw | ConvertFrom-Json).Command.CommandId
-            $deadline  = (Get-Date).AddSeconds($SsmTimeoutSeconds + 60)
-            $inv       = $null
-            do {
-                Start-Sleep -Seconds 5
-                $raw = Invoke-Aws ssm get-command-invocation `
-                    --command-id  $commandId --instance-id $InstanceId `
-                    --output json --profile $AwsProfile --region $Region
-                if ($LASTEXITCODE -eq 0) { $inv = $raw | ConvertFrom-Json }
-            } while (
-                (-not $inv -or $inv.StatusDetails -notin @('Success','Failed','TimedOut','Cancelled')) -and
-                (Get-Date) -lt $deadline
-            )
-            if (-not $inv) { throw 'Timed out waiting for SSM command.' }
-            return $inv
-        }
 
         # â”€â”€ Send three SSM commands per instance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         foreach ($instance in $ssmReadyInstances) {
