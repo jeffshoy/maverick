@@ -10,8 +10,10 @@
     Match tiers (stops at the first tier that returns >= 1 hit):
       1. Exact name (case-sensitive)
       2. Case-insensitive exact
-      3. Case-insensitive substring
-      4. Token overlap (splits on camel-case/hyphens/underscores)
+      3. Normalized nickname match (lowercase + strip spaces/dashes/underscores;
+         "pac-prd", "PAC PRD", and "pacprd" all match the same nickname entry)
+      4. Case-insensitive substring on name
+      5. Token overlap (splits on camel-case/hyphens/underscores)
 
     Tie-breaking within a tier:
       - Same display name in both orgs: Foundation wins silently (migration target).
@@ -61,6 +63,10 @@ $accounts  = @($registry.accounts)
 # ---------------------------------------------------------------------------
 # Matching helpers
 # ---------------------------------------------------------------------------
+function Get-Normalized([string]$s) {
+    ($s.ToLower() -replace '[\s\-_]', '')
+}
+
 function Get-Tokens([string]$s) {
     # Split on hyphens, underscores, and camelCase boundaries; always return array
     @($s -csplit '(?<=[a-z])(?=[A-Z])|[-_]' | Where-Object { $_ })
@@ -86,12 +92,21 @@ if ($candidates.Count -eq 0) {
     $candidates = @($accounts | Where-Object { $_.name -ieq $Name })
 }
 
-# Tier 3: substring
+# Tier 3: normalized nickname match
+if ($candidates.Count -eq 0) {
+    $normInput = Get-Normalized $Name
+    $candidates = @($accounts | Where-Object {
+        $nicknames = @($_.PSObject.Properties['nicknames'].Value)
+        ($nicknames | ForEach-Object { Get-Normalized $_ }) -contains $normInput
+    })
+}
+
+# Tier 4: substring
 if ($candidates.Count -eq 0) {
     $candidates = @($accounts | Where-Object { $_.name -ilike "*$Name*" })
 }
 
-# Tier 4: token overlap (score >= 1)
+# Tier 5: token overlap on name (score >= 1)
 if ($candidates.Count -eq 0) {
     $scored = @($accounts | ForEach-Object {
         [PSCustomObject]@{ Account = $_; Score = (Get-TokenScore $Name $_.name) }

@@ -43,6 +43,7 @@ SSO_SESSIONS = [
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_OUT = REPO_ROOT / "aws-configs" / "cloudops.config"
 ACCOUNTS_OUT = REPO_ROOT / "aws-configs" / "accounts.json"
+NICKNAMES_FILE = REPO_ROOT / "aws-configs" / "nicknames.json"
 
 
 # ---------------------------------------------------------------------------
@@ -132,12 +133,61 @@ output         = json
 """
 
 
+def _normalize_nickname(s: str) -> str:
+    import re
+    return re.sub(r'[\s\-_]', '', s.lower())
+
+
+def load_nicknames() -> dict[str, list[str]]:
+    """Load aws-configs/nicknames.json; returns {} if the file doesn't exist yet."""
+    if not NICKNAMES_FILE.exists():
+        return {}
+    return json.loads(NICKNAMES_FILE.read_text(encoding="utf-8"))
+
+
+def validate_nicknames(nicknames_map: dict[str, list[str]], all_accounts: list[dict]) -> None:
+    """
+    Validate nicknames.json against the live account list.
+    Raises SystemExit on:
+      - a key that doesn't match any account name
+      - the same normalized nickname appearing under two different account names
+    """
+    known_names = {a["name"] for a in all_accounts}
+
+    # Unknown account keys
+    unknown = [k for k in nicknames_map if k not in known_names]
+    if unknown:
+        print(f"\nERROR: nicknames.json references unknown account name(s): {unknown}")
+        print("Fix the key(s) to match the exact AWS account name, then re-run.")
+        sys.exit(1)
+
+    # Duplicate normalized nicknames across different accounts
+    seen: dict[str, str] = {}  # normalized -> account name
+    dupes: list[str] = []
+    for acct_name, nicks in nicknames_map.items():
+        for nick in nicks:
+            norm = _normalize_nickname(nick)
+            if norm in seen and seen[norm] != acct_name:
+                dupes.append(f"  '{nick}' (normalized: '{norm}') on both '{seen[norm]}' and '{acct_name}'")
+            else:
+                seen[norm] = acct_name
+    if dupes:
+        print("\nERROR: Duplicate nicknames found in nicknames.json:")
+        for d in dupes:
+            print(d)
+        print("Each normalized nickname must be unique across all accounts.")
+        sys.exit(1)
+
+
 def build_profile_name(session: dict, account_name: str) -> str:
     return f"{session['profilePrefix']}{account_name}"
 
 
 def generate(dry_run: bool = False) -> None:
     print("Generating AWS config and accounts registry...")
+    nicknames_map = load_nicknames()
+    if nicknames_map:
+        print(f"  Loaded nicknames for {len(nicknames_map)} account(s) from {NICKNAMES_FILE.name}")
 
     all_accounts: list[dict] = []   # for accounts.json
     config_parts: list[str] = [HEADER]
@@ -171,7 +221,11 @@ def generate(dry_run: bool = False) -> None:
                 "org": session["name"],
                 "ssoSession": session["name"],
                 "profile": profile,
+                "nicknames": nicknames_map.get(acct["accountName"], []),
             })
+
+    # Validate nicknames before writing — fail loud on unknown names or duplicates
+    validate_nicknames(nicknames_map, all_accounts)
 
     # Sort accounts.json by (name, org) — foundation before legacy for same name
     all_accounts.sort(key=lambda a: (a["name"], 0 if a["org"] == "foundation" else 1))
@@ -192,6 +246,11 @@ def generate(dry_run: bool = False) -> None:
         preview = dict(accounts_json)
         preview["accounts"] = all_accounts[:5]
         print(json.dumps(preview, indent=2))
+        nicknamed = [a for a in all_accounts if a["nicknames"]]
+        if nicknamed:
+            print(f"\n--- DRY RUN: accounts with nicknames ({len(nicknamed)}) ---")
+            for a in nicknamed:
+                print(f"  {a['name']}: {a['nicknames']}")
         print(f"\n[dry-run] Would write {len(config_text.splitlines())} lines to {CONFIG_OUT}")
         print(f"[dry-run] Would write {len(all_accounts)} accounts to {ACCOUNTS_OUT}")
         return

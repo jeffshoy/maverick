@@ -65,6 +65,11 @@ def get_sso_sessions() -> dict:
     return _SSO_SESSIONS
 
 
+def _normalize(s: str) -> str:
+    """Lowercase and strip spaces, hyphens, underscores for nickname matching."""
+    return re.sub(r'[\s\-_]', '', s.lower())
+
+
 def _tokenize(s: str) -> list[str]:
     """Split a string on hyphens, underscores, and camelCase boundaries."""
     parts = re.split(r'(?<=[a-z])(?=[A-Z])|[-_]', s)
@@ -85,8 +90,9 @@ def resolve_account(name: str) -> dict:
     Match tiers (stops at first tier with >= 1 hit):
       1. Exact (case-sensitive)
       2. Case-insensitive exact
-      3. Case-insensitive substring
-      4. Token overlap
+      3. Normalized nickname match (lowercase + strip spaces/dashes/underscores)
+      4. Case-insensitive substring
+      5. Token overlap
 
     Tie-breaking:
       - Same display name in both orgs: Foundation wins silently.
@@ -107,11 +113,19 @@ def resolve_account(name: str) -> dict:
     if not candidates:
         candidates = [a for a in accounts if a["name"].lower() == name.lower()]
 
-    # Tier 3: substring
+    # Tier 3: normalized nickname match
+    if not candidates:
+        norm_input = _normalize(name)
+        candidates = [
+            a for a in accounts
+            if norm_input in {_normalize(n) for n in a.get("nicknames", [])}
+        ]
+
+    # Tier 4: substring
     if not candidates:
         candidates = [a for a in accounts if name.lower() in a["name"].lower()]
 
-    # Tier 4: token overlap
+    # Tier 5: token overlap
     if not candidates:
         scored = sorted(
             [(a, _token_score(name, a["name"])) for a in accounts],

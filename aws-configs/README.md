@@ -50,8 +50,34 @@ When an account migrates from legacy → foundation, its profile drops the `lega
 | File | Purpose |
 |------|---------|
 | `cloudops.config` | Committed AWS config — both SSO sessions + all profiles. Do not edit by hand. |
+| `accounts.json` | Generated account registry used by the resolvers in `scripts/aws/`. |
+| `nicknames.json` | Hand-maintained nickname aliases, merged into `accounts.json` on regeneration. |
 | `tools/Sync-AwsConfig.ps1` | Merges `cloudops.config` into `~/.aws/config`, preserving personal profiles. |
-| `tools/generate_aws_config.py` | Regenerates `cloudops.config` by querying both SSO instances via `list_accounts`. |
+| `tools/generate_aws_config.py` | Regenerates `cloudops.config` and `accounts.json` by querying both SSO instances. |
+
+---
+
+## Account nicknames
+
+Scripts that accept an account name (`Connect-RDP.ps1`, `Find-Instance.ps1`, all Python AWS tools) resolve it through a 5-tier matcher. **Tier 3** checks curated nicknames before falling back to substring/token-overlap on the real name.
+
+**Add a nickname:**
+
+1. Edit `aws-configs/nicknames.json` — keys are exact AWS account names, values are arrays of aliases:
+   ```json
+   {
+     "PROD-PA-Pro": ["pac-prd", "pac prd", "comdev", "commdev"],
+     "PALegacySharedServices": ["shared", "ss"]
+   }
+   ```
+2. Regenerate: `python aws-configs/tools/generate_aws_config.py`
+3. Commit `nicknames.json` and `accounts.json` together in a PR.
+
+**Normalization:** matching is case-insensitive and ignores spaces, hyphens, and underscores. The entry `"pac-prd"` also matches `pac prd`, `PAC_PRD`, and `PacPrd`.
+
+**Validation:** the generator fails loudly if:
+- A key in `nicknames.json` doesn't match a real AWS account name.
+- The same normalized nickname appears under two different accounts (prevents ambiguous routing).
 
 ---
 
