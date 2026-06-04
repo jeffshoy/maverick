@@ -4,10 +4,15 @@ Find EC2 instances by client/server code, view health status checks, reboot, and
 
 ## Usage
 
+**Kiro task (preferred):** run **`AWS: Reboot Server`** from the task picker. Leave the account prompt blank to get the GUI OU picker.
+
+**CLI:**
 ```
-cd C:\Users\sunil.kanakappagari\Foundation\Server-Reboot
-python reboot_server.py
+cd %USERPROFILE%\repos\cloudops
+python scripts\aws\server-reboot\reboot_server.py
 ```
+
+Add `--account <NAME>` to skip the picker (e.g. `--account PLUS`).
 
 ## Flow
 

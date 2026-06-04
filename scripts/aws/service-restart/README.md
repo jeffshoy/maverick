@@ -5,10 +5,15 @@ Built for responding to LogicMonitor alerts.
 
 ## Usage
 
+**Kiro task (preferred):** run **`AWS: Restart Service`** from the task picker. Leave the account prompt blank to get the GUI OU picker.
+
+**CLI:**
 ```
-cd C:\Users\sunil.kanakappagari\Foundation\Service-Restart
-python restart_services.py
+cd %USERPROFILE%\repos\cloudops
+python scripts\aws\service-restart\restart_services.py
 ```
+
+Add `--account <NAME>` to skip the picker (e.g. `--account PLUS`).
 
 ## Flow
 

@@ -4,10 +4,15 @@ Expand EBS volumes and automatically resize OS partitions on Foundation OU serve
 
 ## Usage
 
+**Kiro task (preferred):** run **`AWS: Expand Disk`** from the task picker. Leave the account prompt blank to get the GUI OU picker.
+
+**CLI:**
 ```
-cd C:\Users\sunil.kanakappagari\Foundation\Disk-Expand
-python expand_disk.py
+cd %USERPROFILE%\repos\cloudops
+python scripts\aws\disk-expand\expand_disk.py
 ```
+
+Add `--account <NAME>` to skip the picker (e.g. `--account PLUS`).
 
 ## Flow
 

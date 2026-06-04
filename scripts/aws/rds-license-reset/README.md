@@ -35,10 +35,16 @@ Opens your browser → log in → authorize. The script auto-triggers this if th
 ## Usage
 
 ### Reset RDS License (main tool)
+
+**Kiro task (preferred):** run **`AWS: Reset RDS License Grace Period`** from the task picker. Leave the account prompt blank to get the GUI OU picker.
+
+**CLI:**
 ```
-cd C:\Users\sunil.kanakappagari\Foundation\RDS-license-reset
-python rds_license_reset.py
+cd %USERPROFILE%\repos\cloudops
+python scripts\aws\rds-license-reset\rds_license_reset.py
 ```
+
+Add `--account <NAME>` to skip the picker (e.g. `--account PLUS`).
 
 Flow:
 1. GUI popup — searchable dropdown to pick the AWS OU (reads all `foundation` profiles from `~/.aws/config`)
