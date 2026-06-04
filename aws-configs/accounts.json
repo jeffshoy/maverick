@@ -2302,7 +2302,7 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyPlus",
-      "nicknames": [],
+      "nicknames": ["PLUS"],
       "applications": []
     },
     {
@@ -2311,7 +2311,7 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyPlusDev",
-      "nicknames": [],
+      "nicknames": ["PLUSDEV"],
       "applications": []
     },
     {
