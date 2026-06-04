@@ -24,21 +24,21 @@
 ### 1. Clone the repo and set up CLAUDE.md
 
 ```powershell
-cd C:\repos
+# Standard clone location — all tooling and docs assume this path
+cd "$env:USERPROFILE\repos"
 git clone https://psgov@dev.azure.com/psgov/Cloud-PA/_git/cloudops
 ```
 
 **Option A — Symlink (preferred, auto-updates on `git pull`):**
 ```powershell
-# Run from an elevated PowerShell prompt or with Windows Developer Mode enabled
 New-Item -ItemType SymbolicLink `
     -Path "$env:USERPROFILE\.claude\CLAUDE.md" `
-    -Target "C:\repos\cloudops\CLAUDE.md"
+    -Target "$env:USERPROFILE\repos\cloudops\CLAUDE.md"
 ```
 
 **Option B — Copy (no admin required, re-run after updates):**
 ```powershell
-Copy-Item C:\repos\cloudops\CLAUDE.md "$env:USERPROFILE\.claude\CLAUDE.md"
+Copy-Item "$env:USERPROFILE\repos\cloudops\CLAUDE.md" "$env:USERPROFILE\.claude\CLAUDE.md"
 ```
 
 ### 2. Sync the AWS config
@@ -47,7 +47,7 @@ Run in Kiro: **`Setup: Sync AWS Config`**
 
 Or from CLI:
 ```powershell
-cd C:\repos\cloudops
+cd "$env:USERPROFILE\repos\cloudops"
 pwsh aws-configs/tools/Sync-AwsConfig.ps1
 ```
 
@@ -93,7 +93,7 @@ aws sts get-caller-identity --profile legacy-<any-legacy-account>
 If you hit a "No account found matching" error, the account registry may be stale.
 
 ```powershell
-cd C:\repos\cloudops
+cd "$env:USERPROFILE\repos\cloudops"
 python aws-configs/tools/generate_aws_config.py
 ```
 

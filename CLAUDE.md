@@ -4,8 +4,9 @@
 
 This file is the authoritative Claude Code configuration for the **CloudOps SRE team** — a blend of System Administrator and DevOps engineering. We manage Windows workloads on AWS EC2, operate across multiple Active Directory domains, use Azure DevOps for source control, and write primarily in PowerShell. This file is **loaded automatically by Claude in every repo a teammate works in**, not just `cloudops`.
 
-**Canonical source:** `C:\repos\cloudops\CLAUDE.md` (version-controlled, PR-reviewable).
+**Canonical source:** `CLAUDE.md` at the root of your `cloudops` clone (version-controlled, PR-reviewable).
 Each teammate mirrors it to `%USERPROFILE%\.claude\CLAUDE.md` using the setup instructions below.
+Standard clone location: `%USERPROFILE%\repos\cloudops`.
 
 **Repo layout & invocation:** see [`README.md`](README.md) for the folder map and how to run scripts via the Kiro task launcher. **AWS SSO setup:** see [`aws-configs/README.md`](aws-configs/README.md).
 
@@ -13,18 +14,25 @@ Each teammate mirrors it to `%USERPROFILE%\.claude\CLAUDE.md` using the setup in
 
 ## Setup — One-Time Per Teammate
 
-**Option A — Symlink (preferred, stays in sync automatically):**
-Run once from an elevated PowerShell prompt:
+**Fastest path — bootstrap script (recommended):**
+```powershell
+cd "$env:USERPROFILE\repos\cloudops"
+pwsh scripts\setup\Initialize-Workstation.ps1
+```
+Installs all tools, links `CLAUDE.md`, and syncs the AWS config in one shot.
+See [`docs/onboarding.md`](docs/onboarding.md) for the full guide and manual steps.
+
+**Manual — Option A: Symlink (preferred, stays in sync automatically):**
 ```powershell
 New-Item -ItemType SymbolicLink `
     -Path "$env:USERPROFILE\.claude\CLAUDE.md" `
-    -Target "C:\repos\cloudops\CLAUDE.md"
+    -Target "$env:USERPROFILE\repos\cloudops\CLAUDE.md"
 ```
-Requires admin rights or Windows Developer Mode. Once set, `git pull` on `cloudops` updates Claude's guidance for everyone automatically.
+Once set, `git pull` on `cloudops` updates Claude's guidance for everyone automatically.
 
-**Option B — Copy (no admin required, must re-run after updates):**
+**Manual — Option B: Copy (re-run after updates):**
 ```powershell
-Copy-Item C:\repos\cloudops\CLAUDE.md "$env:USERPROFILE\.claude\CLAUDE.md"
+Copy-Item "$env:USERPROFILE\repos\cloudops\CLAUDE.md" "$env:USERPROFILE\.claude\CLAUDE.md"
 ```
 Re-run this after pulling changes to the canonical file.
 
@@ -62,7 +70,10 @@ Management has standardized on **Kiro** as the team IDE. Kiro is a VS Code fork,
 
 1. Open Kiro → Extensions panel → search **"Claude Code"** → install.
 2. The extension reads `%USERPROFILE%\.claude\CLAUDE.md` automatically — the same symlink you already created. No extra config.
-3. Open the `cloudops` folder in Kiro and start a Claude Code session from the extension's sidebar.
+3. Open the repo via **File > Open Workspace from File** → select `cloudops.code-workspace` at the repo root. This ensures all Kiro tasks appear even when other folders are open alongside `cloudops`.
+4. Start a Claude Code session from the extension's sidebar.
+
+**Fallback:** **File > Open Folder** on `%USERPROFILE%\repos\cloudops` also works for single-folder sessions — tasks load from `.vscode/tasks.json`.
 
 ### When to reach for the CLI vs the Kiro IDE
 

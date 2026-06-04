@@ -6,17 +6,22 @@ SRE automation for the CloudOps team — PowerShell, Python, and Bash scripts fo
 
 ## First-time setup
 
-1. **Install Kiro + Claude Code extension** — see [`CLAUDE.md`](CLAUDE.md) for setup instructions and team standards.
-2. **Sync your AWS config** — in Kiro, run `Ctrl+Shift+P → Tasks: Run Task → Setup: Sync AWS Config`. This installs all team AWS profiles into your `~/.aws/config`.
-3. **Log in to AWS SSO** — run both:
-   - `Setup: AWS SSO Login (foundation)` — new org (300+ accounts, role `cst-comm-cloudadmin`)
-   - `Setup: AWS SSO Login (legacy)` — CentralSquare org (role `Cloud-Administrator`, being migrated)
+**New teammate?** Start at [`docs/onboarding.md`](docs/onboarding.md) — it covers tool installs, clone location, AWS SSO, and Kiro setup. The bootstrap script does most of it in one shot:
+```powershell
+cd "$env:USERPROFILE\repos\cloudops"
+pwsh scripts\setup\Initialize-Workstation.ps1
+```
+
+After that:
+1. **Open the workspace** — in Kiro: **File > Open Workspace from File** → `cloudops.code-workspace`.
+2. **Sync AWS config** — run task `Setup: Sync AWS Config`.
+3. **Log in to AWS SSO** — run both `Setup: AWS SSO Login (foundation)` and `Setup: AWS SSO Login (legacy)`.
 
 ---
 
 ## Run a script in 10 seconds
 
-1. Open this repo in Kiro.
+1. Open `cloudops.code-workspace` in Kiro (**File > Open Workspace from File**).
 2. Press **`Ctrl+Shift+P`** → **Tasks: Run Task**.
 3. Pick a task from the list (prefixed by domain: `AD:`, `AWS:`, `ADSSP:`, `Sectigo:`, `DNS:`, `Setup:`).
 

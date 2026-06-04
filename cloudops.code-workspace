@@ -1,0 +1,29 @@
+{
+  // Workspace file for cloudops. Tasks live in .vscode/tasks.json — they
+  // surface in the picker automatically (prefixed by folder name in
+  // multi-root workspaces). Edit tasks there, not here.
+  "folders": [
+    {
+      "name": "cloudops",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.profiles.windows": {
+      "PowerShell": {
+        "source": "PowerShell",
+        "args": ["-NoProfile"]
+      }
+    },
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "anthropic.claude-code"
+    ]
+  }
+}

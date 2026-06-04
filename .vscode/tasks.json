@@ -1,4 +1,7 @@
 {
+  // Single source of truth for all Kiro/VS Code tasks.
+  // Add new tasks here. They appear in the picker automatically whether the
+  // repo is opened via File > Open Folder or via cloudops.code-workspace.
   "version": "2.0.0",
   "tasks": [
     {
@@ -287,6 +290,15 @@
       "type": "shell",
       "command": "pwsh",
       "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/dns/Find-MobileDnsRecords.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup: Initialize Workstation",
+      "detail": "First-time setup — installs tools, links CLAUDE.md, syncs AWS config",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/setup/Initialize-Workstation.ps1"],
       "presentation": { "reveal": "always", "panel": "new", "focus": true },
       "problemMatcher": []
     },
