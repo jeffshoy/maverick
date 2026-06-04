@@ -183,6 +183,17 @@ $ErrorActionPreference = 'Stop'
 - MUST support non-interactive execution (no blocking `Read-Host` unless `-Interactive` is an explicit flag).
 - MUST validate inputs early — fail fast before touching any remote system.
 
+### Language Choice — PowerShell vs Python
+
+PowerShell is the default for new automation. Reach for Python only when one of the following clearly applies:
+
+- **Linux-only target** (e.g., `AWS-DX/`).
+- **Heavy AWS data wrangling** — boto3 paginators, multi-service workflows, JSON shaping where AWS.Tools would be verbose. The existing `aws-configs/tools/generate_aws_config.py` and `scripts/aws/aws_sso_helper.py` are the reference patterns.
+- **GUI / picker UX** — Tkinter is the team standard; do not shoehorn WinForms/WPF.
+- **Significant data work** — joins, dedup, group-by aggregations, regex-heavy string parsing.
+
+Stay in PowerShell for: AD operations (RSAT module is mandatory), Windows fleet ops (services, registry, WinRM, SSM Run Command with PS documents), Windows file/cert/installer work, and anything that pipes structured objects between cmdlets. Do not rewrite working PS scripts in Python without a concrete reason from the list above.
+
 ### AWS (EC2 and Adjacent Services)
 
 - MUST declare target account, region, and environment at the top of every script.

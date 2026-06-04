@@ -51,33 +51,50 @@ When an account migrates from legacy → foundation, its profile drops the `lega
 |------|---------|
 | `cloudops.config` | Committed AWS config — both SSO sessions + all profiles. Do not edit by hand. |
 | `accounts.json` | Generated account registry used by the resolvers in `scripts/aws/`. |
-| `nicknames.json` | Hand-maintained nickname aliases, merged into `accounts.json` on regeneration. |
+| `aliases.json` | Hand-maintained nickname + application aliases, merged into `accounts.json` on regeneration. |
 | `tools/Sync-AwsConfig.ps1` | Merges `cloudops.config` into `~/.aws/config`, preserving personal profiles. |
 | `tools/generate_aws_config.py` | Regenerates `cloudops.config` and `accounts.json` by querying both SSO instances. |
 
 ---
 
-## Account nicknames
+## Account aliases — nicknames vs applications
 
-Scripts that accept an account name (`Connect-RDP.ps1`, `Find-Instance.ps1`, all Python AWS tools) resolve it through a 5-tier matcher. **Tier 3** checks curated nicknames before falling back to substring/token-overlap on the real name.
+Scripts that accept an account name (`Connect-RDP.ps1`, `connect-instance.ps1`, all Python AWS tools) resolve it through a 6-tier matcher. The interesting middle tiers come from `aliases.json`:
 
-**Add a nickname:**
+- **Tier 3 — nicknames** are environment-specific 1:1 aliases. `pac-prd` resolves to one and only one account; if you typed it, you meant that one. The validator enforces strict 1:1.
+- **Tier 4 — applications** are 1:many app names that may legitimately span prod/staging/dev. `finance` matches every account that runs finance workloads; the resolver returns all of them and prompts you to pick the environment.
 
-1. Edit `aws-configs/nicknames.json` — keys are exact AWS account names, values are arrays of aliases:
-   ```json
-   {
-     "PROD-PA-Pro": ["pac-prd", "pac prd", "comdev", "commdev"],
-     "PALegacySharedServices": ["shared", "ss"]
-   }
-   ```
+**Schema** — `aws-configs/aliases.json`:
+
+```json
+{
+  "PROD-PA-Pro":    { "nicknames": ["pac-prd", "pac prd"], "applications": ["comdev", "finance"] },
+  "Pa-pro-staging": { "nicknames": ["pac-stg", "pac stg"], "applications": ["comdev", "finance"] },
+  "Pa-pro-dev":     { "nicknames": ["pac-dev", "pac dev"], "applications": ["comdev", "finance"] },
+  "PALegacySharedServices": { "nicknames": ["shared", "ss"] }
+}
+```
+
+Either field may be omitted; an account without aliases gets `[]` for both in `accounts.json`.
+
+**When to use which:**
+- **Nickname** — there's exactly one account this shorthand could mean. `pac-prd`, `shared`, `ss`.
+- **Application** — the same app exists in multiple environments and you want a prompt to pick. `finance`, `comdev`, `eam`.
+
+**Add an alias:**
+
+1. Edit `aws-configs/aliases.json`. Keys must match the exact AWS account name.
 2. Regenerate: `python aws-configs/tools/generate_aws_config.py`
-3. Commit `nicknames.json` and `accounts.json` together in a PR.
+3. Commit `aliases.json` and `accounts.json` together in a PR.
 
-**Normalization:** matching is case-insensitive and ignores spaces, hyphens, and underscores. The entry `"pac-prd"` also matches `pac prd`, `PAC_PRD`, and `PacPrd`.
+**Normalization:** matching is case-insensitive and ignores spaces, hyphens, and underscores. `"pac-prd"` also matches `pac prd`, `PAC_PRD`, and `PacPrd`. Same rule applies to applications.
 
 **Validation:** the generator fails loudly if:
-- A key in `nicknames.json` doesn't match a real AWS account name.
-- The same normalized nickname appears under two different accounts (prevents ambiguous routing).
+- A key in `aliases.json` doesn't match a real AWS account name.
+- The same normalized **nickname** appears under two different accounts (1:1 enforced).
+- The same normalized string appears as both a nickname and an application (a name is one or the other, never both).
+
+Application names ARE allowed to repeat across accounts — that's the whole point.
 
 ---
 

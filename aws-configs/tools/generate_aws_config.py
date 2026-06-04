@@ -43,7 +43,7 @@ SSO_SESSIONS = [
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_OUT = REPO_ROOT / "aws-configs" / "cloudops.config"
 ACCOUNTS_OUT = REPO_ROOT / "aws-configs" / "accounts.json"
-NICKNAMES_FILE = REPO_ROOT / "aws-configs" / "nicknames.json"
+ALIASES_FILE = REPO_ROOT / "aws-configs" / "aliases.json"
 
 
 # ---------------------------------------------------------------------------
@@ -133,49 +133,81 @@ output         = json
 """
 
 
-def _normalize_nickname(s: str) -> str:
+def _normalize_alias(s: str) -> str:
     import re
     return re.sub(r'[\s\-_]', '', s.lower())
 
 
-def load_nicknames() -> dict[str, list[str]]:
-    """Load aws-configs/nicknames.json; returns {} if the file doesn't exist yet."""
-    if not NICKNAMES_FILE.exists():
-        return {}
-    return json.loads(NICKNAMES_FILE.read_text(encoding="utf-8"))
-
-
-def validate_nicknames(nicknames_map: dict[str, list[str]], all_accounts: list[dict]) -> None:
+def load_aliases() -> dict[str, dict]:
     """
-    Validate nicknames.json against the live account list.
+    Load aws-configs/aliases.json; returns {} if the file doesn't exist.
+    Each value is a dict with optional 'nicknames' and 'applications' arrays.
+    """
+    if not ALIASES_FILE.exists():
+        return {}
+    raw = json.loads(ALIASES_FILE.read_text(encoding="utf-8"))
+    # Normalize entries: ensure both keys exist as lists
+    out: dict[str, dict] = {}
+    for acct_name, entry in raw.items():
+        if not isinstance(entry, dict):
+            print(f"\nERROR: aliases.json entry for '{acct_name}' must be an object with 'nicknames' and/or 'applications' arrays.")
+            sys.exit(1)
+        out[acct_name] = {
+            "nicknames": list(entry.get("nicknames", [])),
+            "applications": list(entry.get("applications", [])),
+        }
+    return out
+
+
+def validate_aliases(aliases_map: dict[str, dict], all_accounts: list[dict]) -> None:
+    """
+    Validate aliases.json against the live account list.
     Raises SystemExit on:
       - a key that doesn't match any account name
-      - the same normalized nickname appearing under two different account names
+      - the same normalized nickname appearing under two different account names (1:1 enforced)
+      - a normalized string appearing as both a nickname and an application
+    Application names ARE allowed to repeat across accounts — that's the whole point.
     """
     known_names = {a["name"] for a in all_accounts}
 
     # Unknown account keys
-    unknown = [k for k in nicknames_map if k not in known_names]
+    unknown = [k for k in aliases_map if k not in known_names]
     if unknown:
-        print(f"\nERROR: nicknames.json references unknown account name(s): {unknown}")
+        print(f"\nERROR: aliases.json references unknown account name(s): {unknown}")
         print("Fix the key(s) to match the exact AWS account name, then re-run.")
         sys.exit(1)
 
-    # Duplicate normalized nicknames across different accounts
-    seen: dict[str, str] = {}  # normalized -> account name
-    dupes: list[str] = []
-    for acct_name, nicks in nicknames_map.items():
-        for nick in nicks:
-            norm = _normalize_nickname(nick)
-            if norm in seen and seen[norm] != acct_name:
-                dupes.append(f"  '{nick}' (normalized: '{norm}') on both '{seen[norm]}' and '{acct_name}'")
+    # Duplicate normalized nicknames across different accounts (still strict 1:1)
+    nick_seen: dict[str, str] = {}  # normalized -> account name
+    nick_dupes: list[str] = []
+    for acct_name, entry in aliases_map.items():
+        for nick in entry["nicknames"]:
+            norm = _normalize_alias(nick)
+            if norm in nick_seen and nick_seen[norm] != acct_name:
+                nick_dupes.append(f"  '{nick}' (normalized: '{norm}') on both '{nick_seen[norm]}' and '{acct_name}'")
             else:
-                seen[norm] = acct_name
-    if dupes:
-        print("\nERROR: Duplicate nicknames found in nicknames.json:")
-        for d in dupes:
+                nick_seen[norm] = acct_name
+    if nick_dupes:
+        print("\nERROR: Duplicate nicknames found in aliases.json:")
+        for d in nick_dupes:
             print(d)
-        print("Each normalized nickname must be unique across all accounts.")
+        print("Nicknames must be unique across all accounts (use 'applications' for multi-account aliases).")
+        sys.exit(1)
+
+    # Cross-field collision: same normalized string can't be both a nickname and an application
+    app_norm: dict[str, str] = {}  # normalized -> account name (just for error message)
+    for acct_name, entry in aliases_map.items():
+        for app in entry["applications"]:
+            app_norm[_normalize_alias(app)] = acct_name
+    collisions: list[str] = []
+    for norm, nick_owner in nick_seen.items():
+        if norm in app_norm:
+            collisions.append(f"  '{norm}' is a nickname on '{nick_owner}' AND an application on '{app_norm[norm]}'")
+    if collisions:
+        print("\nERROR: Nickname/application collision in aliases.json:")
+        for c in collisions:
+            print(c)
+        print("A name must be either a nickname (1:1) or an application (1:many) — not both.")
         sys.exit(1)
 
 
@@ -185,9 +217,9 @@ def build_profile_name(session: dict, account_name: str) -> str:
 
 def generate(dry_run: bool = False) -> None:
     print("Generating AWS config and accounts registry...")
-    nicknames_map = load_nicknames()
-    if nicknames_map:
-        print(f"  Loaded nicknames for {len(nicknames_map)} account(s) from {NICKNAMES_FILE.name}")
+    aliases_map = load_aliases()
+    if aliases_map:
+        print(f"  Loaded aliases for {len(aliases_map)} account(s) from {ALIASES_FILE.name}")
 
     all_accounts: list[dict] = []   # for accounts.json
     config_parts: list[str] = [HEADER]
@@ -215,17 +247,19 @@ def generate(dry_run: bool = False) -> None:
                     region=session["region"],
                 )
             )
+            entry = aliases_map.get(acct["accountName"], {})
             all_accounts.append({
                 "name": acct["accountName"],
                 "accountId": acct["accountId"],
                 "org": session["name"],
                 "ssoSession": session["name"],
                 "profile": profile,
-                "nicknames": nicknames_map.get(acct["accountName"], []),
+                "nicknames": list(entry.get("nicknames", [])),
+                "applications": list(entry.get("applications", [])),
             })
 
-    # Validate nicknames before writing — fail loud on unknown names or duplicates
-    validate_nicknames(nicknames_map, all_accounts)
+    # Validate aliases before writing — fail loud on unknown names, dup nicknames, or collisions
+    validate_aliases(aliases_map, all_accounts)
 
     # Sort accounts.json by (name, org) — foundation before legacy for same name
     all_accounts.sort(key=lambda a: (a["name"], 0 if a["org"] == "foundation" else 1))
@@ -246,11 +280,16 @@ def generate(dry_run: bool = False) -> None:
         preview = dict(accounts_json)
         preview["accounts"] = all_accounts[:5]
         print(json.dumps(preview, indent=2))
-        nicknamed = [a for a in all_accounts if a["nicknames"]]
-        if nicknamed:
-            print(f"\n--- DRY RUN: accounts with nicknames ({len(nicknamed)}) ---")
-            for a in nicknamed:
-                print(f"  {a['name']}: {a['nicknames']}")
+        aliased = [a for a in all_accounts if a["nicknames"] or a["applications"]]
+        if aliased:
+            print(f"\n--- DRY RUN: accounts with aliases ({len(aliased)}) ---")
+            for a in aliased:
+                bits = []
+                if a["nicknames"]:
+                    bits.append(f"nicknames={a['nicknames']}")
+                if a["applications"]:
+                    bits.append(f"applications={a['applications']}")
+                print(f"  {a['name']}: {', '.join(bits)}")
         print(f"\n[dry-run] Would write {len(config_text.splitlines())} lines to {CONFIG_OUT}")
         print(f"[dry-run] Would write {len(all_accounts)} accounts to {ACCOUNTS_OUT}")
         return

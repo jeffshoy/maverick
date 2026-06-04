@@ -90,9 +90,10 @@ def resolve_account(name: str) -> dict:
     Match tiers (stops at first tier with >= 1 hit):
       1. Exact (case-sensitive)
       2. Case-insensitive exact
-      3. Normalized nickname match (lowercase + strip spaces/dashes/underscores)
-      4. Case-insensitive substring
-      5. Token overlap
+      3. Normalized nickname match (lowercase + strip spaces/dashes/underscores; 1:1)
+      4. Normalized application match (1:many — multiple matches flow to disambiguation prompt)
+      5. Case-insensitive substring
+      6. Token overlap
 
     Tie-breaking:
       - Same display name in both orgs: Foundation wins silently.
@@ -113,7 +114,7 @@ def resolve_account(name: str) -> dict:
     if not candidates:
         candidates = [a for a in accounts if a["name"].lower() == name.lower()]
 
-    # Tier 3: normalized nickname match
+    # Tier 3: normalized nickname match (1:1)
     if not candidates:
         norm_input = _normalize(name)
         candidates = [
@@ -121,11 +122,19 @@ def resolve_account(name: str) -> dict:
             if norm_input in {_normalize(n) for n in a.get("nicknames", [])}
         ]
 
-    # Tier 4: substring
+    # Tier 4: normalized application match (1:many — caller disambiguates)
+    if not candidates:
+        norm_input = _normalize(name)
+        candidates = [
+            a for a in accounts
+            if norm_input in {_normalize(n) for n in a.get("applications", [])}
+        ]
+
+    # Tier 5: substring
     if not candidates:
         candidates = [a for a in accounts if name.lower() in a["name"].lower()]
 
-    # Tier 5: token overlap
+    # Tier 6: token overlap
     if not candidates:
         scored = sorted(
             [(a, _token_score(name, a["name"])) for a in accounts],
@@ -315,9 +324,54 @@ def pick_profile_gui(profiles: dict[str, str] | None = None, title: str = "Selec
 
 
 # ---------------------------------------------------------------------------
-# Self-test
+# CLI entrypoint — for PowerShell callers that shell out via & python ...
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
+
+def _cli_resolve(args) -> None:
+    """Resolve an account name and print PascalCase JSON to stdout."""
+    try:
+        acct = resolve_account(args.name)
+    except ValueError as exc:
+        msg = str(exc)
+        # Multiple candidates — prompt interactively unless --quiet
+        if "Multiple accounts match" in msg and not args.quiet:
+            print(msg, file=sys.stderr)
+            # Re-run load to get the candidate list for a numbered prompt
+            accounts = load_accounts()
+            import re as _re
+            candidates = [a for a in accounts if a["name"] in msg]
+            if not candidates:
+                print(f"error: {msg}", file=sys.stderr)
+                sys.exit(1)
+            print("\nMultiple accounts match. Choose one:", file=sys.stderr)
+            for i, c in enumerate(candidates, 1):
+                print(f"  [{i}] {c['name']:<40} {c['org']:<12} {c['accountId']}", file=sys.stderr)
+            while True:
+                try:
+                    raw = input("Enter number: ").strip()
+                except EOFError:
+                    print("error: non-interactive context and multiple matches; use --quiet to error instead.", file=sys.stderr)
+                    sys.exit(1)
+                if raw.isdigit() and 1 <= int(raw) <= len(candidates):
+                    acct = candidates[int(raw) - 1]
+                    break
+                print(f"  Invalid — enter 1–{len(candidates)}.", file=sys.stderr)
+        else:
+            print(f"error: {msg}", file=sys.stderr)
+            sys.exit(1)
+
+    # PascalCase keys so PowerShell ConvertFrom-Json produces $acct.Profile etc.
+    result = {
+        "Name": acct["name"],
+        "AccountId": acct["accountId"],
+        "Org": acct["org"],
+        "SsoSession": acct["ssoSession"],
+        "Profile": acct["profile"],
+    }
+    print(json.dumps(result))
+
+
+def _cli_selftest(_args) -> None:
     print(f"accounts.json: {ACCOUNTS_JSON}")
     acct = resolve_account("PALegacyPlus")
     print(f"resolve_account('PALegacyPlus') -> {acct}")
@@ -325,3 +379,23 @@ if __name__ == "__main__":
     print(f"SSO sessions: {list(sessions.keys())}")
     total = len(load_accounts())
     print(f"Total accounts: {total}")
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="aws_sso_helper CLI")
+    sub = parser.add_subparsers(dest="cmd")
+
+    p_resolve = sub.add_parser("resolve", help="Resolve an account name to its profile/session/id.")
+    p_resolve.add_argument("--name", required=True, help="Account name or nickname to resolve.")
+    p_resolve.add_argument("--quiet", action="store_true", help="Error on ambiguity instead of prompting.")
+    p_resolve.set_defaults(func=_cli_resolve)
+
+    p_test = sub.add_parser("selftest", help="Run a quick self-test against accounts.json.")
+    p_test.set_defaults(func=_cli_selftest)
+
+    parsed = parser.parse_args()
+    if not parsed.cmd:
+        parser.print_help()
+        sys.exit(1)
+    parsed.func(parsed)

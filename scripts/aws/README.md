@@ -27,7 +27,6 @@ Python and PowerShell automation for the CloudOps Windows fleet (both Foundation
 | `Connect-RDP.ps1` | `AWS: RDP to Instance` | Port-forward RDP via SSM and auto-launch mstsc |
 | `connect-instance.ps1` | `AWS: Connect to Instance` | Open an interactive SSM shell session |
 | `Find-Instance.ps1` | *(utility)* | Resolve a server Name tag → instance ID across priority regions |
-| `Resolve-AwsAccount.ps1` | *(utility)* | Fuzzy-match an account name/nickname → profile + SSO session |
 
 ### Operations scripts (Python — GUI picker or `--account` flag)
 
@@ -45,14 +44,14 @@ Python and PowerShell automation for the CloudOps Windows fleet (both Foundation
 
 | File | Purpose |
 |------|---------|
-| `aws_sso_helper.py` | Shared SSO helpers used by all Python scripts: `resolve_account()`, `ensure_profile_session()`, `pick_profile_gui()`. Do not run directly. |
+| `aws_sso_helper.py` | Shared SSO helpers used by all Python scripts: `resolve_account()`, `ensure_profile_session()`, `pick_profile_gui()`. Also exposes a CLI for PowerShell callers: `python aws_sso_helper.py resolve --name <NAME>` |
 | `fetch_foundation_ous.py` | List accounts accessible via an SSO session. Run directly: `python fetch_foundation_ous.py --account PLUS` |
 
 ---
 
 ## Account names (fuzzy matching)
 
-All tools accept informal account names. Matching is: exact → case-insensitive → substring → token overlap. If a name matches more than one account you will be asked to choose.
+All tools accept informal account names. Matching is: exact → case-insensitive → **nickname** (1:1) → **application** (1:many) → substring → token overlap. If a name matches more than one account you will be asked to choose. Nicknames and applications are defined in [`aws-configs/aliases.json`](../../aws-configs/README.md#account-aliases--nicknames-vs-applications).
 
 ```powershell
 # These all resolve to PALegacyPlus (939845564306):

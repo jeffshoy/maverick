@@ -61,7 +61,9 @@ if (Test-Path $configPath) {
 
 if (-not $profileInConfig) {
     Write-Host "Resolving account '$aws_profile'..." -ForegroundColor Yellow
-    $acct = & "$PSScriptRoot\Resolve-AwsAccount.ps1" -Name $aws_profile
+    $resolverScript = Join-Path $PSScriptRoot 'aws_sso_helper.py'
+    $acct = & python $resolverScript resolve --name $aws_profile | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0 -or -not $acct) { Write-Error "Failed to resolve account '$aws_profile'."; exit 1 }
     $resolvedProfile    = $acct.Profile
     $resolvedSsoSession = $acct.SsoSession
     Write-Host "  $check $($acct.Name) ($($acct.Org)) -> profile: $resolvedProfile" -ForegroundColor Green

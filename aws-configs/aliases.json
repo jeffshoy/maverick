@@ -1,0 +1,23 @@
+{
+  "PROD-PA-Pro": {
+    "nicknames": ["pac-prd", "pac prd"],
+    "applications": ["comdev", "commdev", "finance", "utilities"]
+  },
+  "Pa-pro-staging": {
+    "nicknames": ["pac-stg", "pac stg"],
+    "applications": ["comdev", "commdev", "finance", "utilities"]
+  },
+  "Pa-pro-dev": {
+    "nicknames": ["pac-dev", "pac dev"],
+    "applications": ["comdev", "commdev", "finance", "utilities"]
+  },
+  "LucityCloud Prod Env": {
+    "applications": ["eam"]
+  },
+  "Lucity AWS-Test": {
+    "applications": ["eam"]
+  },
+  "Lucity Internal": {
+    "applications": ["eam"]
+  }
+}

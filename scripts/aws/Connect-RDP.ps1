@@ -62,7 +62,9 @@ $cross = [char]::ConvertFromUtf32(0x274C)
 # 1. Resolve account
 # ---------------------------------------------------------------------------
 Write-Host "Resolving account '$Account'..." -ForegroundColor Yellow
-$acct = & "$PSScriptRoot\Resolve-AwsAccount.ps1" -Name $Account
+$resolverScript = Join-Path $PSScriptRoot 'aws_sso_helper.py'
+$acct = & python $resolverScript resolve --name $Account | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or -not $acct) { Write-Error "Failed to resolve account '$Account'."; exit 1 }
 Write-Host "  $check $($acct.Name) ($($acct.Org), $($acct.AccountId))" -ForegroundColor Green
 
 # ---------------------------------------------------------------------------
