@@ -40,6 +40,16 @@ Re-run this after pulling changes to the canonical file.
 
 ## Onboarding — New Teammate Quick Start
 
+### Shell standard: PowerShell 7
+
+The team standard is **PowerShell 7 (`pwsh`)** for all CLI work — Claude Code, Kiro terminals, script invocation, and ad-hoc shells. PS5.1 (`powershell.exe`) still ships with Windows but should not be used for team automation: several scripts (notably `scripts/aws/Connect-RDP.ps1` and `Find-Instance.ps1`) require PS7 features (parallel runspaces, `ForEach-Object -Parallel`).
+
+The bootstrap script installs PS7 via winget. After install:
+
+- **Windows Terminal:** Settings → Startup → Default profile → **"PowerShell"** (PS7 icon), not "Windows PowerShell" (PS5.1).
+- **Claude Code CLI:** launch `claude` from a `pwsh` session. Verify with `pwsh --version` (expect 7.x).
+- **Kiro:** already uses `pwsh` — no action needed.
+
 **Key built-in commands:**
 | Command | What it does |
 |---------|-------------|

@@ -85,11 +85,19 @@ if (-not $SkipWinget) {
     )
 
     foreach ($tool in $tools) {
+        $alreadyInstalled = $false
         try {
-            $listOutput    = (winget list --id $tool.Id --exact 2>&1) | Out-String
+            $listOutput = (winget list --id $tool.Id --exact 2>&1) | Out-String
             $alreadyInstalled = $listOutput -match [regex]::Escape($tool.Id)
-        } catch {
-            $alreadyInstalled = $false
+        } catch { $alreadyInstalled = $false }
+
+        # PS7 may have been installed outside winget (MSI, Scoop, dotnet install).
+        # If `pwsh` resolves on PATH, treat it as already present — don't double-install.
+        if (-not $alreadyInstalled -and $tool.Id -eq 'Microsoft.PowerShell') {
+            if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+                $alreadyInstalled = $true
+                Write-Skip "$($tool.Name) — detected on PATH (non-winget install)"
+            }
         }
 
         if ($alreadyInstalled) {
@@ -261,6 +269,17 @@ if ($missing.Count -gt 0) {
     Write-Warning "$($missing.Count) tool(s) not found on PATH: $($missing.Tool -join ', ')"
     Write-Warning "If tools were just installed by winget, open a NEW terminal and re-run to verify."
     exit 1
+}
+
+#endregion
+
+#region Shell self-check
+
+Write-Host "`nShell self-check:" -ForegroundColor White
+Write-Host "  Bootstrap ran under: PowerShell $($PSVersionTable.PSVersion)"
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Warning "Team standard is PowerShell 7. Open a new 'pwsh' terminal for future work."
+    Write-Warning "Set Windows Terminal default profile to PowerShell 7 (see docs/onboarding.md step 3.5)."
 }
 
 #endregion

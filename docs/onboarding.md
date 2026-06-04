@@ -57,6 +57,25 @@ winget install --id Python.Python.3.12          --exact --accept-source-agreemen
 winget install --id Git.Git                     --exact --accept-source-agreements --accept-package-agreements
 ```
 
+### 3.5. Set PowerShell 7 as your default terminal shell
+
+After step 3 finishes, PS7 is installed but Windows hasn't switched to it yet. Open a **new terminal** to pick up the updated PATH first.
+
+**Windows Terminal:**
+1. Open **Windows Terminal**.
+2. Click the dropdown **▾** next to the new-tab button → **Settings**.
+3. **Startup → Default profile → "PowerShell"** — the entry with the PS7 hex icon. **Not** "Windows PowerShell" (PS5.1).
+4. Save and open a new tab to verify.
+
+**Verify:**
+```powershell
+pwsh --version    # expect: PowerShell 7.x.x
+```
+
+**Claude Code CLI:** always launch `claude` from a `pwsh` session. With Windows Terminal defaulting to PS7, opening a new tab is enough. From an existing `powershell.exe` session, run `pwsh` first.
+
+**Kiro:** already launches terminals as `pwsh` — no action needed.
+
 ### 4. Install RSAT (Active Directory + DNS tools)
 
 Run from an **elevated** PowerShell session (required for AD and DNS scripts):
