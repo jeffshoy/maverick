@@ -177,7 +177,7 @@ def main() -> None:
     print(f"Fetching locations for old cert {args.old_cert_id}...")
     old_locations = get_locations(args.old_cert_id, creds)
     old_fqdns = fqdns_from_locations(old_locations)
-    print(f"  {len(old_locations)} records → {len(old_fqdns)} unique server FQDNs\n")
+    print(f"  {len(old_locations)} records -> {len(old_fqdns)} unique server FQDNs\n")
 
     if not old_fqdns:
         print("No server FQDNs found. Re-run with --debug.")

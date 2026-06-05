@@ -12,8 +12,9 @@ Usage:
   python list_servers.py --search splsap --agent-id 18227
   python list_servers.py --inactive --output inactive.csv
 
-Required env vars: SECTIGO_LOGIN, SECTIGO_PASSWORD, SECTIGO_CUSTOMER_URI
-Optional:          SECTIGO_BASE_URL  (default: https://cert-manager.com)
+Required env vars: SECTIGO_LOGIN, SECTIGO_PASSWORD
+Optional:          SECTIGO_CUSTOMER_URI  (default: centralsquare)
+                   SECTIGO_BASE_URL      (default: https://cert-manager.com)
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ def _creds() -> dict:
         return {
             "login": os.environ["SECTIGO_LOGIN"],
             "password": os.environ["SECTIGO_PASSWORD"],
-            "customerUri": os.environ["SECTIGO_CUSTOMER_URI"],
+            "customerUri": os.environ.get("SECTIGO_CUSTOMER_URI", "centralsquare"),
             "base_url": os.environ.get(
                 "SECTIGO_BASE_URL", "https://cert-manager.com"
             ).rstrip("/"),
