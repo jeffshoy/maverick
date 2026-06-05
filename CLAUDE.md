@@ -257,24 +257,21 @@ Bash is acceptable **only** for Linux-only targets (e.g., `AWS-DX/`). It is not 
   - Dry-run output or WhatIf evidence attached
   ```
 
-  Claude MUST generate this description whenever it creates a PR via `az repos pr create`. A PR with no description or a one-liner will be rejected in review.
+  Claude MUST generate this description whenever it creates a PR. A PR with no description or a one-liner will be rejected in review.
 
-  **AzDo CLI note:** `az repos pr create --description` only stores the first line when passed a single multiline string or `\n`-escaped text. Always pass each line as a separate `--description` argument via Python subprocess:
-  ```python
-  import subprocess, re, shutil
-  lines = ["## Summary", "", "What changed and why", ...]
-  r = subprocess.run(
-      ["az", "repos", "pr", "create", "--title", "...", "--description"] + lines,
-      capture_output=True, text=True,
-      executable=shutil.which("az")
-  )
-  data = json.loads(r.stdout)
-  pr_id = data["pullRequestId"]
-  web_url = re.sub(r'https://[^@]+@', 'https://', data["repository"]["remoteUrl"]) + f'/pullrequest/{pr_id}'
-  print(f"PR {pr_id}: {web_url}")
+  **Creating PRs — always use the wrapper.** Claude MUST create PRs by calling `scripts/azdo/New-PR.ps1` from `pwsh`. Never invoke `az repos pr create` directly and never inline Python subprocess snippets — both produce parse errors when shell, heredoc, or escape boundaries don't align.
+
+  Workflow:
+  1. Write the PR description to a temp markdown file using the Write tool: `C:\Temp\pr-<short-slug>.md`
+  2. Run the wrapper:
+  ```powershell
+  pwsh scripts\azdo\New-PR.ps1 `
+      -Title "fix(scope): summary" `
+      -DescriptionFile "C:\Temp\pr-<short-slug>.md"
   ```
+  3. The wrapper prints `PR <id>: <url>` — include that URL in the response.
 
-- **Claude MUST print the web URL** after creating a PR. Construct it from `repository.remoteUrl` (strip the `psgov@` credential prefix) + `/pullrequest/<id>`. Never report just the PR ID and expect the user to look it up.
+- **Claude MUST print the web URL** after creating a PR. The wrapper prints it automatically. Never report just the PR ID and expect the user to look it up.
 - **Claude MUST NOT** run `git push`, create PRs, close PRs, or merge branches without an explicit instruction from the user **in the current turn**. A prior approval does not carry forward.
 - **NEVER use `--no-verify`** to skip hooks. NEVER amend a commit that has already been pushed. NEVER `--force` push without explicit user approval in the same turn.
 
