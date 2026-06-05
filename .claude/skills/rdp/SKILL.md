@@ -15,7 +15,7 @@ Parse the user's input to extract a server name and an account, then run Connect
 
 ## Action
 
-Run via the Bash tool from the cloudops repo root (`C:\Users\trent.johnson\repos\cloudops`):
+Run via the Bash tool from the cloudops repo root:
 
 ```
 pwsh scripts/aws/Connect-RDP.ps1 -ServerName <SERVER> -Account <ACCOUNT>
