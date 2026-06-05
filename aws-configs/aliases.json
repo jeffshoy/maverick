@@ -19,5 +19,11 @@
   },
   "Lucity Internal": {
     "applications": ["eam"]
+  },
+  "PALegacyPlus": {
+    "nicknames": ["PLUS"]
+  },
+  "PALegacyPlusDev": {
+    "nicknames": ["PLUSDEV"]
   }
 }

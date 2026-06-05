@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T02:13:14Z",
+  "generatedAt": "2026-06-05T15:30:50Z",
   "ssoSessions": {
     "foundation": {
       "startUrl": "https://d-9067f93f22.awsapps.com/start",
@@ -250,9 +250,9 @@
     {
       "name": "CLOUD-Jurisdiction-Online",
       "accountId": "677071966006",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CLOUD-Jurisdiction-Online",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CLOUD-Jurisdiction-Online",
       "nicknames": [],
       "applications": []
     },
@@ -2302,7 +2302,9 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyPlus",
-      "nicknames": ["PLUS"],
+      "nicknames": [
+        "PLUS"
+      ],
       "applications": []
     },
     {
@@ -2311,7 +2313,9 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyPlusDev",
-      "nicknames": ["PLUSDEV"],
+      "nicknames": [
+        "PLUSDEV"
+      ],
       "applications": []
     },
     {
@@ -2620,6 +2624,15 @@
       "applications": []
     },
     {
+      "name": "PSJProGASeminoleSO",
+      "accountId": "619759453168",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGASeminoleSO",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJProGAValdostaUniversityPD",
       "accountId": "386403273629",
       "org": "foundation",
@@ -2760,6 +2773,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProMNStevensSO",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProMOBowlingGreenPD",
+      "accountId": "642494478712",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOBowlingGreenPD",
       "nicknames": [],
       "applications": []
     },
@@ -3219,6 +3241,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProWVBoone911",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProWVFireMarshallFD",
+      "accountId": "046497227317",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProWVFireMarshallFD",
       "nicknames": [],
       "applications": []
     },
