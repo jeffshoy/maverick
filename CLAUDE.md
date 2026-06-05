@@ -70,7 +70,20 @@ The bootstrap script installs PS7 via winget. After install:
 
 **Memory:** Claude builds a persistent memory index at `~/.claude/projects/.../memory/`. It loads automatically each session and grows over time with context about how you work. Review it periodically — sensitive context should not live there.
 
-**Skills:** The team can define reusable prompts as skills in `~/.claude/skills/`. Invoke them with `/<skill-name>`. If you find yourself typing the same prompt repeatedly (e.g., "scaffold a disable-user script for domain X"), promote it to a skill.
+**Skills:** Reusable Claude prompts invoked with `/<skill-name>`. Two locations:
+
+- **Repo-shared** (team-wide): `.claude/skills/<name>/SKILL.md` — committed to the `cloudops` repo. Auto-loaded for anyone working in the cloudops workspace; no symlink required. These are reviewed and merged like any script change.
+- **Personal**: `~/.claude/skills/<name>/SKILL.md` — local to your machine only.
+
+**Available repo skills:**
+
+| Skill | Invocation | Wraps |
+|-------|-----------|-------|
+| rdp | `/rdp <server> <account>` | `scripts/aws/Connect-RDP.ps1` |
+
+**Authoring a new shared skill:** create a folder under `.claude/skills/`, add a `SKILL.md` with `name` and `description` frontmatter, open a PR. One teammate review, same as any script change.
+
+If you find yourself typing the same prompt repeatedly (e.g., "scaffold a disable-user script for domain X"), promote it to a skill.
 
 **If Claude drifts:** Paste the relevant section of this file into the chat as a reminder, or file a PR to add a rule. The file is the source of truth.
 

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pwsh scripts/aws/Connect-RDP.ps1 *)"
+    ]
+  }
+}

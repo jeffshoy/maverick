@@ -68,8 +68,21 @@ Every new script must include:
 
 ---
 
+## Skills
+
+Claude Code skills are reusable prompts invoked with `/<skill-name>` from any Claude session in this workspace. Skills committed to `.claude/skills/` are auto-loaded for the whole team — no symlink required.
+
+| Skill | Invocation | What it does |
+|-------|-----------|--------------|
+| rdp | `/rdp <server> <account>` | Opens an SSM RDP tunnel to any EC2 instance by fuzzy name and account alias |
+
+**Adding a new skill:** create `.claude/skills/<name>/SKILL.md` with `name` and `description` frontmatter, open a PR. See the **Skills** section in [`CLAUDE.md`](CLAUDE.md) for the full authoring guide.
+
+---
+
 ## References
 
 - [`CLAUDE.md`](CLAUDE.md) — team AI standards, PowerShell scaffold, security rules
 - [`aws-configs/README.md`](aws-configs/README.md) — AWS SSO setup and config refresh procedure
 - [`runbooks/README.md`](runbooks/README.md) — runbook index
+- [`.claude/skills/`](.claude/skills/) — repo-shared Claude skills

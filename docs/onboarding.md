@@ -142,6 +142,18 @@ The extension automatically reads `%USERPROFILE%\.claude\CLAUDE.md` — the file
 
 ---
 
+## 9.5. Repo-shared Claude skills
+
+Skills committed to `.claude/skills/` in this repo are auto-loaded whenever you work in the cloudops workspace — no symlink or extra config needed. The first available skill is `/rdp`:
+
+```
+/rdp <server> <account>
+```
+
+This opens an SSM RDP tunnel to any EC2 instance by name and fuzzy account alias — the same thing `scripts/aws/Connect-RDP.ps1` does, but invokable directly from a Claude session. See the **Skills** section in [`CLAUDE.md`](../CLAUDE.md) for the full list and authoring guide.
+
+---
+
 ## 10. Log in to AWS SSO
 
 In Kiro, run both SSO login tasks, or from the CLI:
@@ -194,3 +206,4 @@ Test a live task: in Kiro, run **`AWS: RDP to Instance`** with a known server na
 | [`README.md`](../README.md) | Folder map and task launcher reference |
 | [`aws-configs/README.md`](../aws-configs/README.md) | AWS SSO sessions and config refresh procedure |
 | [`runbooks/`](../runbooks/) | Incident and operational playbooks |
+| [`.claude/skills/`](../.claude/skills/) | Repo-shared Claude skills (start with `/rdp`) |
