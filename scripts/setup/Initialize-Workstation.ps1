@@ -73,7 +73,7 @@ $repoRoot = $actualRoot
 #region 1 — Winget tool installs
 
 if (-not $SkipWinget) {
-    Write-Host "`n[1/5] Installing prerequisites via winget..." -ForegroundColor White
+    Write-Host "`n[1/6] Installing prerequisites via winget..." -ForegroundColor White
 
     $tools = @(
         [PSCustomObject]@{ Id = 'Microsoft.PowerShell';        Name = 'PowerShell 7'          },
@@ -121,7 +121,7 @@ if (-not $SkipWinget) {
 #region 2 — RSAT capabilities
 
 if (-not $SkipRsat) {
-    Write-Host "`n[2/5] Installing RSAT capabilities..." -ForegroundColor White
+    Write-Host "`n[2/6] Installing RSAT capabilities..." -ForegroundColor White
 
     $isAdmin = ([Security.Principal.WindowsPrincipal] `
         [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -152,14 +152,14 @@ if (-not $SkipRsat) {
         }
     }
 } else {
-    Write-Host "`n[2/5] Skipping RSAT install (-SkipRsat)" -ForegroundColor DarkGray
+    Write-Host "`n[2/6] Skipping RSAT install (-SkipRsat)" -ForegroundColor DarkGray
 }
 
 #endregion
 
 #region 3 — Python packages
 
-Write-Host "`n[3/5] Installing Python packages..." -ForegroundColor White
+Write-Host "`n[3/6] Installing Python packages..." -ForegroundColor White
 
 $pyPackages = @('boto3', 'colorama')
 foreach ($pkg in $pyPackages) {
@@ -187,7 +187,7 @@ foreach ($pkg in $pyPackages) {
 
 #region 4 — CLAUDE.md symlink
 
-Write-Host "`n[4/5] Linking CLAUDE.md to Claude Code config..." -ForegroundColor White
+Write-Host "`n[4/6] Linking CLAUDE.md to Claude Code config..." -ForegroundColor White
 
 $claudeDir   = Join-Path $env:USERPROFILE '.claude'
 $symlinkPath = Join-Path $claudeDir 'CLAUDE.md'
@@ -222,10 +222,69 @@ if (Test-Path $symlinkPath -PathType Leaf) {
 
 #endregion
 
-#region 5 — Sync AWS config
+#region 5 — Claude Code settings
+
+Write-Host "`n[5/6] Configuring Claude Code permissions..." -ForegroundColor White
+
+$claudeSettingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
+
+# Read-only Bash commands that should never prompt for permission.
+$readOnlyAllows = @(
+    'Bash(ls *)',
+    'Bash(ls)',
+    'Bash(pwd)',
+    'Bash(stat *)',
+    'Bash(file *)',
+    'Bash(wc *)',
+    'Bash(du *)',
+    'Bash(df *)',
+    'Bash(which *)',
+    'Bash(where *)',
+    'Bash(whoami)',
+    'Bash(hostname)',
+    'Bash(env)',
+    'Bash(printenv *)',
+    'Bash(echo *)',
+    'Bash(date)',
+    'Bash(pwsh --version)',
+    'Bash(powershell.exe --version)',
+    'Bash(oh-my-posh --version)',
+    'Bash(oh-my-posh get *)',
+    'Bash(mkdir -p *)'
+)
+
+if (Test-Path $claudeSettingsPath) {
+    $settingsJson = Get-Content $claudeSettingsPath -Raw -ErrorAction Stop | ConvertFrom-Json
+
+    # Ensure permissions.allow exists
+    if (-not ($settingsJson.PSObject.Properties.Name -contains 'permissions')) {
+        $settingsJson | Add-Member -NotePropertyName 'permissions' -NotePropertyValue ([PSCustomObject]@{ allow = @() })
+    }
+    if (-not ($settingsJson.permissions.PSObject.Properties.Name -contains 'allow')) {
+        $settingsJson.permissions | Add-Member -NotePropertyName 'allow' -NotePropertyValue @()
+    }
+
+    $existing = [System.Collections.Generic.HashSet[string]] $settingsJson.permissions.allow
+    $toAdd    = $readOnlyAllows | Where-Object { -not $existing.Contains($_) }
+
+    if ($toAdd.Count -eq 0) {
+        Write-Skip "Claude Code read-only allows already present"
+    } elseif ($PSCmdlet.ShouldProcess($claudeSettingsPath, "Add $($toAdd.Count) read-only Bash allow(s)")) {
+        $settingsJson.permissions.allow = @($settingsJson.permissions.allow) + $toAdd
+        $settingsJson | ConvertTo-Json -Depth 10 | Set-Content $claudeSettingsPath -Encoding UTF8 -ErrorAction Stop
+        Write-Ok "Added $($toAdd.Count) read-only Bash allow(s) to $claudeSettingsPath"
+    }
+} else {
+    Write-Warning "Claude Code settings not found at $claudeSettingsPath — skipping."
+    Write-Warning "Install Claude Code and run again, or add the permissions block manually (see CLAUDE.md)."
+}
+
+#endregion
+
+#region 6 — Sync AWS config
 
 if (-not $SkipAwsSync) {
-    Write-Host "`n[5/5] Syncing team AWS config..." -ForegroundColor White
+    Write-Host "`n[6/6] Syncing team AWS config..." -ForegroundColor White
 
     $syncScript = Join-Path $repoRoot 'aws-configs\tools\Sync-AwsConfig.ps1'
     if (-not (Test-Path $syncScript)) {
@@ -236,7 +295,7 @@ if (-not $SkipAwsSync) {
         & $syncScript
     }
 } else {
-    Write-Host "`n[5/5] Skipping AWS config sync (-SkipAwsSync)" -ForegroundColor DarkGray
+    Write-Host "`n[6/6] Skipping AWS config sync (-SkipAwsSync)" -ForegroundColor DarkGray
 }
 
 #endregion
