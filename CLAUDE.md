@@ -251,6 +251,20 @@ Bash is acceptable **only** for Linux-only targets (e.g., `AWS-DX/`). It is not 
 
 ---
 
+## File & Path Conventions
+
+- **Verify before referencing.** Use Read or Glob to confirm a file exists at its expected path before referencing it in scripts, READMEs, or PR descriptions. Do not assume paths like `Resolve-AwsAccount.ps1` exist where expected.
+- **Never hardcode personal user paths** (e.g., `C:\Users\<name>`, expanded `$USERPROFILE` values) in shared scripts, READMEs, or PR descriptions. Use `$env:USERPROFILE` or parameterize the path.
+- **PEM/cert files on Windows:** strip CRLF line endings and OpenSSL Bag Attributes metadata before handing off to AWS ACM or F5. Raw `openssl` output on Windows often includes both; verify with a hex check before upload.
+
+---
+
+## Slash Commands & Diagnostics
+
+- `claude doctor`, `/review`, `/insights`, and similar are **interactive slash commands** — do not attempt to invoke them via the Bash tool. If diagnostics are needed, instruct the user to run the command in their terminal and paste the output into the conversation.
+
+---
+
 ## Git / Azure DevOps Workflow
 
 - **NEVER push directly to `main` or `master`.** All changes go through a feature or fix branch and a PR.
@@ -276,7 +290,7 @@ Bash is acceptable **only** for Linux-only targets (e.g., `AWS-DX/`). It is not 
 
   Claude MUST generate this description whenever it creates a PR. A PR with no description or a one-liner will be rejected in review.
 
-  **Creating PRs — always use the wrapper.** Claude MUST create PRs by calling `scripts/azdo/New-PR.ps1` from `pwsh`. Never invoke `az repos pr create` directly and never inline Python subprocess snippets — both produce parse errors when shell, heredoc, or escape boundaries don't align.
+  **Creating PRs — always use the wrapper.** Claude MUST create PRs by calling `scripts/azdo/New-PR.ps1` from `pwsh`. Never invoke `az repos pr create` directly and never inline Python subprocess snippets — both produce parse errors when shell, heredoc, or escape boundaries don't align. **This organization uses Azure DevOps, not GitHub — the `gh` CLI is not available here.**
 
   Workflow:
   1. Write the PR description to a temp markdown file using the Write tool: `C:\Temp\pr-<short-slug>.md`
