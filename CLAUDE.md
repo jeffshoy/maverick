@@ -16,6 +16,7 @@ Standard clone location: `%USERPROFILE%\repos\cloudops`.
 
 **Fastest path — bootstrap script (recommended):**
 ```powershell
+# Run from an elevated pwsh session — winget MSI installs and RSAT both require admin.
 cd "$env:USERPROFILE\repos\cloudops"
 pwsh scripts\setup\Initialize-Workstation.ps1
 ```

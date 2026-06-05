@@ -32,11 +32,14 @@ The standard clone location is `%USERPROFILE%\repos\cloudops`. All documentation
 After cloning, run the bootstrap script to complete steps 3–7 automatically:
 
 ```powershell
+# Run from an elevated pwsh session — winget MSI installs and RSAT both require admin.
 cd "$env:USERPROFILE\repos\cloudops"
 pwsh scripts\setup\Initialize-Workstation.ps1
 ```
 
-Use `-WhatIf` to preview every action without making changes. Use `-SkipRsat` on non-domain-joined machines.
+To launch elevated: right-click Windows Terminal → "Run as administrator", then open a `pwsh` tab.
+
+Use `-WhatIf` to preview every action without making changes. Use `-SkipRsat` on non-domain-joined machines. If all tools are already installed, `-SkipWinget -SkipRsat` runs the remaining steps (symlink, settings, AWS config sync) without admin.
 
 After the script succeeds, skip to [step 8](#8-open-the-workspace-in-kiro).
 

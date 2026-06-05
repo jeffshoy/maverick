@@ -70,6 +70,40 @@ $repoRoot = $actualRoot
 
 #endregion
 
+#region 0.5 — Elevation check
+
+$isAdmin = ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+# winget MSI installs and RSAT capability installs both require admin.
+# If both are skipped, the remaining steps (pip, symlink, settings, AWS sync) run without elevation.
+$needsAdmin = (-not $SkipWinget) -or (-not $SkipRsat)
+
+if ($needsAdmin -and -not $isAdmin) {
+    Write-Host ""
+    Write-Host "ERROR: This script must run from an elevated PowerShell session." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  Why: winget MSI installs (AWS CLI, Azure CLI, Git, Python, SSM plugin)" -ForegroundColor Yellow
+    Write-Host "       and RSAT capabilities both require local administrator rights." -ForegroundColor Yellow
+    Write-Host "       Cancelling the UAC prompt mid-run leaves the workstation half-installed." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Fix: Close this terminal. Right-click Windows Terminal -> 'Run as administrator'," -ForegroundColor Cyan
+    Write-Host "       open a pwsh tab, and re-run:" -ForegroundColor Cyan
+    Write-Host "         pwsh $PSCommandPath" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  Or:  if all tools are already installed, re-run with -SkipWinget -SkipRsat" -ForegroundColor Cyan
+    Write-Host "       to do only the symlink, settings, and AWS-config-sync steps." -ForegroundColor Cyan
+    Write-Host ""
+    exit 1
+}
+
+if ($isAdmin) {
+    Write-Step "Running elevated — winget and RSAT installs will proceed without UAC interruption."
+}
+
+#endregion
+
 #region 1 — Winget tool installs
 
 if (-not $SkipWinget) {
@@ -123,32 +157,24 @@ if (-not $SkipWinget) {
 if (-not $SkipRsat) {
     Write-Host "`n[2/6] Installing RSAT capabilities..." -ForegroundColor White
 
-    $isAdmin = ([Security.Principal.WindowsPrincipal] `
-        [Security.Principal.WindowsIdentity]::GetCurrent()
-    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    $rsatCaps = @(
+        'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0',
+        'Rsat.Dns.Tools~~~~0.0.1.0'
+    )
 
-    if (-not $isAdmin) {
-        Write-Warning "RSAT install requires administrator rights. Skipping. Re-run as admin to install RSAT."
-    } else {
-        $rsatCaps = @(
-            'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0',
-            'Rsat.Dns.Tools~~~~0.0.1.0'
-        )
+    foreach ($cap in $rsatCaps) {
+        try {
+            $state = (Get-WindowsCapability -Online -Name $cap -ErrorAction Stop).State
+        } catch {
+            $state = 'Unknown'
+        }
 
-        foreach ($cap in $rsatCaps) {
-            try {
-                $state = (Get-WindowsCapability -Online -Name $cap -ErrorAction Stop).State
-            } catch {
-                $state = 'Unknown'
-            }
-
-            if ($state -eq 'Installed') {
-                Write-Skip "$cap — already installed"
-            } elseif ($PSCmdlet.ShouldProcess($cap, 'Add-WindowsCapability')) {
-                Write-Step "Installing $cap..."
-                Add-WindowsCapability -Online -Name $cap -ErrorAction Stop | Out-Null
-                Write-Ok "$cap installed"
-            }
+        if ($state -eq 'Installed') {
+            Write-Skip "$cap — already installed"
+        } elseif ($PSCmdlet.ShouldProcess($cap, 'Add-WindowsCapability')) {
+            Write-Step "Installing $cap..."
+            Add-WindowsCapability -Online -Name $cap -ErrorAction Stop | Out-Null
+            Write-Ok "$cap installed"
         }
     }
 } else {
