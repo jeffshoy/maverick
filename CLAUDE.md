@@ -12,6 +12,13 @@ Standard clone location: `%USERPROFILE%\repos\cloudops`.
 
 ---
 
+## Environment
+
+- **Primary shell: PowerShell on Windows (not bash).** Use PowerShell-native syntax — backtick line continuation, proper semicolons, no smart quotes. Place `param()` blocks at the very top of scripts (before any other statements).
+- **When PowerShell one-liners get complex or fail, pivot to a Python script** rather than iterating on PowerShell syntax. Three failed reformulations of the same command is the threshold — stop and rewrite in Python.
+
+---
+
 ## Setup — One-Time Per Teammate
 
 **Fastest path — bootstrap script (recommended):**
@@ -237,9 +244,18 @@ Bash is acceptable **only** for Linux-only targets (e.g., `AWS-DX/`). It is not 
 
 ---
 
+## Verification Discipline
+
+- **Never claim a script or service is working based on log files alone** — always verify the timestamp on any log entry is from the current session before citing it as evidence of success.
+- **When debugging stalls after 2-3 approaches, stop and re-examine assumptions** rather than trying more variants. Cycling through jq → Python → Node.js → cmd → pwsh for the same problem is a smell that the root cause hasn't been identified. Step back and restate what is actually known before the next attempt.
+
+---
+
 ## Git / Azure DevOps Workflow
 
 - **NEVER push directly to `main` or `master`.** All changes go through a feature or fix branch and a PR.
+- **Always confirm the correct base branch before creating a feature branch.** Run `git branch --show-current` and ask if the current branch is unclear or unexpected.
+- **Scope edits narrowly to the files and rows the user explicitly mentions.** Do not apply changes broadly across similar rows or files without confirmation.
 - **Branch naming:** short and descriptive — `feature/<short-desc>`, `fix/<short-desc>`, or `<name>-<topic>` (e.g., `trent-disable-user-fix`).
 - **Commits:** imperative mood, what + why. Reference the AzDo work item or ticket number when applicable (e.g., `Add dry-run flag to Disable_users script (#1234)`).
 - **PR descriptions:** Every PR MUST have a markdown description. No exceptions. Use this structure:
