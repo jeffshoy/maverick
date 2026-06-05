@@ -22,6 +22,8 @@ from the old multi-SAN `*.aspgov.com` cert to per-client split certs
 | `audit_split_certs.py` | Report which servers on the old `*.aspgov.com` cert have/haven't migrated |
 | `list_agent_nodes.py` | Flat list of every server node on both agents with cert name and order number |
 | `verify_iis_certs.py` | SSM into each server and confirm the expected cert is bound in IIS |
+| `list_servers.py` | List all servers on a Network Agent — filter by inactive status or name; exports CSV |
+| `remove_servers_from_agent.py` | Remove servers from a Network Agent by CSV (from `list_servers.py`) or live name filter |
 
 ---
 
@@ -196,6 +198,49 @@ Writes `verify_iis_certs_{cert_id}_{timestamp}.csv`.
 
 ---
 
+### Phase 3 — Clean up stale servers from agents
+
+Over time, decommissioned or renamed servers accumulate in the Network Agent
+and show as inactive. These scripts identify and remove them.
+
+**Step 1: List servers on an agent**
+
+```powershell
+# All servers on the us-east-1 agent
+python list_servers.py
+
+# Inactive only (most common use case before cleanup)
+python list_servers.py --inactive
+
+# Find a specific server by name substring
+python list_servers.py --search cld-splsap
+
+# us-west-2 agent
+python list_servers.py --agent-id 18247 --inactive
+```
+
+Writes a timestamped CSV (e.g. `servers_18227_inactive_20260603_095419.csv`).
+Review the CSV before proceeding to removal.
+
+**Step 2: Remove servers**
+
+```powershell
+# Dry run from CSV produced in Step 1
+python remove_servers_from_agent.py --agent-id 18227 --csv servers_18227_inactive_20260603_095419.csv --dry-run
+
+# Apply from CSV
+python remove_servers_from_agent.py --agent-id 18227 --csv servers_18227_inactive_20260603_095419.csv
+
+# Remove inactive servers matching a name filter (live query, no CSV needed)
+python remove_servers_from_agent.py --agent-id 18227 --search smia --inactive --dry-run
+python remove_servers_from_agent.py --agent-id 18227 --search smia --inactive
+```
+
+Both scripts require confirmation (`yes`) before any destructive action.
+`--dry-run` shows what would be removed without calling the API.
+
+---
+
 ## Script Reference
 
 ### `add_servers_to_agent.py`
@@ -274,6 +319,38 @@ python verify_domains.py --profile PALegacyFinEntANCO
 Reports: `Match`, `Mismatch`, `No SSM`, `Auth fail`.
 Tries all matching instances per account until one SSM-reachable instance is found.
 
+### `list_servers.py`
+
+Paginates through all servers on a Network Agent and writes a CSV. No writes
+to Sectigo — read-only.
+
+```powershell
+python list_servers.py                              # all servers, us-east-1 agent
+python list_servers.py --inactive                   # inactive only
+python list_servers.py --search cld-splsap102       # find by name
+python list_servers.py --agent-id 18247 --inactive  # us-west-2
+python list_servers.py --inactive --output out.csv  # custom output path
+```
+
+Output CSV columns vary by agent response but always include `id`, `name`, and active status.
+
+### `remove_servers_from_agent.py`
+
+Issues a DELETE per server. Requires explicit `yes` confirmation before any
+changes. Always dry-run first.
+
+```powershell
+# From CSV (recommended — review list_servers.py output first)
+python remove_servers_from_agent.py --agent-id 18227 --csv servers_18227_inactive_*.csv --dry-run
+python remove_servers_from_agent.py --agent-id 18227 --csv servers_18227_inactive_*.csv
+
+# Live filter (no CSV required)
+python remove_servers_from_agent.py --agent-id 18227 --search smia --inactive --dry-run
+python remove_servers_from_agent.py --agent-id 18227 --search smia --inactive
+```
+
+Exit codes: `0` = all removed, `1` = one or more DELETE calls failed.
+
 ---
 
 ## Security Notes
@@ -301,3 +378,6 @@ Tries all matching instances per account until one SSM-reachable instance is fou
 | `ForbiddenException` from AWS | Profile config issue — check `~/.aws/config` |
 | `python3` not found | Use `python` on Windows |
 | `servers_*.json` not generated | Check `--dry-run` isn't set, and that `SECTIGO_SVC_PASSWORD` is set |
+| `list_servers.py` returns 0 servers | Agent ID may be wrong, or the API response uses an unexpected key — the script prints the top-level keys on the first page to help diagnose |
+| `remove_servers_from_agent.py` — `CSV missing 'id' column` | Ensure the CSV came from `list_servers.py`, not a manually edited file |
+| `HTTP 404` on DELETE | Server ID no longer exists on the agent (may have been removed already) |
