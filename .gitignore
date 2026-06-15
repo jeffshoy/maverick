@@ -15,6 +15,7 @@ scripts/sectigo/MassServerAdd/verify_iis_certs_*.csv
 scripts/sectigo/MassServerAdd/servers_*_inactive_*.csv
 scripts/sectigo/MassServerAdd/servers_*_inactive_search_*.csv
 scripts/sectigo/MassServerAdd/inactive_servers_*.csv
+scripts/sectigo/MassServerAdd/servers_*_search_*.csv
 scripts/sectigo/MassServerAdd/*.xlsx
 # Sectigo — root-level working directory (run artifacts, never committed)
 /Sectigo/

@@ -48,6 +48,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).parent
 CSV_PATH = SCRIPT_DIR / "ASPGOV_SSLCertRenewal_2026-2027.csv"
 OLD_CERT_ID_DEFAULT = 14546938
+NEW_SHARED_ASPGOV_CERT_ID = 19506604
 
 
 # ---------------------------------------------------------------------------
@@ -86,20 +87,25 @@ def api_get(url: str, creds: dict) -> Any:
 
 
 def search_cert_id(cn: str, creds: dict) -> int | None:
-    params = urllib.parse.urlencode({"commonName": cn, "size": 10})
+    params = urllib.parse.urlencode({"commonName": cn, "size": 25})
     results = api_get(f"{creds['base_url']}/api/ssl/v2?{params}", creds)
-    if isinstance(results, list):
-        for r in results:
-            if r.get("commonName", "").lower() == cn.lower():
-                return r["sslId"]
-    return None
+    if not isinstance(results, list):
+        return None
+    # Prefer the most recently issued cert (highest sslId) with status Issued.
+    # Fall back to highest sslId regardless of status if none are Issued.
+    matches = [r for r in results if r.get("commonName", "").lower() == cn.lower()]
+    issued = [r for r in matches if str(r.get("status", "")).lower() == "issued"]
+    candidates = issued if issued else matches
+    if not candidates:
+        return None
+    return max(candidates, key=lambda r: r["sslId"])["sslId"]
 
 
 def get_locations(cert_id: int, creds: dict) -> list[dict]:
     for url in [
-        f"{creds['base_url']}/api/ssl/v2/{cert_id}/renewalInfo",
-        f"{creds['base_url']}/api/agent/v1/ssl/{cert_id}/location",
         f"{creds['base_url']}/api/ssl/v2/{cert_id}/location",
+        f"{creds['base_url']}/api/agent/v1/ssl/{cert_id}/location",
+        f"{creds['base_url']}/api/ssl/v2/{cert_id}/renewalInfo",
     ]:
         try:
             data = api_get(url, creds)
@@ -199,13 +205,19 @@ def main() -> None:
     split_cert_ids: dict[str, int] = {}
     split_cert_sans: dict[str, str] = {}
 
-    # Use every in-use row that has a client-specific SAN (not the bare *.aspgov.com rows)
-    # regardless of whether "split cert already created?" is marked — we query Sectigo
-    # to find out whether a cert exists rather than trusting the CSV column.
+    # ── 3a. New shared *.aspgov.com cert: fetch its locations once upfront ───────
+    print(f"Fetching locations for new shared *.aspgov.com cert {NEW_SHARED_ASPGOV_CERT_ID}...")
+    shared_locs = get_locations(NEW_SHARED_ASPGOV_CERT_ID, creds)
+    shared_aspgov_fqdns = fqdns_from_locations(shared_locs)
+    print(f"  agent sees it on {len(shared_aspgov_fqdns)} server(s)\n")
+
+    # Use every row that has a client-specific SAN (not the bare *.aspgov.com rows).
+    # Do NOT filter by "In Use?" — that column is unreliable and causes split certs to be
+    # missed for accounts marked "no" that still have servers on the old cert (e.g. calco).
+    # We query Sectigo directly to determine whether a cert exists.
     split_rows = [
         r for r in rows
-        if r.get("In Use?", "").strip().lower() == "yes"
-        and r.get("local_domain", "").strip()
+        if r.get("local_domain", "").strip()
         and r.get("SAN", "").strip()
         and r["SAN"].strip().lower() not in ("*.aspgov.com", "aspgov.com")
     ]
@@ -250,13 +262,21 @@ def main() -> None:
             domain_in_split = matched_domain in split_fqdns
 
             if not domain_in_split:
-                # *.aspgov.com row or not in-use — not a split cert candidate
-                status = "NO_SPLIT_CERT"
-                split_cert_id = ""
+                # *.aspgov.com row — check the new shared cert
+                if fqdn in shared_aspgov_fqdns:
+                    status = "MIGRATED"
+                    split_cert_id = str(NEW_SHARED_ASPGOV_CERT_ID)
+                else:
+                    status = "STILL_OLD_CERT"
+                    split_cert_id = ""
             elif not split_cert_ids.get(matched_domain):
-                # Queried Sectigo, cert doesn't exist yet
-                status = "NO_SPLIT_CERT"
-                split_cert_id = ""
+                # Queried Sectigo, tenant split cert doesn't exist yet
+                if fqdn in shared_aspgov_fqdns:
+                    status = "MIGRATED"
+                    split_cert_id = str(NEW_SHARED_ASPGOV_CERT_ID)
+                else:
+                    status = "NO_SPLIT_CERT"
+                    split_cert_id = ""
             elif fqdn in split_fqdns[matched_domain]:
                 status = "MIGRATED"
                 split_cert_id = str(split_cert_ids[matched_domain])

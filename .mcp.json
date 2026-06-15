@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sectigo": {
+      "command": "python",
+      "args": ["scripts/sectigo/mcp_proxy.py"],
+      "env": {
+        "SECTIGO_CLIENT_ID": "${SECTIGO_CLIENT_ID}",
+        "SECTIGO_CLIENT_SECRET": "${SECTIGO_CLIENT_SECRET}"
+      }
+    }
+  }
+}
