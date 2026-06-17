@@ -107,10 +107,17 @@ function Invoke-XCApi {
 # This prevents a partial double-replace if the script is run twice.
 $escapedOld = [regex]::Escape($OldCertName)
 $escapedNew = [regex]::Escape($NewCertName)
-# Negative lookahead: match OldCertName not followed by what would make it NewCertName already
-$suffix     = $NewCertName.Substring($OldCertName.Length)   # e.g. "pt2"
-$escapedSuffix = [regex]::Escape($suffix)
-$certPattern   = "(?<=[`"])" + $escapedOld + "(?!" + $escapedSuffix + ")(?=[`"])"
+# Match OldCertName inside JSON string delimiters, but only when it isn't already NewCertName.
+# When names share a common prefix (same length or OldCertName is a prefix of NewCertName),
+# fall back to an exact-boundary match rather than an empty/broken lookahead.
+if ($NewCertName.Length -gt $OldCertName.Length -and $NewCertName.StartsWith($OldCertName)) {
+    $suffix        = $NewCertName.Substring($OldCertName.Length)
+    $escapedSuffix = [regex]::Escape($suffix)
+    $certPattern   = "(?<=[`"])" + $escapedOld + "(?!" + $escapedSuffix + ")(?=[`"])"
+} else {
+    # Names differ in place (not prefix/suffix relationship) — exact boundary match is sufficient.
+    $certPattern   = "(?<=[`"])" + $escapedOld + "(?=[`"])"
+}
 
 $totalFound   = 0
 $totalUpdated = 0
