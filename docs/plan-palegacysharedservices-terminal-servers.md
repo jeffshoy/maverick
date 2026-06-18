@@ -99,7 +99,24 @@ Sibling module approach confirmed acceptable. Does not modify any core Foundatio
 
 ### Domain join
 
-SSM Association with `AWS-JoinDirectoryServiceDomain`. OU paths confirmed:
+SSM Association with `AWS-JoinDirectoryServiceDomain`. `directoryOU` is omitted from the association parameters — `ds:CreateComputer` does not work cross-account on a shared Managed AD, so computer objects must be pre-created in ADUC before instances are launched. The plugin skips `CreateComputer` when no OU is specified and calls `Add-Computer` directly.
+
+Pre-create computer objects in ADUC before each deployment:
+```powershell
+# us-east-1
+$ou = "OU=PALegacyUSE1,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl"
+"INF-WSRDS001","INF-WSRDS002","INF-WSRDS003","INF-WSSQL001" | ForEach-Object {
+    New-ADComputer -Name $_ -Path $ou -Server "172.30.20.20" -Enabled $true
+}
+
+# us-west-2
+$ou = "OU=PALegacyUSW2,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl"
+"INF-WSRDS101","INF-WSRDS102","INF-WSRDS103","INF-WSSQL101" | ForEach-Object {
+    New-ADComputer -Name $_ -Path $ou -Server "172.30.20.20" -Enabled $true
+}
+```
+
+OU paths:
 - us-east-1: `OU=PALegacyUSE1,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl`
 - us-west-2: `OU=PALegacyUSW2,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl`
 
