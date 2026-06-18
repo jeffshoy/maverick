@@ -105,8 +105,10 @@ AWS License Manager UBS requires the AD Connector to live in a VPC whose CIDR be
 | USW2 VPC CIDR (10.x) | **TBD — Aarron** |
 | USW2 Subnet1 CIDR | **TBD — Aarron** |
 | USW2 Subnet2 CIDR | **TBD — Aarron** |
-| AD service account (`svc-adconnector` or similar) | **TBD — cloud.lcl AD team** |
-| Service account password in SSM SecureString | **TBD — before Terraform apply** |
+| AD service account | `awslmsvc` in `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl` — password >30 complex characters (from PBI 1531539) |
+| Service account password in SSM SecureString | **TBD — create before Terraform apply** |
+
+**Note on service account credential rotation:** Explore automating rotation of the `awslmsvc` password (e.g. AWS Secrets Manager rotation Lambda → updates SSM SecureString + AD password). Not required for initial deployment but desirable long-term.
 
 ### Terraform work remaining (once CIDRs confirmed)
 
@@ -154,6 +156,12 @@ SSM Association with `AWS-JoinDirectoryServiceDomain`. Directory ID and DNS IPs 
 
 `directoryOU` is currently omitted — was required to work around `ds:CreateComputer` cross-account failure on shared Managed AD. Once the AD Connector is owned by this account, add `directoryOU` back and computer pre-creation is no longer needed.
 
+**Target OUs:**
+- us-east-1: `OU=PALegacyUSE1,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl`
+- us-west-2: `OU=PALegacyUSW2,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl`
+
+**RDP access group:** `R_AWSCOMM_SSO_cst-comm-infrdsaccess` in `cloud.lcl/Resources/AWSCOMMSSO` — added to `Remote Desktop Users` on each RDSH server by the Ansible playbook.
+
 ---
 
 ## Config (cloud-foundation-configs)
@@ -182,6 +190,26 @@ SSM Association with `AWS-JoinDirectoryServiceDomain`. Directory ID and DNS IPs 
 
 Both playbooks retrieve the Administrator password from SSM Parameter Store (`/inf/palegacysharedservices/<instance>/admin_password`) and connect via WinRM NTLM on port 5986.
 
+### Required application installs (PBI 1531541) — TODO
+
+The following applications must be installed on every RDSH bastion host. These are not yet covered by the Ansible playbooks — to be added after domain join is working.
+
+| Application | Notes |
+|---|---|
+| CarbonBlack | Endpoint security agent |
+| Tanium | Endpoint management agent |
+| Rapid7 | Vulnerability management agent |
+| NPM Client | Network Password Manager client |
+| Microsoft RSAT | Required for AD management from bastion |
+| SecureCRT | SSH/terminal client |
+
+### Required AD configuration (PBI 1531541) — TODO
+
+Before bastion hosts are handed over to end users:
+- Create OU: `OU=BastionHosts,OU=Resources,DC=cloud,DC=lcl`
+- Create group: `R_BH_Cloud_Access` — add members from Rich G's team
+- Grant `R_BH_Cloud_Access` access to the RDS collection on each bastion host
+
 ---
 
 ## AMI Strategy
@@ -208,6 +236,10 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | 10 | **Add `directoryOU` back** to SSM association parameters once connector is owned by this account | CloudOps | Blocked on item 7 |
 | 11 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | Blocked on item 4 |
 | 12 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group → LM subscriptions | CloudOps | No — manual runbook step covers it initially |
+| 13 | **Create `awslmsvc` AD service account** — `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl`, password >30 chars, store in SSM SecureString | cloud.lcl AD team + CloudOps | Yes — needed before AD Connector deploys |
+| 14 | **Explore `awslmsvc` credential rotation** — Secrets Manager rotation Lambda updating SSM + AD; not required for initial deploy | CloudOps | No |
+| 15 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after domain join working |
+| 16 | **AD: create `OU=BastionHosts,OU=Resources`** and `R_BH_Cloud_Access` group; grant RDS collection access (PBI 1531541) | cloud.lcl AD team | No — after domain join working |
 
 ---
 
