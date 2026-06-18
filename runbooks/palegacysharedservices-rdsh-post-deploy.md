@@ -85,23 +85,29 @@ This replaces SPLA and the grace-period-reset scripts. Must be done before any u
 
 ### 4a — Register the cloud.lcl directory with License Manager
 
-Do this once per region. Requires the Managed AD directory to be fully active.
+The `prdcomm.cloud.lcl` directory is owned by the SharedServices account (`590183938156`).
+LM UBS registration must be done in the **owner account** (`SharedServices` profile), not PALegacySharedServices.
+
+LM UBS for us-west-2 with a cross-region replicated Managed AD is not yet supported — deferred to Phase 2.
+The SLR (`AWSServiceRoleForAWSLicenseManagerUserSubscriptionsService`) has already been created in both accounts.
 
 ```powershell
-# us-east-1
-aws license-manager-user-subscriptions register-identity-provider `
-    --profile PALegacySharedServices `
-    --region us-east-1 `
-    --identity-provider "ActiveDirectory={DirectoryId=d-906672ebcc}" `
-    --product "Remote Desktop Services"
-
-# us-west-2 — run after the cloud.lcl directory share is extended to us-west-2
+# us-east-1 — run in the owner account (SharedServices), already completed 2026-06-18
 # aws license-manager-user-subscriptions register-identity-provider `
-#     --profile PALegacySharedServices `
-#     --region us-west-2 `
-#     --identity-provider "ActiveDirectory={DirectoryId=<usw2-directory-id>}" `
-#     --product "Remote Desktop Services"
+#     --profile SharedServices `
+#     --region us-east-1 `
+#     --identity-provider "ActiveDirectoryIdentityProvider={DirectoryId=d-90663dba5c}" `
+#     --product "REMOTE_DESKTOP_SERVICES"
+
+# us-west-2 — deferred to Phase 2 (see plan doc)
 ```
+
+Verify registration is active:
+```powershell
+aws license-manager-user-subscriptions list-identity-providers `
+    --profile SharedServices --region us-east-1
+```
+Expected: `"Status": "REGISTERED"` for `d-90663dba5c`.
 
 ### 4b — Create the AD access group
 
@@ -122,7 +128,7 @@ foreach ($user in $users) {
     aws license-manager-user-subscriptions start-product-subscription `
         --profile PALegacySharedServices `
         --region us-east-1 `
-        --identity-provider "ActiveDirectory={DirectoryId=d-906672ebcc}" `
+        --identity-provider "ActiveDirectoryIdentityProvider={DirectoryId=d-906672ebcc}" `
         --product "Remote Desktop Services" `
         --username $user `
         --domain "cloud.lcl"

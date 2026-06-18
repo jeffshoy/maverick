@@ -165,6 +165,7 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 
 - aspgov.pri and FinEnt domains in AWS UBS — requires multi-domain trust testing
 - **Instance Scheduler** — enable for this account, set `cst_schedule` tags, implement pre-shutdown notification Lambda (`inf-rdsh-pre-shutdown-notify`) with EventBridge rules and self-service deferral
+- **LM UBS for us-west-2** — AWS LM UBS cannot register a cross-region replicated Managed AD directory from a consumer account; the us-west-2 RDSH servers run on the 120-day grace period until resolved. Options: open AWS support case, or create a dedicated Managed AD in PALegacySharedServices for us-west-2. Set `lm_ubs_enabled = true` in `secondary_palegacysharedservices.tfvars` once resolved.
 - Packer AMI bake (RDSH role + SSMS + baseline hardening)
 - Security group tightening (broad RFC1918 ingress is intentional for now; FTDv controls access)
 - Moving ASPGOV and FinEnt environments off current unsupported solutions
