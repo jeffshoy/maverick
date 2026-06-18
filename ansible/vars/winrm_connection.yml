@@ -1,0 +1,8 @@
+---
+# WinRM connection settings for Windows hosts.
+# Loaded via vars_files at play level — matches the pattern in fe-aws-infra.
+ansible_connection: winrm
+ansible_port: 5986
+ansible_user: Administrator
+ansible_winrm_server_cert_validation: ignore
+ansible_winrm_transport: ntlm

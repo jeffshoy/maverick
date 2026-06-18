@@ -1,0 +1,27 @@
+---
+- name: Install RD Session Host role
+  win_feature:
+    name: RDS-RD-Server
+    include_management_tools: true
+    state: present
+  register: rdsh_install
+
+- name: Reboot if required after RDSH role install
+  win_reboot:
+    reboot_timeout: 300
+    post_reboot_delay: 30
+  when: rdsh_install.reboot_required
+
+- name: Add R_AWSCOMM_SSO_cst-comm-infrdsaccess to Remote Desktop Users
+  win_group_membership:
+    name: "Remote Desktop Users"
+    members:
+      - "CLOUD\\R_AWSCOMM_SSO_cst-comm-infrdsaccess"
+    state: present
+
+- name: Verify RDSH role is active
+  win_shell: |
+    (Get-WindowsFeature RDS-RD-Server).InstallState
+  register: rdsh_state
+  changed_when: false
+  failed_when: rdsh_state.stdout.strip() != 'Installed'

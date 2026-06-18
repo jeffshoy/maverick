@@ -1,0 +1,26 @@
+---
+# Playbook: PALegacySharedServices RDSH post-deploy setup
+#
+# Installs the RD Session Host Windows role and adds the AD access group to
+# Remote Desktop Users on all INF-WSRDS* servers.
+#
+# Usage:
+#   ansible-playbook palegacysharedservices-rdsh-setup.yml \
+#     -e "aws_region=us-east-1"
+#
+# Targets all instances tagged cst_application=inf-admin-rdsh in the
+# specified region via the aws_ec2 dynamic inventory.
+
+- name: Configure RDSH terminal servers
+  gather_facts: true
+  hosts: "tag_cst_application_inf_admin_rdsh"
+  vars:
+    ansible_password: "{{ lookup('aws_ssm', '/inf/palegacysharedservices/' + inventory_hostname_short | lower + '/admin_password',
+                          region=aws_region, shortnames=true, bypath=false) }}"
+    aws_region: "{{ aws_region | default('us-east-1') }}"
+  vars_files:
+    - vars/winrm_connection.yml
+  tasks:
+    - name: Include RDSH setup role
+      include_role:
+        name: rdsh_setup

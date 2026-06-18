@@ -1,0 +1,26 @@
+---
+# Playbook: PALegacySharedServices SSMS post-deploy setup
+#
+# Downloads SSMS installer from the media S3 bucket and installs it silently
+# on all INF-WSSQL* servers.
+#
+# Prerequisites:
+#   - SSMS installer uploaded to s3://cst-comm-palegacysharedservices-media/installers/SSMS-Setup-ENU.exe
+#
+# Usage:
+#   ansible-playbook palegacysharedservices-ssms-setup.yml \
+#     -e "aws_region=us-east-1"
+
+- name: Install SSMS on DBA jump boxes
+  gather_facts: true
+  hosts: "tag_cst_application_inf_admin_ssms"
+  vars:
+    ansible_password: "{{ lookup('aws_ssm', '/inf/palegacysharedservices/' + inventory_hostname_short | lower + '/admin_password',
+                          region=aws_region, shortnames=true, bypath=false) }}"
+    aws_region: "{{ aws_region | default('us-east-1') }}"
+  vars_files:
+    - vars/winrm_connection.yml
+  tasks:
+    - name: Include SSMS setup role
+      include_role:
+        name: ssms_setup

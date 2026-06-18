@@ -1,0 +1,20 @@
+---
+- name: Download SSMS installer from S3 media bucket
+  win_shell: |
+    aws s3 cp "s3://cst-comm-palegacysharedservices-media/installers/SSMS-Setup-ENU.exe" `
+        "C:\Windows\Temp\SSMS-Setup-ENU.exe" --region {{ aws_region }}
+  args:
+    creates: C:\Windows\Temp\SSMS-Setup-ENU.exe
+
+- name: Install SSMS silently
+  win_package:
+    path: C:\Windows\Temp\SSMS-Setup-ENU.exe
+    arguments: /install /quiet /norestart
+    state: present
+  register: ssms_install
+
+- name: Reboot if required after SSMS install
+  win_reboot:
+    reboot_timeout: 300
+    post_reboot_delay: 30
+  when: ssms_install.reboot_required

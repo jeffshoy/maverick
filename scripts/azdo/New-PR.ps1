@@ -91,9 +91,16 @@ $azArgs = @(
     '--description'
 ) + $lines
 
-$output = az @azArgs 2>&1 | Out-String
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "az repos pr create failed (exit $LASTEXITCODE):`n$output"
+$tempErr = [System.IO.Path]::GetTempFileName()
+try {
+    $output = az @azArgs 2>$tempErr | Out-String
+    $azExit = $LASTEXITCODE
+    $errOutput = Get-Content $tempErr -Raw -ErrorAction SilentlyContinue
+} finally {
+    Remove-Item $tempErr -ErrorAction SilentlyContinue
+}
+if ($azExit -ne 0) {
+    Write-Error "az repos pr create failed (exit $azExit):`n$errOutput`n$output"
     exit 1
 }
 
