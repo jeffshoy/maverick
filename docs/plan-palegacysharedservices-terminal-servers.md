@@ -6,6 +6,19 @@
 
 ---
 
+## Proposed Timeline (reviewed with Gunjan)
+
+| Phase | Owner | Duration | Description |
+|---|---|---|---|
+| 1 | Kevin | 2 weeks | Create IaC and automation to build/manage the replacement environment. Initial state is bare minimum necessary to shut down the datacenter. Additional refinement post-migration. |
+| 2 | Kevin | 1 week | Deploy final production infrastructure — VPCs, AWS License Manager, RDS License Server, IAM roles, workstations, routes. Provide firewall rule list to network team via PBI. |
+| 3 | Network | 1 week | Deploy firewall rules to permit communication with new workstations. |
+| 4 | All Staff | 2 weeks | Begin using new workstations while old workstations remain available as backup. |
+| 5 | All Staff | 1 week | Shut down old workstations not intended to be migrated. |
+| 6 | Shawn / Aarron | +1 week | Migrate necessary workstations from datacenter to AWS. |
+
+---
+
 ## Context
 
 PALegacySharedServices is the AWS landing zone for a **datacenter-to-AWS migration** replacing ~50 individual physical workstations with shared Windows Remote Desktop Session Host (RDSH) servers. This also replaces the existing `inf-wss*` machines. Once cloud.lcl users are migrated, the platform will expand to cover ASPGOV and FinEnt environments moving off their current unsupported solutions (Phase 2).
