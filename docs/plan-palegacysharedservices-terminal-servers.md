@@ -33,8 +33,8 @@ Windows Server 2022 + SQL Server Management Studio. Single-admin use — no RDSH
 
 | Name | Region | Subnet |
 |---|---|---|
-| INF-WSSQL001 | us-east-1 | pri-sub-3-INFWS-az1 (172.30.43.0/28) |
-| INF-WSSQL101 | us-west-2 | pri-sub-3-INFWS-az1 (172.29.43.0/28) |
+| INF-WSSQL001 | us-east-1 | pri-sub-3-INFWS-az4 (172.30.43.0/28, us-east-1d) |
+| INF-WSSQL101 | us-west-2 | pri-sub-3-INFWS-az4 (172.29.43.0/28) |
 
 **Instance type:** `t3.large` (2 vCPU / 8 GB)  
 **Storage:** 100 GB gp3, encrypted  
@@ -46,12 +46,12 @@ Windows Remote Desktop Session Host — multi-user shared workstations for ~50 o
 
 | Name | Region | AZ | Subnet | Schedule |
 |---|---|---|---|---|
-| INF-WSRDS001 | us-east-1 | az1 | pri-sub-3-INFWS-az1 (172.30.43.0/28) | `office-hours` |
-| INF-WSRDS002 | us-east-1 | az2 | pri-sub-3-INFWS-az2 (172.30.43.16/28) | `office-hours` |
-| INF-WSRDS003 | us-east-1 | az1 | pri-sub-3-INFWS-az1 (172.30.43.0/28) | `always-on` |
-| INF-WSRDS101 | us-west-2 | az1 | pri-sub-3-INFWS-az1 (172.29.43.0/28) | `office-hours` |
-| INF-WSRDS102 | us-west-2 | az2 | pri-sub-3-INFWS-az2 (172.29.43.16/28) | `office-hours` |
-| INF-WSRDS103 | us-west-2 | az1 | pri-sub-3-INFWS-az1 (172.29.43.0/28) | `always-on` |
+| INF-WSRDS001 | us-east-1 | az4 (us-east-1d) | pri-sub-3-INFWS-az4 (172.30.43.0/28) | `office-hours` |
+| INF-WSRDS002 | us-east-1 | az1 (us-east-1b) | pri-sub-3-INFWS-az1 (172.30.43.16/28) | `office-hours` |
+| INF-WSRDS003 | us-east-1 | az4 (us-east-1d) | pri-sub-3-INFWS-az4 (172.30.43.0/28) | `always-on` |
+| INF-WSRDS101 | us-west-2 | az4 | pri-sub-3-INFWS-az4 (172.29.43.0/28) | `office-hours` |
+| INF-WSRDS102 | us-west-2 | az1 (us-west-2a) | pri-sub-3-INFWS-az1 (172.29.43.16/28) | `office-hours` |
+| INF-WSRDS103 | us-west-2 | az4 | pri-sub-3-INFWS-az4 (172.29.43.0/28) | `always-on` |
 
 **Instance type:** `t3a.xlarge` (4 vCPU / 16 GB, burstable) — start here; upgrade to `m5.xlarge` if burstable credit exhaustion is observed under concurrent load  
 **Storage:** 150 GB gp3, encrypted  
@@ -66,10 +66,10 @@ Instance count and sizing are fully variable-driven from cloud-foundation-config
 
 New secondary CIDRs added to the existing PALegacy VPCs for RDSH/SSMS workloads. The instances moved off the original 172.x.249.x /25 subnets onto dedicated /28s.
 
-| Region | Secondary CIDR | az1 Subnet | az2 Subnet |
+| Region | Secondary CIDR | az4 Subnet | az1 Subnet |
 |---|---|---|---|
-| us-east-1 | 172.30.43.0/24 | pri-sub-3-INFWS-az1 (172.30.43.0/28) | pri-sub-3-INFWS-az2 (172.30.43.16/28) |
-| us-west-2 | 172.29.43.0/24 | pri-sub-3-INFWS-az1 (172.29.43.0/28) | pri-sub-3-INFWS-az2 (172.29.43.16/28) |
+| us-east-1 | 172.30.43.0/24 | pri-sub-3-INFWS-az4 (172.30.43.0/28, us-east-1d) | pri-sub-3-INFWS-az1 (172.30.43.16/28, us-east-1b) |
+| us-west-2 | 172.29.43.0/24 | pri-sub-3-INFWS-az4 (172.29.43.0/28) | pri-sub-3-INFWS-az1 (172.29.43.16/28, us-west-2a) |
 
 Defined in `cloud-foundation-configs/networking/PALegacySharedServices-use1/primary_networking.tfvars` and `PALegacySharedServices-usw2/primary_networking.tfvars`. Applied via the `cloud-foundation-spoke-networking` pipeline.
 
@@ -104,20 +104,22 @@ LM UBS was blocked by the shared Managed AD cross-account limitation — the `AW
 
 ## AD Connector
 
-**Status: Blocked on Aarron Lacey — 10.x VPC CIDRs TBD**
+**CIDRs confirmed by Aarron Lacey (06/18/2026).** The AD Connector uses secondary CIDRs added to the existing PALegacy VPCs — no separate VPCs required.
 
-AWS License Manager UBS requires the AD Connector to live in a VPC whose CIDR belongs to `10.0.0.0/8` — AWS automatically assigns connector IP addresses and they must fall within this range. Separate new VPCs are required in both regions.
+AWS License Manager UBS requires the AD Connector VPC CIDR to belong to `10.0.0.0/8`. Secondary CIDRs have been added to the existing PALegacy VPCs for this purpose.
 
-### What's needed
+### Confirmed CIDRs
 
-| Item | Status |
+| Item | Value |
 |---|---|
-| USE1 VPC CIDR (10.x) | **TBD — Aarron** |
-| USE1 Subnet1 CIDR | **TBD — Aarron** |
-| USE1 Subnet2 CIDR | **TBD — Aarron** |
-| USW2 VPC CIDR (10.x) | **TBD — Aarron** |
-| USW2 Subnet1 CIDR | **TBD — Aarron** |
-| USW2 Subnet2 CIDR | **TBD — Aarron** |
+| USE1 VPC | `vpc-010818af91a495e15` (PALegacySharedServices-use1, existing) |
+| USE1 secondary CIDR | `10.0.15.0/24` |
+| USE1 Subnet1 | `MSADConnectors-use1az4` — `10.0.15.0/28` — use1-az4 (us-east-1d) |
+| USE1 Subnet2 | `MSADConnectors-use1az1` — `10.0.15.16/28` — use1-az1 (us-east-1b) |
+| USW2 VPC | `vpc-086f4e090baccb929` (PALegacySharedServices-usw2, existing) |
+| USW2 secondary CIDR | `10.1.15.0/24` |
+| USW2 Subnet1 | `MSADConnectors-usw2az1` — `10.1.15.0/28` — usw2-az1 (us-west-2a) |
+| USW2 Subnet2 | `MSADConnectors-usw2az2` — `10.1.15.16/28` — usw2-az2 (us-west-2b) |
 | AD service account | `awslmsvc` in `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl` — password >30 complex characters (from PBI 1531539) |
 | Service account password in SSM SecureString | **TBD — create before Terraform apply** |
 
@@ -240,7 +242,7 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | 1 | **PR 163079** (cloud-foundation-configs — subnets, endpoints, AD DNS IP vars) | Reviewer | **Yes** — spoke-networking must apply before instances deploy |
 | 2 | **PR 163174** (cloud-foundation-palegacysharedservices — full module) | Reviewer | **Yes** — main deploy PR |
 | 3 | **Run spoke-networking pipeline** for PALegacySharedServices-use1 and usw2 | CloudOps | **Yes** — creates pri-sub-3-INFWS subnets and DS endpoint |
-| 4 | **AD Connector VPC CIDRs** (10.x range, 2 VPCs) | **Aarron Lacey** | **Yes** — blocks connector Terraform and domain join |
+| 4 | **AD Connector CIDRs confirmed** — secondary CIDRs `10.0.15.0/24` (USE1) and `10.1.15.0/24` (USW2) added to networking configs | ~~Aarron Lacey~~ | Resolved |
 | 5 | **AD service account** for connector (`svc-adconnector` or similar) with rights to create computer objects in PALegacy OUs | cloud.lcl AD team | **Yes** — needed before connector deploys |
 | 6 | **Write AD Connector Terraform** — new VPCs, connector resource, SSM secret | CloudOps | Blocked on items 4 + 5 |
 | 7 | **Update tfvars** with connector directory IDs and DC IPs once connector is deployed | CloudOps | Blocked on item 6 |
