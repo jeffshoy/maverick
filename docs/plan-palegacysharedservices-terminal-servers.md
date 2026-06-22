@@ -34,7 +34,7 @@ Windows Server 2022 + SQL Server Management Studio. Single-admin use — no RDSH
 | Name | Region | Subnet |
 |---|---|---|
 | INF-WSSQL001 | us-east-1 | pri-sub-3-INFWS-az4 (172.30.43.0/28, us-east-1d) |
-| INF-WSSQL101 | us-west-2 | pri-sub-3-INFWS-az4 (172.29.43.0/28) |
+| INF-WSSQL101 | us-west-2 | pri-sub-3-INFWS-az1 (172.29.43.0/28, us-west-2a) |
 
 **Instance type:** `t3.large` (2 vCPU / 8 GB)  
 **Storage:** 100 GB gp3, encrypted  
@@ -49,9 +49,9 @@ Windows Remote Desktop Session Host — multi-user shared workstations for ~50 o
 | INF-WSRDS001 | us-east-1 | az4 (us-east-1d) | pri-sub-3-INFWS-az4 (172.30.43.0/28) | `office-hours` |
 | INF-WSRDS002 | us-east-1 | az1 (us-east-1b) | pri-sub-3-INFWS-az1 (172.30.43.16/28) | `office-hours` |
 | INF-WSRDS003 | us-east-1 | az4 (us-east-1d) | pri-sub-3-INFWS-az4 (172.30.43.0/28) | `always-on` |
-| INF-WSRDS101 | us-west-2 | az4 | pri-sub-3-INFWS-az4 (172.29.43.0/28) | `office-hours` |
-| INF-WSRDS102 | us-west-2 | az1 (us-west-2a) | pri-sub-3-INFWS-az1 (172.29.43.16/28) | `office-hours` |
-| INF-WSRDS103 | us-west-2 | az4 | pri-sub-3-INFWS-az4 (172.29.43.0/28) | `always-on` |
+| INF-WSRDS101 | us-west-2 | az1 (us-west-2a) | pri-sub-3-INFWS-az1 (172.29.43.0/28) | `office-hours` |
+| INF-WSRDS102 | us-west-2 | az2 (us-west-2b) | pri-sub-3-INFWS-az2 (172.29.43.16/28) | `office-hours` |
+| INF-WSRDS103 | us-west-2 | az1 (us-west-2a) | pri-sub-3-INFWS-az1 (172.29.43.0/28) | `always-on` |
 
 **Instance type:** `t3a.xlarge` (4 vCPU / 16 GB, burstable) — start here; upgrade to `m5.xlarge` if burstable credit exhaustion is observed under concurrent load  
 **Storage:** 150 GB gp3, encrypted  
@@ -66,10 +66,10 @@ Instance count and sizing are fully variable-driven from cloud-foundation-config
 
 New secondary CIDRs added to the existing PALegacy VPCs for RDSH/SSMS workloads. The instances moved off the original 172.x.249.x /25 subnets onto dedicated /28s.
 
-| Region | Secondary CIDR | az4 Subnet | az1 Subnet |
+| Region | Secondary CIDR | First Subnet | Second Subnet |
 |---|---|---|---|
 | us-east-1 | 172.30.43.0/24 | pri-sub-3-INFWS-az4 (172.30.43.0/28, us-east-1d) | pri-sub-3-INFWS-az1 (172.30.43.16/28, us-east-1b) |
-| us-west-2 | 172.29.43.0/24 | pri-sub-3-INFWS-az4 (172.29.43.0/28) | pri-sub-3-INFWS-az1 (172.29.43.16/28, us-west-2a) |
+| us-west-2 | 172.29.43.0/24 | pri-sub-3-INFWS-az1 (172.29.43.0/28, us-west-2a) | pri-sub-3-INFWS-az2 (172.29.43.16/28, us-west-2b) |
 
 Defined in `cloud-foundation-configs/networking/PALegacySharedServices-use1/primary_networking.tfvars` and `PALegacySharedServices-usw2/primary_networking.tfvars`. Applied via the `cloud-foundation-spoke-networking` pipeline.
 
