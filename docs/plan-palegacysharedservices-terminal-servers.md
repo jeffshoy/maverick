@@ -71,11 +71,11 @@ New secondary CIDRs added to the existing PALegacy VPCs for RDSH/SSMS workloads.
 | us-east-1 | 172.30.43.0/24 | pri-sub-3-INFWS-az4 (172.30.43.0/28, us-east-1d) | pri-sub-3-INFWS-az1 (172.30.43.16/28, us-east-1b) |
 | us-west-2 | 172.29.43.0/24 | pri-sub-3-INFWS-az1 (172.29.43.0/28, us-west-2a) | pri-sub-3-INFWS-az2 (172.29.43.16/28, us-west-2b) |
 
-Defined in `cloud-foundation-configs/networking/PALegacySharedServices-use1/primary_networking.tfvars` and `PALegacySharedServices-usw2/primary_networking.tfvars`. Applied via the `cloud-foundation-spoke-networking` pipeline.
+Defined in `cloud-foundation-configs/networking/PALegacySharedServices-use1/primary_networking.tfvars` and `PALegacySharedServices-usw2/primary_networking.tfvars`. **Applied via `cloud-foundation-spoke-networking` pipeline — complete as of 2026-06-25.**
 
 ### VPC Endpoints
 
-DS interface endpoint (`com.amazonaws.<region>.ds`) is defined in the networking tfvars alongside the other VPC service endpoints. Required for the `AWS-JoinDirectoryServiceDomain` SSM plugin to reach the Directory Service API from private subnets.
+DS interface endpoint (`com.amazonaws.<region>.ds`) is defined in the networking tfvars alongside the other VPC service endpoints. Required for the `AWS-JoinDirectoryServiceDomain` SSM plugin to reach the Directory Service API from private subnets. **Deployed in both regions as of 2026-06-25** (use1: `vpce-0f91ea393e3089055`, usw2: `vpce-0f91ea393e3089055` — see apply logs).
 
 ---
 
@@ -104,32 +104,34 @@ LM UBS was blocked by the shared Managed AD cross-account limitation — the `AW
 
 ## AD Connector
 
-**CIDRs confirmed by Aarron Lacey (06/18/2026).** The AD Connector uses secondary CIDRs added to the existing PALegacy VPCs — no separate VPCs required.
+**CIDRs confirmed by Aarron Lacey (06/18/2026).** AWS License Manager UBS requires the AD Connector VPC CIDR to belong to `10.0.0.0/8`. AWS does not permit 10.x secondary CIDRs on a VPC whose primary CIDR is in the 172.x range — attempting to add a 10.x secondary CIDR to the existing PALegacy VPCs returns `InvalidVpc.Range`. **Separate VPCs are required** for the MSAD connector subnets.
 
-AWS License Manager UBS requires the AD Connector VPC CIDR to belong to `10.0.0.0/8`. Secondary CIDRs have been added to the existing PALegacy VPCs for this purpose.
+Two new VPCs (`PALegacySharedServicesAlternate-USE1` and `PALegacySharedServicesAlternate-USW2`) were created via the `cloud-foundation-spoke-networking` pipeline and are live in AWS as of 2026-06-25.
 
-### Confirmed CIDRs
+### Deployed CIDRs and Resources
 
 | Item | Value |
 |---|---|
-| USE1 VPC | `vpc-010818af91a495e15` (PALegacySharedServices-use1, existing) |
-| USE1 secondary CIDR | `10.0.15.0/24` |
-| USE1 Subnet1 | `MSADConnectors-use1az4` — `10.0.15.0/28` — use1-az4 (us-east-1d) |
-| USE1 Subnet2 | `MSADConnectors-use1az1` — `10.0.15.16/28` — use1-az1 (us-east-1b) |
-| USW2 VPC | `vpc-086f4e090baccb929` (PALegacySharedServices-usw2, existing) |
-| USW2 secondary CIDR | `10.1.15.0/24` |
-| USW2 Subnet1 | `MSADConnectors-usw2az1` — `10.1.15.0/28` — usw2-az1 (us-west-2a) |
-| USW2 Subnet2 | `MSADConnectors-usw2az2` — `10.1.15.16/28` — usw2-az2 (us-west-2b) |
+| USE1 VPC | `vpc-03ad69aad26522702` (PALegacySharedServicesAlternate-USE1, **new**) |
+| USE1 CIDR | `10.0.15.0/24` |
+| USE1 Subnet1 | `MSADConnectors-use1az4` — `10.0.15.0/28` — use1-az4 (us-east-1d) — `subnet-076d1828a602da486` |
+| USE1 Subnet2 | `MSADConnectors-use1az1` — `10.0.15.16/28` — use1-az1 (us-east-1b) — `subnet-0999ef9a27b42b73d` |
+| USE1 TGW attachment | `tgw-attach-037b90a827469c808` → `TGW-PALegacy-US-East-1-CldSvcs` |
+| USW2 VPC | `vpc-0f7fcace897bad052` (PALegacySharedServicesAlternate-USW2, **new**) |
+| USW2 CIDR | `10.1.15.0/24` |
+| USW2 Subnet1 | `MSADConnectors-usw2az1` — `10.1.15.0/28` — usw2-az1 (us-west-2a) — `subnet-0a5378dfb0720e4a4` |
+| USW2 Subnet2 | `MSADConnectors-usw2az2` — `10.1.15.16/28` — usw2-az2 (us-west-2b) — `subnet-0ee342a4ffaa765e6` |
+| USW2 TGW attachment | `tgw-attach-0bb0550d4c4908755` → `TGW-PALegacy-US-West-2-CldSvcs` |
 | AD service account | `awslmsvc` in `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl` — password >30 complex characters (from PBI 1531539) |
-| Service account password in SSM SecureString | **TBD — create before Terraform apply** |
+| Service account password in SSM SecureString | **TBD — create before AD Connector Terraform apply** |
 
 **Note on service account credential rotation:** Explore automating rotation of the `awslmsvc` password (e.g. AWS Secrets Manager rotation Lambda → updates SSM SecureString + AD password). Not required for initial deployment but desirable long-term.
 
-### Terraform work remaining (once CIDRs confirmed)
+### Terraform work remaining
 
-- New VPC + subnets in 10.x space (both regions) — in `cloud-foundation-spoke-networking` or as a new module TBD
+- ~~New VPC + subnets in 10.x space (both regions)~~ — **Done** (PALegacySharedServicesAlternate-USE1/USW2 applied 2026-06-25)
 - `aws_directory_service_connector` resource in `cloud-foundation-palegacysharedservices`
-- SSM SecureString parameter for service account password
+- SSM SecureString parameter for service account password (`/inf/palegacysharedservices/awslmsvc/password` — both regions)
 - Update `ad_directory_id_use1` / `ad_directory_id_usw2` in `palegacysharedservices.tfvars` to the new connector directory IDs
 - Populate `ad_dns_ip_use1` / `ad_dns_ip_usw2` with the connector DC IPs
 - Add `directoryOU` back to SSM association parameters (cross-account `ds:CreateComputer` limitation goes away with an owned connector)
@@ -239,19 +241,19 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 
 | # | Item | Owner | Blocking? |
 |---|---|---|---|
-| 1 | **PR 163079** (cloud-foundation-configs — subnets, endpoints, AD DNS IP vars) | Reviewer | **Yes** — spoke-networking must apply before instances deploy |
+| 1 | ~~**PR 163079** (cloud-foundation-configs — subnets, endpoints, AD DNS IP vars)~~ | ~~Reviewer~~ | **Done** — merged as PR 163895 (fix/palegacy-subnet-az-mapping → main) 2026-06-25 |
 | 2 | **PR 163174** (cloud-foundation-palegacysharedservices — full module) | Reviewer | **Yes** — main deploy PR |
-| 3 | **Run spoke-networking pipeline** for PALegacySharedServices-use1 and usw2 | CloudOps | **Yes** — creates pri-sub-3-INFWS subnets and DS endpoint |
-| 4 | **AD Connector CIDRs confirmed** — secondary CIDRs `10.0.15.0/24` (USE1) and `10.1.15.0/24` (USW2) added to networking configs | ~~Aarron Lacey~~ | Resolved |
-| 5 | **AD service account** for connector (`svc-adconnector` or similar) with rights to create computer objects in PALegacy OUs | cloud.lcl AD team | **Yes** — needed before connector deploys |
-| 6 | **Write AD Connector Terraform** — new VPCs, connector resource, SSM secret | CloudOps | Blocked on items 4 + 5 |
-| 7 | **Update tfvars** with connector directory IDs and DC IPs once connector is deployed | CloudOps | Blocked on item 6 |
-| 8 | **Redeploy palegacysharedservices** (deploy pipeline) | CloudOps | Blocked on items 3 + 7 |
-| 9 | **Enable LM UBS** — set `lm_ubs_enabled = true`, run `register-identity-provider` CLI step | CloudOps | Blocked on item 8 |
-| 10 | **Add `directoryOU` back** to SSM association parameters once connector is owned by this account | CloudOps | Blocked on item 7 |
-| 11 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | Blocked on item 4 |
-| 12 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group → LM subscriptions | CloudOps | No — manual runbook step covers it initially |
-| 13 | **Create `awslmsvc` AD service account** — `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl`, password >30 chars, store in SSM SecureString | cloud.lcl AD team + CloudOps | Yes — needed before AD Connector deploys |
+| 3 | ~~**Run spoke-networking pipeline** for PALegacySharedServices-use1, usw2, Alternate-USE1, Alternate-USW2~~ | ~~CloudOps~~ | **Done** — all four stacks applied 2026-06-25. vpc-endpoints → main merged as PR 164063 |
+| 4 | ~~**AD Connector CIDRs confirmed**~~ | ~~Aarron Lacey~~ | **Done** — confirmed 06/18/2026; separate VPCs required and deployed |
+| 5 | **AD service account `awslmsvc`** — rights to create computer objects in PALegacy OUs | cloud.lcl AD team | **Yes** — needed before connector deploys |
+| 6 | **Write AD Connector Terraform** — ~~new VPCs~~, connector resource, SSM secret | CloudOps | Partially done — VPCs deployed; `aws_directory_service_connector` resource still needed in `cloud-foundation-palegacysharedservices` |
+| 7 | **Populate SSM SecureString** `/inf/palegacysharedservices/awslmsvc/password` in us-east-1 and us-west-2 | CloudOps | **Yes** — must exist before AD Connector Terraform apply |
+| 8 | **Update tfvars** with connector directory IDs and DC IPs once connector is deployed | CloudOps | Blocked on items 6 + 7 |
+| 9 | **Redeploy palegacysharedservices** (deploy pipeline) | CloudOps | Blocked on items 2 + 8 |
+| 10 | **Enable LM UBS** — set `lm_ubs_enabled = true`, run `register-identity-provider` CLI step | CloudOps | Blocked on item 9 |
+| 11 | **Add `directoryOU` back** to SSM association parameters once connector is owned by this account | CloudOps | Blocked on item 8 |
+| 12 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | Blocked on item 6 |
+| 13 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group → LM subscriptions | CloudOps | No — manual runbook step covers it initially |
 | 14 | **Explore `awslmsvc` credential rotation** — Secrets Manager rotation Lambda updating SSM + AD; not required for initial deploy | CloudOps | No |
 | 15 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after domain join working |
 | 16 | **AD: create `OU=BastionHosts,OU=Resources`** and `R_BH_Cloud_Access` group; grant RDS collection access (PBI 1531541) | cloud.lcl AD team | No — after domain join working |
