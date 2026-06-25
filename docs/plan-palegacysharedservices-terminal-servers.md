@@ -242,14 +242,14 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | # | Item | Owner | Blocking? |
 |---|---|---|---|
 | 1 | ~~**PR 163079** (cloud-foundation-configs — subnets, endpoints, AD DNS IP vars)~~ | ~~Reviewer~~ | **Done** — merged as PR 163895 (fix/palegacy-subnet-az-mapping → main) 2026-06-25 |
-| 2 | **PR 163174** (cloud-foundation-palegacysharedservices — full module) | Reviewer | **Yes** — main deploy PR |
+| 2 | ~~**PR 163174** (cloud-foundation-palegacysharedservices — full module)~~ | ~~Reviewer~~ | **Done** — merged |
 | 3 | ~~**Run spoke-networking pipeline** for PALegacySharedServices-use1, usw2, Alternate-USE1, Alternate-USW2~~ | ~~CloudOps~~ | **Done** — all four stacks applied 2026-06-25. vpc-endpoints → main merged as PR 164063 |
 | 4 | ~~**AD Connector CIDRs confirmed**~~ | ~~Aarron Lacey~~ | **Done** — confirmed 06/18/2026; separate VPCs required and deployed |
-| 5 | **AD service account `awslmsvc`** — rights to create computer objects in PALegacy OUs | cloud.lcl AD team | **Yes** — needed before connector deploys |
-| 6 | **Write AD Connector Terraform** — ~~new VPCs~~, connector resource, SSM secret | CloudOps | Partially done — VPCs deployed; `aws_directory_service_connector` resource still needed in `cloud-foundation-palegacysharedservices` |
-| 7 | **Populate SSM SecureString** `/inf/palegacysharedservices/awslmsvc/password` in us-east-1 and us-west-2 | CloudOps | **Yes** — must exist before AD Connector Terraform apply |
-| 8 | **Update tfvars** with connector directory IDs and DC IPs once connector is deployed | CloudOps | Blocked on items 6 + 7 |
-| 9 | **Redeploy palegacysharedservices** (deploy pipeline) | CloudOps | Blocked on items 2 + 8 |
+| 5 | ~~**AD service account `awslmsvc`**~~ | ~~cloud.lcl AD team~~ | **Done** — account created |
+| 6 | **Write AD Connector Terraform** — ~~new VPCs~~, connector resource, SSM secret | CloudOps | **Yes** — VPCs deployed; `aws_directory_service_connector` resource still needed in `cloud-foundation-palegacysharedservices` |
+| 7 | ~~**Populate SSM SecureString** `/inf/palegacysharedservices/awslmsvc/password` in us-east-1 and us-west-2~~ | ~~CloudOps~~ | **Done** |
+| 8 | **Update tfvars** with connector directory IDs and DC IPs once connector is deployed | CloudOps | Blocked on item 6 |
+| 9 | **Redeploy palegacysharedservices** (deploy pipeline) | CloudOps | Blocked on items 6 + 8 |
 | 10 | **Enable LM UBS** — set `lm_ubs_enabled = true`, run `register-identity-provider` CLI step | CloudOps | Blocked on item 9 |
 | 11 | **Add `directoryOU` back** to SSM association parameters once connector is owned by this account | CloudOps | Blocked on item 8 |
 | 12 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | Blocked on item 6 |
