@@ -268,9 +268,9 @@
     {
       "name": "CLOUD-Stardyne-SAAS",
       "accountId": "300512157817",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CLOUD-Stardyne-SAAS",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CLOUD-Stardyne-SAAS",
       "nicknames": [],
       "applications": []
     },
