@@ -1,0 +1,3 @@
+# Customers whose samid naming scheme is CUST+LASTNAME+FIRSTINITIAL (opposite of default CUST+FI+LASTNAME).
+# One site code per line. Lines starting with # are comments.
+hfm

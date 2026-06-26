@@ -1,0 +1,29 @@
+# 3-char site codes for customers on PLUS 5.2 / 9.2 (will also get PRD04/STG04 SQL access).
+# One code per line. Lines starting with # are comments.
+# SOURCE: $52_Customers from PLUSSysAdmins module / SharePoint Customers list.
+# UPDATE this file when new customers go live on 5.2.
+ala
+bre
+btv
+bue
+cis
+cmt
+eme
+eri
+gld
+glo
+hfm
+hic
+lmp
+mea
+oro
+pcg
+pet
+pou
+rhe
+sra
+srs
+sta
+tmk
+wat
+wch

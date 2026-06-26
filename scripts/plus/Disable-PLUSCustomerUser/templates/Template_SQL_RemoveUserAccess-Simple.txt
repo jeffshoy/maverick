@@ -1,0 +1,74 @@
+DECLARE
+ @SAMID CHAR(25) = 'ZZZsamidZZZ'
+ ,@DisableLogin int = ZZZRemoveLogin01ZZZ
+ ,@RemoveSectbAccess int = ZZZRemoveSectbAccessZZZ
+ ,@Domain CHAR(6) = 'ASPGOV'	 /* don't change this line unless needed */
+ ,@CMD VARCHAR(max)
+ ,@viewnm CHAR(7)
+ ,@IsFinanceDB int = 0
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+/**** PER DB ITERATIONS BEGIN HERE - CHANGE NOTHING BELOW THIS LINE WHEN EXECUTING ****/
+	DECLARE @domainSamid CHAR(42) = (@Domain + '\' + @SAMID)
+	PRINT 'SAMID = [' + rtrim(@SAMID) + ']'
+
+	/* IS IT A FINANCE DB */
+	IF ((DB_NAME() LIKE '%finplus%' OR DB_NAME() LIKE '%finpro%') AND DB_NAME() NOT LIKE '%[_]%') BEGIN  SET @IsFinanceDB = 1 ; PRINT 'FINANCE DB'  END
+
+	/* GET UID */
+	DECLARE @uid CHAR(8) = (SELECT spiuser FROM sectb_crosswalk WHERE winuser = @SAMID AND windomain = @Domain)
+	PRINT 'UID = [' + @uid + ']'
+	IF(@uid IS NULL) print '@uid is NULL, so the SECTB tables will fail... so logic in this script will skip those entirely, otherwise all others will fail because of them... FIX IT, THEN RE-RUN THIS'
+
+	/* DB VIEWS */
+	IF (@IsFinanceDB=1) BEGIN  IF EXISTS (SELECT s.name,v.name FROM [sys].[views] v INNER JOIN [sys].[schemas] s ON v.schema_id=s.schema_id WHERE s.name LIKE ('%'+RTRIM(@SAMID)+'%')) BEGIN  SELECT @CMD = COALESCE(@CMD, N'') + N'DROP VIEW '+QUOTENAME(s.name)+'.' + QUOTENAME(v.name) + N';' + CHAR(13) FROM [sys].[views] v INNER JOIN [sys].[schemas] s ON v.schema_id=s.schema_id WHERE s.name LIKE ('%'+RTRIM(@SAMID)+'%') ; SET @CMD = 'USE ' + QUOTENAME(db_name()) + ' ; ' + @CMD ; EXEC (@CMD)  END  END
+
+	/* DB TABLES... there shouldn't be any, but if there are, but if so drop them... would need to be done before dropping the DB USER/SCHEMA as that would be attached to the table */
+	IF EXISTS (SELECT schema_name(schema_id),name FROM sys.tables WHERE schema_name(schema_id) = @SAMID)  BEGIN  SELECT @CMD = COALESCE(@CMD, N'') + N'DROP TABLE ['+RTRIM(@SAMID)+'].' + QUOTENAME(TABLE_NAME) + N';' + CHAR(13) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = @SAMID and TABLE_TYPE = 'BASE TABLE' ; SET @CMD = 'USE ' + QUOTENAME(db_name()) + ' ; ' + @CMD ; EXEC (@CMD)  END
+
+	/* DB ROLES*/
+		IF OBJECT_ID('tempdb..#temptbl_RemoveUsers') IS NOT NULL DROP TABLE #temptbl_RemoveUsers
+		CREATE TABLE #temptbl_RemoveUsers(rolename CHAR(42))
+		INSERT INTO #temptbl_RemoveUsers(rolename)
+		SELECT DP1.name AS DatabaseRoleName FROM sys.database_role_members AS DRM RIGHT OUTER JOIN sys.database_principals AS DP1  ON DRM.role_principal_id = DP1.principal_id LEFT OUTER JOIN sys.database_principals AS DP2  ON DRM.member_principal_id = DP2.principal_id WHERE DP1.type = 'R' and DP2.name LIKE ('%'+RTRIM(@SAMID)+'%') ORDER BY DP1.name
+	IF EXISTS (SELECT * FROM #temptbl_RemoveUsers WHERE rolename='PLUS_datareader') BEGIN SET @CMD = 'USE ['+db_name()+'] ; EXEC sp_droprolemember ''PLUS_datareader'',''' + RTRIM(@SAMID) + ''''; EXEC (@CMD)  END
+	IF EXISTS (SELECT * FROM #temptbl_RemoveUsers WHERE rolename='PLUS_datawriter') BEGIN SET @CMD = 'USE ['+db_name()+'] ; EXEC sp_droprolemember ''PLUS_datawriter'',''' + RTRIM(@SAMID) + ''''; EXEC (@CMD)  END
+	IF EXISTS (SELECT * FROM #temptbl_RemoveUsers WHERE rolename='PLUS_admin') BEGIN SET @CMD = 'USE ['+db_name()+'] ; EXEC sp_droprolemember ''PLUS_admin'',''' + RTRIM(@SAMID) + ''''; EXEC (@CMD)  END
+	IF EXISTS (SELECT * FROM #temptbl_RemoveUsers WHERE rolename='db_ddladmin') BEGIN SET @CMD = 'USE ['+db_name()+'] ; EXEC sp_droprolemember ''db_ddladmin'',''' + RTRIM(@SAMID) + ''''; EXEC (@CMD)  END
+		DROP TABLE #temptbl_RemoveUsers
+	
+	/* DB SCHEMA */
+	IF EXISTS (SELECT name FROM sys.schemas WHERE name = @SAMID) BEGIN SET @CMD = 'USE ['+db_name()+'] ; DROP SCHEMA ['+RTRIM(@SAMID)+']' ; EXEC (@CMD)  END
+	IF EXISTS (SELECT name FROM sys.schemas WHERE name = @domainSamid) BEGIN SET @CMD = 'USE ['+db_name()+'] ; DROP SCHEMA ['+RTRIM(@domainSamid)+']' ; EXEC (@CMD)  END
+
+	/* DB USER */
+	IF EXISTS (SELECT * FROM [sys].[database_principals] d INNER JOIN sys.server_principals s ON d.sid=s.sid WHERE d.name LIKE ('%'+RTRIM(@SAMID)+'%')) BEGIN SET @CMD = 'USE ['+db_name()+'] ; DROP USER ['+RTRIM(@SAMID)+']' ; EXEC (@CMD)  END
+	IF EXISTS (SELECT * FROM [sys].[database_principals] d INNER JOIN sys.server_principals s ON d.sid=s.sid WHERE d.name LIKE ('%'+RTRIM(@domainSamid)+'%')) BEGIN SET @CMD = 'USE ['+db_name()+'] ; DROP USER ['+RTRIM(@domainSamid)+']' ; EXEC (@CMD)  END
+	IF EXISTS (SELECT * FROM [sys].[database_principals] WHERE LOWER(name) LIKE ('%'+RTRIM(LOWER(@SAMID))+'%')) BEGIN SET @CMD = 'USE ['+db_name()+'] ; DROP USER ['+RTRIM((SELECT name FROM [sys].[database_principals] WHERE LOWER(name) LIKE ('%'+RTRIM(LOWER(@SAMID))+'%')))+']' ; EXEC (@CMD)  END
+
+	IF(@uid IS NOT NULL)
+	BEGIN
+		/* SECTB_USRVIW */
+		IF (@IsFinanceDB=1) BEGIN  IF EXISTS (SELECT * FROM sectb_usrviw WHERE user_id = @uid) BEGIN  DELETE FROM sectb_usrviw WHERE user_id = @uid  END  END
+
+		/* SECTB_USER */
+		IF EXISTS (SELECT * FROM sectb_user WHERE uid = @uid) BEGIN DELETE FROM sectb_user WHERE uid = @uid END
+	
+		/* SECTB_ACCESS */
+		IF @RemoveSectbAccess = 1
+			BEGIN
+				IF EXISTS (SELECT * FROM sectb_access WHERE uid = @uid) BEGIN DELETE FROM sectb_access WHERE uid = @uid END
+			END
+	
+		/* SECTB_CROSSWALK */
+		IF EXISTS (SELECT * FROM sectb_crosswalk WHERE spiuser = @uid) BEGIN DELETE FROM sectb_crosswalk WHERE spiuser = @uid END
+	END
+	
+	/* SQL LOGIN */
+	--IF (@DisableLogin = 1) BEGIN
+	--	IF EXISTS (SELECT * FROM sys.server_principals WHERE name LIKE ('%'+RTRIM(@SAMID)+'%') ) BEGIN SELECT @CMD = COALESCE(@CMD, N'') + N'DROP LOGIN ['+RTRIM(name)+']' + N';' + CHAR(13) FROM sys.server_principals WHERE name LIKE ('%'+RTRIM(@SAMID)+'%') ; SET @CMD = 'USE [master] ; ' + @CMD ; EXEC (@CMD) END
+	--END
+
+	/* DONE */
+	PRINT 'DONE ' + @SAMID + ' on ' + @@SERVERNAME + ' at ' + CONVERT(nvarchar,getdate(),9) + '    (If there were any errors, they were probably bogus, so simply execute it again unchanged)'
+	
