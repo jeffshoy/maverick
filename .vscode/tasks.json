@@ -72,6 +72,15 @@
       "problemMatcher": []
     },
     {
+      "label": "PLUS: DB Refresh",
+      "detail": "Backup PRD → restore to STG/TRN → run post-restore data refresh SQL",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/plus/PLUS-DBRefresh/Invoke-PLUSDBRefresh.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
       "label": "ADSSP: Test Connection",
       "type": "shell",
       "command": "pwsh",

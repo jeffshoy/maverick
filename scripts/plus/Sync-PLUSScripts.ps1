@@ -5,9 +5,12 @@
     Copy scripts/plus/ to C:\PLUS\Scripts\ on all PLUS RDSH servers.
 
 .DESCRIPTION
-    Idempotent. Safe to re-run after any script update. Copies the entire scripts/plus/
-    tree (config, scripts, templates, support launcher) to \\<server>\C$\PLUS\Scripts\
+    Idempotent. Safe to re-run after any script update. Copies the scripts/plus/ tree
+    (config, scripts, templates, support launcher) to \\<server>\C$\PLUS\Scripts\
     on all six RDSH servers. Requires admin share access (domain admin or delegated rights).
+
+    Dev-only folders (PLUS-DBRefresh\Examples, PLUS-DBRefresh\Tests) are excluded
+    from the RDSH copy — they are for developer reference only.
 
 .PARAMETER Servers
     Override the default list of six RDSH servers. Useful for staging to a subset.
@@ -44,6 +47,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Relative paths (from SourceRoot) that are dev-only and should not land on RDSH servers
+$devOnlyFolders = @(
+    'PLUS-DBRefresh\Examples',
+    'PLUS-DBRefresh\Tests'
+)
+
 $results = @()
 
 foreach ($server in $Servers) {
@@ -65,7 +74,13 @@ foreach ($server in $Servers) {
                 Write-Verbose "[$server] Created $unc"
             }
 
-            Copy-Item -Path "$SourceRoot\*" -Destination $unc -Recurse -Force -ErrorAction Stop
+            # Copy all top-level items except dev-only subfolders
+            Get-ChildItem -Path $SourceRoot | Where-Object {
+                $rel = $_.FullName.Substring($SourceRoot.Length).TrimStart('\')
+                $devOnlyFolders -notcontains $rel
+            } | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination $unc -Recurse -Force -ErrorAction Stop
+            }
             Write-Host "[$server] OK — synced to $unc" -ForegroundColor Green
             $results += [pscustomobject]@{ Server = $server; Status = 'OK' }
         } catch {
