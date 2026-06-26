@@ -32,7 +32,7 @@ Standalone replacement for `PLUS_CustomerUsers_QuickSetup "samid" -Reenable -Man
 
 ## Config files
 
-This script shares the same `config/` files as `New-PLUSCustomerUser`. The simplest setup is a symlink:
+This script shares the same `config/` directory as `New-PLUSCustomerUser`. The simplest setup is a symlink:
 
 ```powershell
 New-Item -ItemType SymbolicLink `
@@ -40,17 +40,11 @@ New-Item -ItemType SymbolicLink `
     -Target "..\New-PLUSCustomerUser\config"
 ```
 
-Or copy the folder if you prefer a standalone copy (remember to keep them in sync).
-
 ### Required files
 
 | File | Purpose |
 |------|---------|
-| `config/PLUSCustomers.txt` | Valid 3-char customer site codes |
-| `config/PLUS52Customers.txt` | Customers on the 5.2 platform (PRD04/STG04) |
-| `config/PLUSCustomersUIDLNFI.txt` | Customers using Last-Name-First-Initial samid format |
-| `config/CentroidCustomerOUMap.csv` | Maps site code → Centroid OU name |
-| `config/PLUSCustomerNames.csv` | Maps site code → display name + state |
+| `config/PLUSCustomers.csv` | Single source of truth — all customers with Platform, UIDLNFI, CentroidOU columns |
 | `templates/Template_SQL_GrantUserAccess.txt` | SQL grant template (grab from `\\CLD-PPLSRDS001.aspgov.pri\PLUS$\PS_EnvironmentAdmin\scriptTemplates\`) |
 
 ---
@@ -63,7 +57,7 @@ Or copy the folder if you prefer a standalone copy (remember to keep them in syn
 # Dry run (no changes made)
 .\Enable-PLUSCustomerUser.ps1 -Samid opakalvarado -Manager "Christopher Walkins" -WhatIf
 
-# Force 5.2 SQL envs regardless of PLUS52Customers.txt
+# Force 5.2 SQL envs regardless of PLUSCustomers.csv Platform column
 .\Enable-PLUSCustomerUser.ps1 -Samid opakalvarado -Is52Customer
 ```
 

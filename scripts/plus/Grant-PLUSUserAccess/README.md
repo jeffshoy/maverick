@@ -38,8 +38,7 @@ dropped user permissions, or when a step was skipped during `New-PLUSCustomerUse
 
 | File | Purpose |
 |------|---------|
-| `config/PLUSCustomers.txt` | Valid 3-char customer site codes |
-| `config/PLUS52Customers.txt` | Customers on the 5.2 platform (PRD04/STG04) |
+| `config/PLUSCustomers.csv` | Single source of truth — all customers with Platform column for 5.2 detection |
 | `templates/Template_SQL_GrantUserAccess.txt` | SQL grant template (grab from `\\CLD-PPLSRDS001.aspgov.pri\PLUS$\PS_EnvironmentAdmin\scriptTemplates\`) |
 
 The `config/` folder is shared with `New-PLUSCustomerUser`. The simplest setup is a symlink:
@@ -61,7 +60,7 @@ New-Item -ItemType SymbolicLink `
 # Dry run (no changes made)
 .\Grant-PLUSUserAccess.ps1 -Samid opakalvarado -WhatIf
 
-# Force 5.2 SQL envs (PRD04/STG04) regardless of PLUS52Customers.txt
+# Force 5.2 SQL envs (PRD04/STG04) regardless of PLUSCustomers.csv Platform column
 .\Grant-PLUSUserAccess.ps1 -Samid opakalvarado -Is52Customer
 
 # Override DBA flag (grant User_DBA='Y' in the database)

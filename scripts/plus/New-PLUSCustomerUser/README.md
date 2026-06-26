@@ -34,14 +34,25 @@ Install-Module SqlServer -Scope CurrentUser
 
 If `ActiveDirectory` is missing, install RSAT on your workstation.
 
-### Config files you need to populate before first run
+### Config file
+
+All customer data lives in a single CSV: `config/PLUSCustomers.csv`.
+
+| Column | Values | Notes |
+|--------|--------|-------|
+| `SiteCode` | 3-char lowercase | Customer site code |
+| `Name` | Display string | Customer display name (used in AD + credentials block) |
+| `State` | 2-char abbrev | Used in AD `State`/`City` fields |
+| `Platform` | `52` or empty | Customers on PLUS 5.2 get PRD04/STG04 SQL envs; others get PRD01/STG01 |
+| `UIDLNFI` | `Y` or empty | Customers using Last-Name-First-Initial samid format |
+| `CentroidOU` | OU name or empty | Target OU for `centroid.cloud.lcl` account creation |
+
+To add a customer: add a row. To mark a customer as 5.2: set `Platform=52`. To add a Centroid mapping: set `CentroidOU` to the OU name. **This is the only file that needs editing for customer management.**
+
+### Template file (still required)
 
 | File | Action needed |
-|------|---------------|
-| `config/PLUSCustomers.txt` | Verify this list matches current active customers. Add/remove as needed. |
-| `config/PLUS52Customers.txt` | Populate with current 5.2-live customer site codes (one per line). Source: SharePoint Customers list (`5.2_Status = Live/Prod`). |
-| `config/PLUSCustomerNames.csv` | Populate with three columns: `SiteCode,Name,State`. Generate via `PLUS_GetCustName` loop (see README section below) or copy from the legacy module's data directory. |
-| `config/CentroidCustomerOUMap.csv` | Already seeded with TMK. Add a row for each customer migrated to centroid.cloud.lcl. |
+|------|--------------|
 | `templates/Template_SQL_GrantUserAccess.txt` | **Copy from** `\\CLD-PPLSRDS001.aspgov.pri\PLUS$\PS_EnvironmentAdmin\scriptTemplates\Template_SQL_GrantUserAccess.txt`. |
 
 ---
@@ -70,7 +81,7 @@ If `ActiveDirectory` is missing, install RSAT on your workstation.
 | `-MiddleInitial` | (none) | Used as a tiebreaker if the default samid is taken on aspgov.pri |
 | `-IsUserDBA` | false | Grants `User_DBA='Y'` in the PLUS databases (customer admin level) |
 | `-ExistingUID` | (auto) | Override the derived employeeID — use when the person already has a record in the customer DBs (migrations) |
-| `-Is52Customer` | auto-detected | Force 5.2 SQL envs (PRD04/STG04) even if not in `PLUS52Customers.txt` |
+| `-Is52Customer` | auto-detected | Force 5.2 SQL envs (PRD04/STG04) even if `Platform` is not `52` in `PLUSCustomers.csv` |
 | `-SamidOverride` | (auto) | Skip automatic samid generation entirely |
 | `-Verbose` | (off) | Print detailed step-by-step output |
 
@@ -161,11 +172,7 @@ New-PLUSCustomerUser/
 ├── New-PLUSCustomerUser.ps1
 ├── README.md
 ├── config/
-│   ├── PLUSCustomers.txt            # all active 3-char site codes
-│   ├── PLUS52Customers.txt          # customers on 5.2 (PRD04/STG04 SQL envs)
-│   ├── PLUSCustomersUIDLNFI.txt     # customers using LastName+FirstInitial naming (just "hfm")
-│   ├── CentroidCustomerOUMap.csv    # cust -> Centroid OU name mapping
-│   └── PLUSCustomerNames.csv        # cust -> full customer name + state
+│   └── PLUSCustomers.csv            # single source of truth: SiteCode,Name,State,Platform,UIDLNFI,CentroidOU
 └── templates/
     └── Template_SQL_GrantUserAccess.txt
 ```
@@ -175,8 +182,8 @@ New-PLUSCustomerUser/
 ## Verification checklist (before first live run)
 
 1. **Module preflight** — `Get-Module -ListAvailable ActiveDirectory, SqlServer` returns both.
-2. **Config load** — run with `-WhatIf -Verbose` against a known-good customer; confirm counts: `Loaded X customers, Y 5.2 customers...`.
-3. **Centroid CSV** — `Import-Csv .\config\CentroidCustomerOUMap.csv | Format-Table` shows TMK row intact.
+2. **Config load** — run with `-WhatIf -Verbose` against a known-good customer; confirm counts: `Loaded X customers (Y on 5.2, Z LNFI), W Centroid mappings`.
+3. **Config CSV** — `Import-Csv .\config\PLUSCustomers.csv | Format-Table` shows all customers with expected Platform/CentroidOU values.
 4. **WhatIf dry run** — run against TMK with `-WhatIf`; verify aspgov DN, centroid DN, SQL instances, and share paths in output. No writes.
 5. **Live test run** — use a customer code that's safe to dirty (coordinate cleanup). Confirm after run:
    - aspgov user in correct OU, member of `<CUST>_PLUS`, has `msDS-cloudExtensionAttribute18 = IsPLUSCustAdmin=FALSE`
@@ -189,7 +196,7 @@ New-PLUSCustomerUser/
 7. **Failure tests**:
    - Invalid customer code → fails before any AD touch
    - Existing samid → fails with clear message before any other resource is touched
-   - Customer not in `CentroidCustomerOUMap.csv` → completes aspgov + SQL + folders; centroid shows `SKIPPED-no-OU-mapping`
+   - Customer with no `CentroidOU` in `PLUSCustomers.csv` → completes aspgov + SQL + folders; centroid shows `SKIPPED-no-OU-mapping`
 
 ---
 
@@ -208,7 +215,7 @@ Remove-ADUser -Identity c_<samid> -Server centroid.cloud.lcl -Confirm:$false
 Remove-Item "\\plus-efp-fs.aspgov.com\Userfolders\<cust>\<samid>" -Recurse -Force
 Remove-Item "\\plus-efp-fs-train.aspgov.com\Userfolders\<cust>\<samid>" -Recurse -Force
 
-# 4. SQL: run REVOKE / DROP USER against PRD04/STG04 (5.2 customers) or PRD01/STG01 (non-5.2)
+# 4. SQL: run REVOKE / DROP USER — PRD04/STG04 for 5.2 customers, PRD01/STG01 for non-5.2
 #    The generated .sql files in %TEMP% are named GrantUserAccess_<samid>_<cust>_<env>_<ts>.sql
 #    for audit reference.
 ```
@@ -222,7 +229,7 @@ Remove-Item "\\plus-efp-fs-train.aspgov.com\Userfolders\<cust>\<samid>" -Recurse
 | 31-day account expiration set on new accounts | **Not set** | The expiration was cleared by the `AD-NewUserWatch.ps1` PSync watcher, which no longer exists. Setting it now would lock out new users with no automated relief. |
 | Credentials email (HTM + SMTP) | Console + clipboard only | Email step deferred to a future phase. Send credentials manually. |
 | `PLUS_CustomerUsers_QuickSetup` "rename-if-wrong-DN" repair | Not included | Fails fast on samid collision instead. |
-| SharePoint/PnP for customer list | Static `config/PLUSCustomers.txt` | No SP dependency on runner's machine. Update the file when customers change. |
+| SharePoint/PnP for customer list | Static `config/PLUSCustomers.csv` | No SP dependency on runner's machine. Update the CSV when customers change. |
 
 ---
 

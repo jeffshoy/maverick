@@ -33,7 +33,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 .PARAMETER Is52Customer
     Override automatic 5.2 detection. When set, PRD04/STG04 SQL envs are included.
-    By default the script checks config/PLUS52Customers.txt.
+    By default the script checks the Platform column in config/PLUSCustomers.csv.
 
 .PARAMETER IsUserDBA
     If set, the user is granted User_DBA='Y' in the database (customer admin level).
@@ -69,20 +69,15 @@ $ErrorActionPreference = 'Stop'
 function Get-PLUSConfig {
     param([string]$ConfigDir)
 
-    $cfg = @{
-        Customers   = @()
-        Customers52 = @()
+    $csvPath = Join-Path $ConfigDir 'PLUSCustomers.csv'
+    if (-not (Test-Path $csvPath)) { throw "Missing required config file: $csvPath" }
+
+    $rows = @(Import-Csv $csvPath | Where-Object { $_.SiteCode -match '\S' -and $_.SiteCode -notmatch '^\s*#' })
+
+    return @{
+        Customers   = @($rows | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        Customers52 = @($rows | Where-Object { $_.Platform.Trim() -eq '52' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
     }
-
-    $f = Join-Path $ConfigDir 'PLUSCustomers.txt'
-    if (-not (Test-Path $f)) { throw "Missing required config file: $f" }
-    $cfg.Customers = @(Get-Content $f | Where-Object { $_ -match '\S' -and $_ -notmatch '^\s*#' } | ForEach-Object { $_.Trim().ToLower() })
-
-    $f = Join-Path $ConfigDir 'PLUS52Customers.txt'
-    if (-not (Test-Path $f)) { throw "Missing required config file: $f" }
-    $cfg.Customers52 = @(Get-Content $f | Where-Object { $_ -match '\S' -and $_ -notmatch '^\s*#' } | ForEach-Object { $_.Trim().ToLower() })
-
-    return $cfg
 }
 
 function Add-PLUSGroupMembership {
@@ -254,7 +249,7 @@ $custL  = $samidL.Substring(0, 3)
 $custU  = $custL.ToUpper()
 
 if ($custL -notin $cfg.Customers) {
-    throw "ERROR: '$custU' is not a valid customer site code in config/PLUSCustomers.txt. Check the samid and try again."
+    throw "ERROR: '$custU' is not a valid customer site code in config/PLUSCustomers.csv. Check the samid and try again."
 }
 
 $bIs52 = $Is52Customer.IsPresent -or ($custL -in $cfg.Customers52)

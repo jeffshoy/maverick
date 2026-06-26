@@ -14,11 +14,10 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
     module. Does not require the legacy PowerShell profile or VM workstations.
 
     All configuration ships with the script under ./config/ and ./templates/.
-    You must supply PLUSCustomerNames.csv and Template_SQL_GrantUserAccess.txt before
-    running — see the README for where to grab them.
+    You must supply Template_SQL_GrantUserAccess.txt before running — see the README for where to grab it.
 
     What it does:
-      1. Validates the customer site code against config/PLUSCustomers.txt
+      1. Validates the customer site code against config/PLUSCustomers.csv
       2. Builds and collision-checks the samAccountName on aspgov.pri
       3. Creates the aspgov.pri AD user in OU=USERS,OU=<CUST>,OU=Customer,DC=aspgov,DC=pri
          and adds them to the <CUST>_PLUS AD group
@@ -58,7 +57,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 .PARAMETER Is52Customer
     Override automatic 5.2 detection. When set, PRD04/STG04 SQL envs are included.
-    By default the script checks config/PLUS52Customers.txt.
+    By default the script checks the Platform column in config/PLUSCustomers.csv.
 
 .PARAMETER SamidOverride
     Override the auto-generated samAccountName. Use with caution.
@@ -98,56 +97,33 @@ $ErrorActionPreference = 'Stop'
 
 function Get-PLUSConfig {
     <#
-    Loads the four config files from ./config/ relative to this script and returns
-    a hashtable with keys: Customers, Customers52, CustomersLNFI, CentroidOuMap, CustomerNames.
+    Loads config/PLUSCustomers.csv and returns a hashtable with keys:
+    Customers, Customers52, CustomersLNFI, CentroidOuMap, CustomerNames.
     #>
     param([string]$ConfigDir)
 
-    $cfg = @{
-        Customers     = @()
-        Customers52   = @()
-        CustomersLNFI = @()
-        CentroidOuMap = @()
-        CustomerNames = @{}
-    }
+    $csvPath = Join-Path $ConfigDir 'PLUSCustomers.csv'
+    if (-not (Test-Path $csvPath)) { throw "Missing required config file: $csvPath" }
 
-    # --- PLUSCustomers.txt ---
-    $f = Join-Path $ConfigDir 'PLUSCustomers.txt'
-    if (-not (Test-Path $f)) { throw "Missing required config file: $f" }
-    $cfg.Customers = @(Get-Content $f | Where-Object { $_ -match '\S' -and $_ -notmatch '^\s*#' } | ForEach-Object { $_.Trim().ToLower() })
+    $rows = @(Import-Csv $csvPath | Where-Object { $_.SiteCode -match '\S' -and $_.SiteCode -notmatch '^\s*#' })
 
-    # --- PLUS52Customers.txt ---
-    $f = Join-Path $ConfigDir 'PLUS52Customers.txt'
-    if (-not (Test-Path $f)) { throw "Missing required config file: $f" }
-    $cfg.Customers52 = @(Get-Content $f | Where-Object { $_ -match '\S' -and $_ -notmatch '^\s*#' } | ForEach-Object { $_.Trim().ToLower() })
-
-    # --- PLUSCustomersUIDLNFI.txt ---
-    $f = Join-Path $ConfigDir 'PLUSCustomersUIDLNFI.txt'
-    if (-not (Test-Path $f)) { throw "Missing required config file: $f" }
-    $cfg.CustomersLNFI = @(Get-Content $f | Where-Object { $_ -match '\S' -and $_ -notmatch '^\s*#' } | ForEach-Object { $_.Trim().ToLower() })
-
-    # --- CentroidCustomerOUMap.csv ---
-    $f = Join-Path $ConfigDir 'CentroidCustomerOUMap.csv'
-    if (Test-Path $f) {
-        $cfg.CentroidOuMap = Import-Csv $f
-    } else {
-        Write-Warning "CentroidCustomerOUMap.csv not found at $f — Centroid creation will be skipped for all customers."
-    }
-
-    # --- PLUSCustomerNames.csv ---
-    $f = Join-Path $ConfigDir 'PLUSCustomerNames.csv'
-    if (Test-Path $f) {
-        Import-Csv $f | Where-Object { $_.SiteCode -notmatch '^\s*#' } | ForEach-Object {
-            $cfg.CustomerNames[$_.SiteCode.Trim().ToLower()] = [pscustomobject]@{
-                Name  = $_.Name.Trim()
-                State = $_.State.Trim()
-            }
+    $names = @{}
+    $rows | Where-Object { $_.Name -match '\S' } | ForEach-Object {
+        $names[$_.SiteCode.Trim().ToLower()] = [pscustomobject]@{
+            Name  = $_.Name.Trim()
+            State = $_.State.Trim()
         }
-    } else {
-        Write-Warning "PLUSCustomerNames.csv not found at $f — customer display name will fall back to site code."
     }
 
-    return $cfg
+    return @{
+        Customers     = @($rows | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        Customers52   = @($rows | Where-Object { $_.Platform.Trim() -eq '52' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        CustomersLNFI = @($rows | Where-Object { $_.UIDLNFI.Trim()  -eq 'Y'  } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        CentroidOuMap = @($rows | Where-Object { $_.CentroidOU -match '\S' } | ForEach-Object {
+            [pscustomobject]@{ cust = $_.SiteCode.Trim().ToLower(); CentroidCustomerOU = $_.CentroidOU.Trim() }
+        })
+        CustomerNames = $names
+    }
 }
 
 function Resolve-PLUSSamid {
@@ -588,7 +564,7 @@ $sqlInstances = @{
 Write-Verbose 'Loading configuration...'
 $cfg = Get-PLUSConfig -ConfigDir $configDir
 
-Write-Verbose ("Loaded {0} customers, {1} 5.2 customers, {2} LNFI customers, {3} Centroid mappings" -f
+Write-Verbose ("Loaded {0} customers ({1} on 5.2, {2} LNFI), {3} Centroid mappings" -f
     $cfg.Customers.Count, $cfg.Customers52.Count, $cfg.CustomersLNFI.Count, $cfg.CentroidOuMap.Count)
 
 # ---- Step 1: Normalize and validate inputs ----------------------------------
@@ -601,17 +577,17 @@ $custL         = $Cust.Trim().ToLower()
 $custU         = $custL.ToUpper()
 
 if ($custL -notin $cfg.Customers) {
-    throw "ERROR: '$custU' is not a valid customer site code in config/PLUSCustomers.txt. Check the code and try again."
+    throw "ERROR: '$custU' is not a valid customer site code in config/PLUSCustomers.csv. Check the code and try again."
 }
 
 $bIs52 = $Is52Customer.IsPresent -or ($custL -in $cfg.Customers52)
 
-# Resolve customer name + state (from PLUSCustomerNames.csv, fallback to site code)
+# Resolve customer name + state (from PLUSCustomers.csv Name/State columns, fallback to site code)
 if ($cfg.CustomerNames.ContainsKey($custL)) {
     $custName  = $cfg.CustomerNames[$custL].Name
     $custState = $cfg.CustomerNames[$custL].State
 } else {
-    Write-Warning "No customer name found for '$custU' in PLUSCustomerNames.csv — using site code as display name. Populate the CSV for better output."
+    Write-Warning "No customer name found for '$custU' in PLUSCustomers.csv — using site code as display name. Add Name/State to the CSV for better output."
     $custName  = $custU
     $custState = ''
 }
