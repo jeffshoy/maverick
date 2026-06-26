@@ -24,8 +24,8 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
          City, UPN, msDS-cloudExtensionAttribute18)
       3. Optionally sets a Manager on the AD account (must be in the same OU)
       4. Creates/verifies rpt folders on prod and train file servers
-      5. Re-grants SQL access via Template_SQL_GrantUserAccess.txt on PRD01+STG01 (always)
-         and PRD04+STG04 (if customer is in config/PLUS52Customers.txt or -Is52Customer is set)
+      5. Re-grants SQL access via Template_SQL_GrantUserAccess.txt on PRD04+STG04 (5.2 customers)
+         or PRD01+STG01 (non-5.2 customers) — never both; 5.2 customers have no presence on PRD01/STG01
       6. Ensures the centroid.cloud.lcl c_<samid> account exists and is enabled
       7. Resets the aspgov.pri password, outputs the credentials block to console and clipboard
 

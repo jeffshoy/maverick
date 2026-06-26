@@ -24,8 +24,8 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
          and adds them to the <CUST>_PLUS AD group
       4. Sets msDS-cloudExtensionAttribute18 = IsPLUSCustAdmin=FALSE on the new account
       5. Creates report folders: \\plus-efp-fs[.|-train.]\aspgov.com\Userfolders[52|52TRN]\<cust>\<samid>\rpt
-      6. Grants SQL access via Template_SQL_GrantUserAccess.txt on PRD01+STG01 (always)
-         and PRD04+STG04 (if customer is in config/PLUS52Customers.txt or -Is52Customer is set)
+      6. Grants SQL access via Template_SQL_GrantUserAccess.txt on PRD04+STG04 (5.2 customers)
+         or PRD01+STG01 (non-5.2 customers) — never both; 5.2 customers have no presence on PRD01/STG01
       7. Creates c_<samid> on centroid.cloud.lcl (skips gracefully if no OU mapping exists)
       8. Outputs the credentials block to console and copies it to clipboard
 

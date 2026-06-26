@@ -12,7 +12,7 @@ No VM workstations, no legacy PowerShell profile, no PSync, no Rubrik, no VMware
 2. Adds the user to the `<CUST>_PLUS` AD group
 3. Sets `msDS-cloudExtensionAttribute18 = IsPLUSCustAdmin=FALSE` on the new account
 4. Creates `rpt` folders on the PLUS file servers (prod + train only for customer users)
-5. Grants SQL access on **PRD01 + STG01** (always) and **PRD04 + STG04** (for 5.2 customers)
+5. Grants SQL access on **PRD04 + STG04** (5.2 customers) or **PRD01 + STG01** (non-5.2) — never both
 6. Creates **c\_\<samid\>** on **centroid.cloud.lcl** (skips gracefully if no OU mapping exists)
 7. Prints credentials block to console and copies it to clipboard
 
@@ -85,8 +85,8 @@ The RDS server must be able to reach the following destinations:
 |---|---|---|---|
 | aspgov.pri DCs (e.g. `inf-svrdc101.aspgov.pri`) | 389, 3268, 88, 445 | TCP; 88 also UDP | LDAP, Global Catalog, Kerberos, SMB |
 | centroid.cloud.lcl DCs | 389, 3268, 88 | TCP; 88 also UDP | LDAP for Centroid user creation |
-| `CLD-PPLSDB001.aspgov.pri` (PRD01 SQL) | 1433 | TCP | SQL — always required |
-| `CLD-SPLSDB001.aspgov.pri` (STG01 SQL) | 1433 | TCP | SQL — always required |
+| `CLD-PPLSDB001.aspgov.pri` (PRD01 SQL) | 1433 | TCP | SQL — non-5.2 customers only |
+| `CLD-SPLSDB001.aspgov.pri` (STG01 SQL) | 1433 | TCP | SQL — non-5.2 customers only |
 | `CLD-PPLSDB004.aspgov.pri` (PRD04 SQL) | 1433 | TCP | SQL — 5.2 customers only |
 | `CLD-SPLSDB004.aspgov.pri` (STG04 SQL) | 1433 | TCP | SQL — 5.2 customers only |
 | `plus-efp-fs.aspgov.com` | 445 | TCP | SMB — prod rpt folder creation |
@@ -121,13 +121,13 @@ Create a dedicated AD security group **`PLUS-UserAdmin`** in aspgov.pri and add 
 
 Repeat the same process on `centroid.cloud.lcl` for the `OU=Customers` OU, coordinating with whoever manages that domain.
 
-### SQL — aspgov.pri databases (PRD01, STG01, and optionally PRD04/STG04)
+### SQL — aspgov.pri databases (PRD01/STG01 for non-5.2; PRD04/STG04 for 5.2)
 
 The script uses Windows Integrated Authentication (Kerberos) — no SQL password is stored anywhere. Support users' Windows identities must be granted SQL access.
 
 **Recommended (least privilege):**
 
-1. Add the `PLUS-UserAdmin` AD group as a SQL Login on each instance: `PRD01`, `STG01`, and `PRD04`/`STG04` if any Support users will handle 5.2 customers.
+1. Add the `PLUS-UserAdmin` AD group as a SQL Login on the instances your customers use: `PRD01`/`STG01` for non-5.2 customers, `PRD04`/`STG04` for 5.2 customers — or both if Support handles a mix.
 2. Have the DBA team review `templates/Template_SQL_GrantUserAccess.txt` and identify the exact stored procedures it calls.
 3. Grant `EXECUTE` on those specific procedures only — do **not** grant `db_owner`, `sysadmin`, or any `*FullAccess` role.
 
@@ -208,7 +208,7 @@ Remove-ADUser -Identity c_<samid> -Server centroid.cloud.lcl -Confirm:$false
 Remove-Item "\\plus-efp-fs.aspgov.com\Userfolders\<cust>\<samid>" -Recurse -Force
 Remove-Item "\\plus-efp-fs-train.aspgov.com\Userfolders\<cust>\<samid>" -Recurse -Force
 
-# 4. SQL: run REVOKE / DROP USER against PRD01/STG01 (and 04 envs if 5.2)
+# 4. SQL: run REVOKE / DROP USER against PRD04/STG04 (5.2 customers) or PRD01/STG01 (non-5.2)
 #    The generated .sql files in %TEMP% are named GrantUserAccess_<samid>_<cust>_<env>_<ts>.sql
 #    for audit reference.
 ```

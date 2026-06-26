@@ -11,7 +11,7 @@ Standalone replacement for `PLUS_CustomerUsers_QuickSetup "samid" -Reenable -Man
 3. Sets `Manager` on the account if supplied (must be in the same OU)
 4. Resets the password to `Welcome<FI><LI>!<MMDD>`
 5. Creates any missing rpt folders on prod and train file servers
-6. Re-grants SQL access (PRD01+STG01 always; PRD04+STG04 for 5.2 customers)
+6. Re-grants SQL access (PRD04+STG04 for 5.2 customers; PRD01+STG01 for non-5.2 — never both)
 7. Ensures the `c_<samid>` account on `centroid.cloud.lcl` exists and is enabled
 8. Outputs credentials to console and clipboard
 

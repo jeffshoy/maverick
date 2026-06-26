@@ -20,8 +20,8 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
     What it does:
       1. Validates the samid prefix against config/PLUSCustomers.txt
-      2. Removes the user from all customer databases on PRD01+STG01 (always) and
-         PRD04+STG04 (if customer is in config/PLUS52Customers.txt or -Is52Customer is set)
+      2. Removes the user from all customer databases on PRD04+STG04 (5.2 customers)
+         or PRD01+STG01 (non-5.2 customers) — never both; 5.2 customers have no presence on PRD01/STG01
          via Template_SQL_RemoveUserAccess-Simple.txt (removes DB user + SQL login)
       3. Removes the user from the <CUST>_PLUS AD group on aspgov.pri
       4. Disables the aspgov.pri AD account: sets Description, prepends Info field with

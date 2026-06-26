@@ -7,7 +7,7 @@ Standalone replacement for `PLUS_TerminateCustUser "samid" "CaseNo"` from the de
 ## What it does
 
 1. Validates the samid prefix against `config/PLUSCustomers.txt`
-2. Removes the user from all customer databases (PRD01+STG01; PRD04+STG04 for 5.2 customers) including SQL login removal
+2. Removes the user from all customer databases (PRD04+STG04 for 5.2 customers; PRD01+STG01 for non-5.2 — never both) including SQL login removal
 3. Removes the user from the `<CUST>_PLUS` AD group on aspgov.pri
 4. Disables the aspgov.pri account: sets `Description`, prepends `Info` field with who/when disabled, clears `AccountExpirationDate`
 5. Disables the `c_<samid>` account on centroid.cloud.lcl if it exists
