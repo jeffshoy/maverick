@@ -247,7 +247,7 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | 4 | ~~**AD Connector CIDRs confirmed**~~ | ~~Aarron Lacey~~ | **Done** — confirmed 06/18/2026; separate VPCs required and deployed |
 | 5 | ~~**AD service account**~~ | ~~cloud.lcl AD team~~ | **Done** — `awsadssvc` created and delegated `Create Computer Objects` on `OU=PALegacyUSE1` and `OU=PALegacyUSW2`. Note: `awslmsvc` was deleted. |
 | 6 | ~~**AD Connector Terraform**~~ — connector resource, SSM secret | ~~CloudOps~~ | **Done** — `aws_directory_service_directory` (ADConnector) deployed in USE1 as `d-9066755bec` (Active). Connector uses dedicated Alternate VPCs with 10.x CIDRs. |
-| 7 | ~~**Populate SSM SecureString** `/inf/palegacysharedservices/awsadssvc/password` in us-east-1 and us-west-2~~ | ~~CloudOps~~ | **Done** — parameter created in both regions. **Rotate password** — was briefly exposed in session history. |
+| 7 | ~~**Populate SSM SecureString** `/inf/palegacysharedservices/awsadssvc/password` in us-east-1 and us-west-2~~ | ~~CloudOps~~ | **Done** — parameter created in both regions. |
 | 8 | ~~**Update tfvars** with connector DC IPs and service account~~ | ~~CloudOps~~ | **Done** — `ad_connector_dns_ips_use1/usw2`, `ad_connector_username`, `ad_connector_password_ssm_path` set in `palegacysharedservices.tfvars` |
 | 9 | ~~**Deploy palegacysharedservices USE1**~~ (deploy pipeline) | ~~CloudOps~~ | **Done** — pipeline applied 2026-06-28. INF-WSRDS001/002/003 and INF-WSSQL001 deployed and domain-joined to `OU=PALegacyUSE1`. |
 | 9a | **Deploy palegacysharedservices USW2** | CloudOps | **Blocked** — see networking blocker #1 below. |
@@ -255,11 +255,8 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | 11 | ~~**Add `directoryOU` back** to SSM association parameters~~ | ~~CloudOps~~ | **Done** — `directoryOU` added to `AWS-JoinDirectoryServiceDomain` parameters. All USE1 instances joined to correct OUs. |
 | 12 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | No — deferred; FTDv controls access |
 | 13 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group → LM subscriptions | CloudOps | No — manual runbook step covers it initially |
-| 14 | **Rotate `awsadssvc` password** — update SSM parameter in both regions, run `aws ds update-directory-setup` | CloudOps | **Yes** — password was exposed in session history |
-| 15 | **Ansible: add `R_AWSCOMM_SSO_cst-comm-infrdsaccess`** to Remote Desktop Users on all instances | CloudOps | Blocked on networking blocker #2 (domain connectivity needed for domain group resolution) |
-| 16 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after domain join working |
-| 17 | **AD: create `OU=BastionHosts,OU=Resources`** and `R_BH_Cloud_Access` group; grant RDS collection access (PBI 1531541) | cloud.lcl AD team | No — after domain join working |
-| 18 | **Networking: codify TGW attachment second-AZ subnets** — both regions modified manually today; networking Terraform stack needs to match | Networking | No — cosmetic until next networking stack apply |
+| 14 | **Ansible: add `R_AWSCOMM_SSO_cst-comm-infrdsaccess`** to Remote Desktop Users on all instances | CloudOps | Blocked on networking blocker #2 (domain connectivity needed for domain group resolution) |
+| 15 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after domain join working |
 
 ---
 
