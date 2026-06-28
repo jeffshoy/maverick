@@ -1,0 +1,87 @@
+USE [ZZZDestDBNameZZZ]
+GO
+DECLARE @ENV varchar(10),  @WFAPUrlFx varchar(10), @WFWebUrlFx varchar(10), @ENVUrlfx varchar(10),  @APPUrlfx varchar(10),  @Cogfx varchar(10),  @CUST nvarchar(3) = left(DB_Name(),3),  @DBver nvarchar(2), @PRODver varchar(3), @COGver nvarchar(2)='11' , @eFormURLprt nvarchar(3) = 'Workflow/eForms/Web/', @wfSrvcPrt nvarchar(40) = 'ZZZCustZZZ' 
+DECLARE @sfxProdVer varchar(3) = '', @PODserver varchar(40)
+DECLARE @ThisInstanceName nvarchar(100) = convert(nvarchar,(SELECT SERVERPROPERTY('ServerName')))
+
+IF (DB_Name() LIKE '%finpro%') BEGIN SET @DBver = '52' ;  END 
+IF (DB_Name() LIKE '%finplus') BEGIN SET @DBver = '50' END  ; 
+IF (DB_Name() LIKE '%finplus51') BEGIN SET @DBver = '51' END 
+IF (DB_Name() LIKE '%complus') BEGIN SET @DBver = '90' END  ; 
+IF (DB_Name() LIKE '%complus91' OR DB_Name() LIKE '%compro') BEGIN SET @DBver = '91' END 
+IF @DBver = '50' BEGIN SET @eFormURLprt = 'WebForms/'; SET @wfSrvcPrt = 'ZZZDestDBNameZZZ' END 
+SET @PRODver = replace(@DBver,left(@DBver,1),left(@DBver,1)+'.')
+IF (@ThisInstanceName LIKE '%DPLS%') BEGIN SET @ENV ='DEV' ; SET @Cogfx = 'Dev' END 
+IF (@ThisInstanceName LIKE '%PPLS%') BEGIN SET @ENV ='LIVE' ; SET @Cogfx = 'Live' END 
+IF (@ThisInstanceName LIKE '%SPLS%') BEGIN SET @ENV ='STAGE' ; SET @Cogfx = 'Stage' END 
+IF (@ThisInstanceName LIKE '%TPLS%') BEGIN SET @ENV ='TEST' ; SET @Cogfx = 'Test' END 
+IF (@ThisInstanceName LIKE '%004%') BEGIN SET @sfxProdVer = '-52' END
+IF (DB_NAME() LIKE '%demo%') BEGIN SET @ENV = 'Demo'  END
+IF (@ENV = 'LIVE') SET @ENVUrlfx = '' ELSE SET @ENVUrlfx = '-'+lower(@ENV)
+IF (DB_NAME() LIKE '%trn%' OR DB_NAME() LIKE '%ye%') BEGIN SET @APPUrlfx ='-train' ; SET @Cogfx = 'Train' END ELSE SET @APPUrlfx = @ENVUrlfx 
+IF (DB_NAME() LIKE '%trn%') SET @ENV ='TRAINING' 
+DECLARE @COGSrvr char(40) ; SET @COGSrvr = (select crn_server from [CUSTOMERINFO].[efpcustomerinfo].[dbo].[CustomerProfile] where SiteCode = left(db_name(),3))
+DECLARE @CustomerName nvarchar(150) = (select rtrim(site_name) from [CUSTOMERINFO].efpcustomerinfo.dbo.CustomerProfile where SiteCode = @CUST) + ', ' + (select state_id from [CUSTOMERINFO].efpcustomerinfo.dbo.CustomerProfile where SiteCode = @CUST)  + '  (' + @Cogfx + ')'
+
+PRINT @ENV+'  '+@ENVUrlfx +'  '+ @APPUrlfx   +'  '+ @DBver   +'  '+ @PRODver   +'  '+   @sfxProdVer   +'  '+   @Cogfx   +'  '+  @COGSrvr  +   ' for '   +   DB_Name()   +   ' ('   +   @CustomerName   +  ')'  +  ' on '  +  @ThisInstanceName 
+SELECT @@SERVERNAME AS 'INSTANCE',DB_Name() as 'Database', @ENV as 'Environment', @ENVUrlfx as 'Env Suffix', @APPUrlfx as 'App/Workflow Suffix', @DBver as 'DB ver', @PRODver as 'Product ver', @Cogfx as 'Cognos DSN Suffix', @COGSrvr as 'Cognos Server', @CustomerName as 'Customer Name', @ThisInstanceName as 'Instance'
+
+ALTER USER [ZZZCustZZZ_webuser] WITH LOGIN = [ZZZCustZZZ_webuser] ; ALTER USER [ZZZCustZZZ_crnuser] WITH LOGIN = [ZZZCustZZZ_crnuser] ; 
+ALTER USER [crnuser] WITH LOGIN = [crnuser] 
+	IF EXISTS (SELECT name FROM sys.database_principals where LOWER(name) = 'ZZZCustZZZ_poduser') BEGIN DROP SCHEMA [ZZZCustZZZ_poduser] ; DROP USER [ZZZCustZZZ_poduser] END
+
+IF (@DBver != '52')
+ BEGIN 
+	PRINT 'DB Version= ' + @DBver
+	SET @WFWebUrlFx = 'plus-work-'
+	ALTER USER [webuser] WITH LOGIN = [webuser] ; 
+
+	IF (DB_Name() not LIKE '%[_]%')
+	  BEGIN
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.menutb_cfg
+		  UPDATE ZZZDestDBNameZZZ.dbo.menutb_cfg SET customer = LEFT(rtrim(replace(replace('ZZZCUSTZZZ PRODVERVAR ENVVAR ZZZRestoreDateTimeZZZ','ENVVAR',@ENV),'PRODVERVAR',@PRODver)), 34) , change_date='ZZZCurrentDateTimeZZZ', change_time='ZZZCurrentTimeZZZ', change_uid='ZZZCurrentUserZZZ'
+		   IF (db_name() LIKE '%xtrn%') BEGIN UPDATE ZZZDestDBNameZZZ.dbo.menutb_cfg SET customer = REPLACE(customer,'TRAINING','TRAINING #2') END
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.menutb_cfg
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.crn_cfg
+		   IF (@@SERVERNAME LIKE '%DB004%') BEGIN SET @COGSrvr = REPLACE(@COGSrvr,'cog-','cog11-') END
+		   UPDATE ZZZDestDBNameZZZ.dbo.crn_cfg SET dsn_name = replace(replace(replace(replace(replace(dsn_name,'Live',@Cogfx),'LIVE',@Cogfx),'Train',@Cogfx),'Stage',@Cogfx),'Dev',@Cogfx), crn_server=@COGSrvr, gateway_server=@COGSrvr, crn_version='Cognos10'
+		   IF (COL_LENGTH('ZZZDestDBNameZZZ.dbo.crn_cfg', 'change_date_time') IS NOT NULL) BEGIN  DECLARE @crnUPD nvarchar(max)='UPDATE crn_cfg SET change_date_time=''ZZZCurrentDateTimeZZZ'', change_uid=''ZZZCurrentUserZZZ''' ; EXEC (@crnUPD)  END
+		   IF (@COGSrvr LIKE '%cog11%') BEGIN UPDATE ZZZDestDBNameZZZ.dbo.crn_cfg SET crn_version = 'Cognos11', crn_desc = 'Cognos11' END
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.crn_cfg
+	  END
+	 
+	IF ((DB_Name() LIKE '%finplus%') AND (DB_Name() not LIKE '%[_]%'))
+	  BEGIN
+		SELECT db_name() AS 'DB',udf1 FROM ZZZDestDBNameZZZ.dbo.fincustom WHERE key_name = 'BCP BACKUP'
+		   UPDATE ZZZDestDBNameZZZ.dbo.fincustom SET udf1 = 'plus-efp-db' + @sfxProdVer + @ENVUrlfx + '.aspgov.com\plus' WHERE key_name = 'BCP BACKUP'
+		SELECT db_name() AS 'DB',udf1 FROM ZZZDestDBNameZZZ.dbo.fincustom WHERE key_name = 'BCP BACKUP'
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.web_profile WHERE val LIKE '%aspgov%'
+		   UPDATE ZZZDestDBNameZZZ.dbo.web_profile SET val = replace(replace(replace(val,'plus-efp-fs-stage.','plus-efp-fs'+@ENVUrlfx+'.'),'plus-efp-fs-dev.','plus-efp-fs'+@ENVUrlfx+'.'),'plus-efp-fs.','plus-efp-fs'+@ENVUrlfx+'.') --WHERE descript = 'EAC3BannerUrl' or descript = 'PayChkLogo'
+		   UPDATE ZZZDestDBNameZZZ.dbo.web_profile SET val = replace(replace(replace(val,'plus-ol-stage.','plus-ol'+@ENVUrlfx+'.'),'plus-ol-dev.','plus-ol'+@ENVUrlfx+'.'),'plus-ol.','plus-ol'+@ENVUrlfx+'.') --WHERE descript = 'EAC3BannerUrl' or descript = 'PayChkLogo'
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.web_profile WHERE val LIKE '%aspgov%'
+		IF @ENV = 'LIVE'  SET @WFAPUrlFx = lower(@CUST) ELSE SET @WFAPUrlFx = 'efp-' + @DBver 
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.workflow_config WHERE setting_key LIKE 'Company%' or setting_key LIKE '%Server' or setting_key LIKE 'BaseURL%' order by row_id
+		   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = @CustomerName WHERE setting_key = 'Company Name'
+		   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = 'https://plus-' + @WFAPUrlFx + @APPUrlfx + '.aspgov.com/' WHERE setting_key = 'AppServer'
+		   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = 'https://' + @WFWebUrlFx + @DBver + @ENVUrlfx + '.aspgov.com' WHERE setting_key = 'WebServer'
+		   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = 'relay.aspgov.com' WHERE setting_key = 'EmailServer'
+		   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = replace(setting_value,'ZZZSrcDBNameZZZ','ZZZDestDBNameZZZ')
+		SELECT db_name() AS 'DB',* FROM ZZZDestDBNameZZZ.dbo.workflow_config WHERE setting_key LIKE 'Company%' or setting_key LIKE '%Server' or setting_key LIKE 'BaseURL%' order by row_id
+
+		IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_createview') GRANT EXECUTE ON [dbo].[spi_createview] TO [PLUS_admin] ELSE PRINT 'Does Not Exist: spi_createview'
+		IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_dropview')   GRANT EXECUTE ON [dbo].[spi_dropview] TO [PLUS_admin]   ELSE PRINT 'Does Not Exist: spi_dropview'
+		IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_fnc_CreateHashValue') GRANT EXECUTE ON [dbo].[spi_fnc_CreateHashValue] TO [public] ELSE PRINT 'Does Not Exist: spi_fnc_CreateHashValue'
+		
+		-- so Support Team, Developers and Installers can write data, alter views, etc, using their CLOUD accounts with SSMS, but still not hork up SQL
+		IF (@@SERVERNAME LIKE '%DPLSDB%') 
+			BEGIN 
+				IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_createview') 
+					BEGIN
+						EXEC sp_addrolemember 'PLUS_admin','CLOUD\PLUS_team_ProductSupport'
+						EXEC sp_addrolemember 'PLUS_admin','CLOUD\PLUS_team_Developers'
+						EXEC sp_addrolemember 'PLUS_admin','CLOUD\PLUS_team_Installers'
+					END
+			END
+			
+	  END
+ END

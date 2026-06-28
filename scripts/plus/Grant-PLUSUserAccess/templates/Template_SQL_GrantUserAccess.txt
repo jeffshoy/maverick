@@ -1,0 +1,316 @@
+DECLARE 
+	@CUST NVARCHAR(5) = 'ZZZCustZZZ',			--- !!! Customer Account Code (3-5 chars) OR alphabetically by first letter: a b c e g h l m n o p q r s t v w y
+		@execSectbAccess INT = ZZZexecSectbAccessZZZ,		--1 to insert/UPDATE Sectb_access, 0 to NOT  (Does NOT include LogicMonitor)
+		@DOMAIN NVARCHAR(30) = 'ASPGOV',
+		@EXECUTENOW INT = 0,					--1 to execute now, 0 to just print)
+		@DOMID NVARCHAR(40),		--AD DOMAIN\samaccountname 
+		@FNAME NVARCHAR(30),		--First Name
+		@LNAME NVARCHAR(30),		--Last Name
+		@EMAILADDY NVARCHAR(100),	--Email Address
+		@SECTBUID NVARCHAR(8),		--sectb tables UID (user, crosswalk AND access) LEAVE =NULL TO SET DYNAMICALLY, OR EDIT TO MANUALLY OVERRIDE ... UID/SPIUSER has a max of 8 chars, the crosswalk table matches it to the full AD domain account, so this @SECTBUID can be anything AS long AS its unique... also make sure there are no duplicates
+		@SAMID NVARCHAR(30),		--AD SamAccountName
+		@ISCUSTADMIN CHAR(1) = 'N',				--user IS an Admin in Customer's App Environment?
+		@CurrentUser NVARCHAR(30) =LOWER(REPLACE(REPLACE(REPLACE(REPLACE(system_user,'CLOUD\',''),'ASPGOV\',''),'cloud\',''),'aspgov\','')),
+		@CurrentDate NVARCHAR(19) = FORMAT(GETDATE(),'yyyy-MM-dd 00:00:00'),
+		@CurrentTime NVARCHAR(19) = FORMAT(GETDATE(),'HH:mm:ss'),
+
+		@SQLCMD_Login NVARCHAR(max),
+		@SQLCMD_DB NVARCHAR(max),
+		@SQLCMD_DBUser NVARCHAR(max),
+		@SQLCMD_UsrViw NVARCHAR(max),
+		@SQLCMD_DBViews NVARCHAR(max),
+		@SQLCMDcom NVARCHAR(max),
+		@SQLCMDnotattach NVARCHAR(max),
+		@SQLCMD_sectb_access NVARCHAR(max),
+		@SQLCMDEND NVARCHAR(max),
+		@SQLCMDadmin NVARCHAR(max),
+		@SQLCMDlogicmon NVARCHAR(max),
+		@SQLCMD_FinPro NVARCHAR(max),
+		@SectbAccessMin_EFP NVARCHAR(4) = '550',		--sectb_access minimum resource code to get to Main Menu, FinancePLUS
+		@SectbAccessMin_ECP NVARCHAR(4) = '4901',		--sectb_access minimum resource code to get to Main Menu, CommunityPLUS
+		@DB_Name NVARCHAR(100),
+		@52sqllogin NVARCHAR(60) = 'nunya',
+		@cursor_count INT = 1,
+		@MYDATE NVARCHAR(19) = FORMAT(GETDATE(),'yyyy-MM-dd 00:00:00')
+SET @DOMAIN = UPPER(@DOMAIN)
+SET @CUST = UPPER(@CUST)
+SET NOCOUNT ON
+DECLARE @tbl_USERS TABLE (loginid NVARCHAR(30),fname NVARCHAR(20),lname NVARCHAR(60),emailaddy NVARCHAR(100),sectbuid NVARCHAR(8),IsDBA NVARCHAR(1))
+INSERT INTO @tbl_USERS (loginid,fname,lname,emailaddy,sectbuid,IsDBA)
+VALUES
+/*BEGINREGION_USERS*/
+	ZZZUsersInfoZZZ
+/*ENDREGION_USERS*/
+--SELECT * FROM @tbl_USERS
+DECLARE users_cursor CURSOR FOR SELECT * FROM @tbl_USERS
+OPEN users_cursor
+--per user begins here	
+FETCH NEXT FROM users_cursor INTO @DOMID,@FNAME,@LNAME,@EMAILADDY,@SECTBUID,@ISCUSTADMIN
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+			--extract samaccountname FROM AD login
+			SET @SAMID =REPLACE(@DOMID,'ASPGOV\','')
+
+			--dynamically SET NULL sectbuid (truncates samid to 8 chars)
+			IF (@SECTBUID IS NULL)
+				BEGIN
+					SET @SECTBUID = LOWER(@SAMID)
+					UPDATE @tbl_USERS SET sectbuid = @SECTBUID WHERE loginid = @DOMID
+				END
+
+			--correct name vars case
+			SET @FNAME = UPPER(@FNAME)
+			SET @LNAME = UPPER(@LNAME)
+
+			--show me what'cha workin' wit!
+			PRINT 'PRINT ''--- BEGIN user: ' + @FNAME + ' ' + @LNAME + ' = [' + @DOMID + '] (' + @SECTBUID + ') ----------------------------------------------------------------------------------------'' ; SET NOCOUNT ON
+			'
+
+			--always 1, except for certain peeps (ex. Cognos teams)
+			IF (@ISCUSTADMIN = 'Y') 
+				BEGIN 
+					SET @SQLCMDadmin = 'EXEC sp_addrolemember ''PLUS_admin'',''' + @SAMID + '''
+	EXEC sp_addrolemember ''PLUS_datawriter'',''' + @SAMID + '''
+	EXEC sp_addrolemember ''PLUS_datareader'',''' + @SAMID + '''
+	GO'
+				END
+			ELSE
+				BEGIN 
+					SET @SQLCMDadmin = 'EXEC sp_droprolemember ''PLUS_admin'',''' + @SAMID + '''
+	EXEC sp_addrolemember ''PLUS_datawriter'',''' + @SAMID + '''
+	EXEC sp_addrolemember ''PLUS_datareader'',''' + @SAMID + '''
+	GO'
+				END
+	
+			
+			--@SQLCMD_Login is for all DBs
+			SET @SQLCMD_Login = 
+	'USE [master]
+	IF NOT EXISTS (SELECT name FROM syslogins WHERE name = '''+@DOMID+''')
+		BEGIN
+			PRINT ''Creating SQL Login ' + quotename(@DOMID) + ' on ' + @@SERVERNAME + '''
+			CREATE LOGIN ' + quotename(@DOMID) + ' FROM WINDOWS WITH DEFAULT_DATABASE=[master]
+		END
+	ELSE
+		BEGIN
+			PRINT ''SQL Login ' + quotename(@DOMID) + ' already exists on ' + @@SERVERNAME + '''
+		END
+--------------------------------------------------------------------------------------------------------------
+'
+PRINT @SQLCMD_Login
+IF @EXECUTENOW = 1
+	BEGIN
+		EXEC (@SQLCMD_Login)
+	END
+
+DECLARE db_cursor CURSOR FOR SELECT name FROM master.sys.sysdatabases WHERE ZZZcursorwhereZZZ AND (SELECT DATABASEPROPERTYEX(name, 'Updateability')) = 'READ_WRITE' ORDER BY name
+OPEN db_cursor
+FETCH NEXT FROM db_cursor INTO @DB_Name
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+			SET @52sqllogin = LOWER(@CUST) + @SAMID + 'sql'
+			
+			SET @SQLCMD_DB = 
+			'USE ['+@DB_Name+']
+GO
+PRINT ''--------BEGIN ' + @SAMID + ' on [' + @DB_Name + ']---------------------------------------------------'''
+			SET @SQLCMD_DBUser = '
+	-- DB USER --------------------
+	IF NOT EXISTS (SELECT d.name,s.name FROM [' + @DB_Name + '].[sys].[database_principals] d INNER JOIN sys.server_principals s ON d.sid = s.sid WHERE d.name = ''' + @SAMID + ''' AND (s.name = ''' + @DOMID + ''' OR s.name = ''' + @52sqllogin + '''))
+		BEGIN
+			EXEC sp_adduser '''+ @DOMID + ''',''' + @SAMID + '''
+			PRINT ''Added User ' + quotename(@SAMID) + ' to ' + quotename(@DB_Name) + ' for Login ' + quotename(@DOMID) + '''
+		END
+	ELSE
+		BEGIN
+			IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = ''' + @SAMID + ''')
+				BEGIN
+					EXEC CreateSchema '''+ @SAMID + ''',''' + @SAMID + '''
+					PRINT ''Created User Schema:  ' + quotename(@SAMID) + ' for User ' + quotename(@SAMID) + '''
+				END
+			PRINT ''User ' + quotename(@SAMID) + ' already exists in ' + quotename(@DB_Name) + ' for Login ' + quotename(@DOMID) + '''
+			--ALTER USER ' + quotename(@SAMID) + ' WITH LOGIN = ' + quotename(@DOMID) + '
+		END
+	' + @SQLCMDadmin + '
+'
+			SET @SQLCMDnotattach = '
+	-- SECTB_USER --------------------
+	IF EXISTS (SELECT * FROM [' + @DB_Name + '].[dbo].[sectb_user] WHERE uid = ''' + @SECTBUID + ''') BEGIN DELETE FROM [' + @DB_Name + '].[dbo].[sectb_user] WHERE uid = ''' + @SECTBUID + ''' END
+	INSERT INTO [' + @DB_Name + '].[dbo].[sectb_user] (uid,lname,fname,email,bld_group,dept,user_dba,qwarn,qlimit,stampid,stampdate,stamptime) VALUES(''' + @SECTBUID + ''',''' + @LNAME + ''',''' + @FNAME + ''',''' + @EMAILADDY + ''',''>=0'',''*'',''' + @ISCUSTADMIN + ''',''0'',''0'',''' + LEFT(@CurrentUser,8) + ''',''' + @CurrentDate + ''',''' + @CurrentTime + ''')
+	PRINT ''Added ' + @SECTBUID + ' to sectb_user''
+
+	-- SECTB_CROSSWALK --------------------
+	IF EXISTS (SELECT * FROM [' + @DB_Name + '].[dbo].[sectb_crosswalk] WHERE spiuser = ''' + @SECTBUID + ''' OR winuser = ''' + @SAMID + ''') BEGIN DELETE FROM [' + @DB_Name + '].[dbo].[sectb_crosswalk] WHERE spiuser = ''' + @SECTBUID + ''' OR winuser = ''' + @SAMID + ''' END
+	INSERT INTO [' + @DB_Name + '].[dbo].[sectb_crosswalk](spiuser,windomain,winuser) VALUES(''' + @SECTBUID + ''',''' + @DOMAIN + ''',''' + @SAMID + ''')
+	PRINT ''Added ' + @SECTBUID + ' to sectb_crosswalk'''
+
+			SET @SQLCMD_sectb_access = '
+	-- SECTB_ACCESS --------------------
+	IF EXISTS (SELECT * FROM [' + @DB_Name + '].[dbo].[sectb_resource])
+		BEGIN 
+			IF EXISTS (SELECT * FROM [' + @DB_Name + '].[dbo].[sectb_access] WHERE uid = ''' + @SECTBUID + ''') BEGIN DELETE FROM [' + @DB_Name + '].[dbo].[sectb_access] WHERE uid = ''' + @SECTBUID + ''' END
+
+			INSERT INTO [' + @DB_Name + '].[dbo].[sectb_access]
+			 SELECT ''' + @SECTBUID + ''',usertype,''' + @CurrentUser + ''',''' + @CurrentDate + ''',''' + @CurrentTime + ''' FROM [' + @DB_Name + '].[dbo].[sectb_resource]
+			 WHERE usertype IN (1,2,5,9,15,82,86,101,102,103,104,127,139,144,154,201,202,250,253,254,255,256,257,258,259,260,261,295,296,297,300,303,307,309,311,314,315,317,346,356,357,358,359,360,361,362,365,366,367,368,372,373,374,375,382,394,400,450,500,504,550,551,600,650,700,707,708,713,899,956,957,959,960,962,963,966,967,969,972,975,1103,1502,1503,1504,1505,1506,2001,2300,2324,2801,2802,2807,2854,2855,2918,2919,3101,3102,3181,3182,4090,4091,4092,4093,4601,4645,4901,5000,5010,5011,5012,5014,5051,5100,5200,5201,6101,6102,6169,6191,6192,6193,6194,6287,6490,10001,10210,10212,10277,11001,12001,13001,14001,15001,17001,18001,18050,19001,19010,19219,19960,19963,19966,20001,21001,22001) ORDER BY usertype
+			PRINT ''Added ' + @SECTBUID + ' to sectb_access''
+		END 
+	ELSE 
+		BEGIN 
+			PRINT ''No resource codes yet - cannot add to sectb_access''
+		END'
+
+			SET @SQLCMD_UsrViw = '
+	-- SECTB_USRVIW --------------------
+	IF NOT EXISTS (SELECT * FROM ['+@DB_Name+'].[dbo].[sectb_usrviw] WHERE user_id='''+@SECTBUID+''')
+		BEGIN
+			INSERT INTO ['+@DB_Name+'].[dbo].[sectb_usrviw]
+			SELECT distinct ''' + @SECTBUID + ''',viewcode,'' 1=1'','''+@CurrentDate+''',''' + @CurrentUser + ''','''+@CurrentDate+''',''' + @CurrentUser + ''' FROM sectb_usrviw
+			WHERE viewcode in (''ACCT'',''BUDACCT'',''BUDORGN'',''BUDPROJ'',''ORGN'',''PROJ'')
+		END
+	ELSE
+		BEGIN
+			PRINT ''' + @SECTBUID + ' already exists in ['+@DB_Name+'].[dbo].[sectb_usrviw] ''
+		END
+	'
+			
+			SET @SQLCMD_DBViews = '
+	-- DB VIEWS --------------------
+	IF NOT (SELECT COUNT (*) FROM [' + @DB_Name + '].[sys].[views] v INNER JOIN [' + @DB_Name + '].[sys].[schemas] s ON v.schema_id = s.schema_id WHERE s.name = ''' + @SAMID + ''') = 6
+		BEGIN
+			EXEC (''CREATE VIEW [' + @SAMID + '].[account] AS SELECT * FROM [faaccount] WHERE 1=1'')
+			EXEC (''CREATE VIEW [' + @SAMID + '].[budacct] AS SELECT * FROM [bubudacct] WHERE 1=1'')
+			EXEC (''CREATE VIEW [' + @SAMID + '].[budorgn] AS SELECT * FROM [bubudorgn] WHERE 1=1'')
+			EXEC (''CREATE VIEW [' + @SAMID + '].[budproj] AS SELECT * FROM [bubudproj] WHERE 1=1'')
+			EXEC (''CREATE VIEW [' + @SAMID + '].[orgn] AS SELECT * FROM [faorgn] WHERE 1=1'')
+			EXEC (''CREATE VIEW [' + @SAMID + '].[project] AS SELECT * FROM [faproject] WHERE 1=1'')
+			PRINT ''SUCCESS: Views Created FOR ' + @SAMID + ' in ['+@DB_Name+']''
+		END
+	ELSE
+		BEGIN
+			PRINT ''6 Views already exist FOR ' + @SAMID + ' in ['+@DB_Name+']''
+		END
+	'
+	
+			SET @SQLCMD_FinPro = '
+	-- spi_CheckSecurityByResource --------------------
+	GRANT EXECUTE ON [dbo].[spi_CheckSecurityByResource] TO [PLUS_datareader] ;
+	
+	-- 52 MIGRATE LOGIN --------------------
+	IF (@@SERVERNAME LIKE ''%SPLSDB004%'')
+		BEGIN
+			IF (DB_NAME() LIKE ''%trn%'')
+				BEGIN
+					EXEC [efpcatalog_SAP201].[dbo].[dba_MigrateLoginsTo52] ''' + @DB_Name + ''',''' + left(@DB_Name,3) + ''',''' + @SAMID + '''
+				END
+			ELSE
+				BEGIN
+					EXEC [efpcatalog_SAP202].[dbo].[dba_MigrateLoginsTo52] ''' + @DB_Name + ''',''' + left(@DB_Name,3) + ''',''' + @SAMID + '''
+				END
+		END
+	ELSE
+		BEGIN
+			EXEC [efpcatalog].[dbo].[dba_MigrateLoginsTo52] ''' + @DB_Name + ''',''' + left(@DB_Name,3) + ''',''' + @SAMID + '''
+		END
+	'
+	
+			SET @SQLCMDcom = 
+	'
+	-- COMPLUS --------------------
+	BEGIN
+		EXEC sp_addrolemember ''db_ddladmin'',''' + @SAMID + '''
+	END
+	'
+			
+			SET @SQLCMDlogicmon = '
+	-- LogicMonitor Login Access -----------
+	BEGIN
+		EXEC sp_addrolemember ''PLUS_datareader'',''' + @SAMID + '''
+		EXEC sp_addrolemember ''PLUS_datawriter'',''' + @SAMID + '''
+
+		IF NOT EXISTS (SELECT * FROM ['+@DB_Name+'].[dbo].[sectb_access] WHERE uid='''+@SECTBUID+''')
+			BEGIN
+				INSERT INTO ['+@DB_Name+'].[dbo].[sectb_access]
+				 VALUES( ''' + @SECTBUID + ''',''@SectbAccessMin@'',''' + @CurrentUser + ''',''' + @CurrentDate + ''',''' + @CurrentTime + ''')
+			END
+	END
+	'
+			
+			SET @SQLCMDEND = '
+	PRINT ''--------FINISHED ' + @SAMID + ' ON [' + @DB_Name + ']---------------------------------------------------''
+			GO
+------------------------------------------------------------------------------------------------------------------------------------------------'
+		IF @DB_Name LIKE '%attach%' SET @SQLCMD_DBUser =REPLACE(REPLACE(@SQLCMD_DBUser,'PLUS_admin','db_datareader'),''',''',''',''ASPGOV\')
+		IF @DB_Name LIKE '%attach%' SET @SQLCMD_DBUser = ''       /* If adding domain groups to db_datareader doesn't work, remove this line */
+		PRINT @SQLCMD_DB
+			IF @EXECUTENOW = 1
+				BEGIN
+					EXEC (@SQLCMD_DB)
+				END
+		PRINT @SQLCMD_DBUser
+			IF @EXECUTENOW = 1
+				BEGIN
+					EXEC (@SQLCMD_DBUser)
+				END
+		IF @DB_Name NOT LIKE '%attach%'
+			BEGIN
+				PRINT @SQLCMDnotattach
+					IF @EXECUTENOW = 1
+						BEGIN
+							EXEC (@SQLCMDnotattach)
+						END
+				IF @execSectbAccess = 1 AND @SAMID NOT LIKE 'logicmon%'
+					BEGIN
+						PRINT @SQLCMD_sectb_access
+						IF @EXECUTENOW = 1
+							BEGIN
+								EXEC (@SQLCMD_sectb_access)
+							END
+					END
+			END
+		IF @DB_Name LIKE '%fin%' AND @DB_Name NOT LIKE '%attach%'
+			BEGIN
+				PRINT @SQLCMD_UsrViw
+				PRINT @SQLCMD_DBViews
+					IF @EXECUTENOW = 1
+						BEGIN
+							EXEC (@SQLCMD_UsrViw)
+							EXEC (@SQLCMD_UsrViw)
+						END
+				IF @SAMID LIKE 'logicmon%'
+					BEGIN
+						SET @SQLCMDlogicmon =REPLACE(@SQLCMDlogicmon,'@SectbAccessMin@',@SectbAccessMin_EFP)
+						PRINT @SQLCMDlogicmon
+					END
+				IF (@DB_Name LIKE '%finpro%') PRINT @SQLCMD_FinPro
+			END
+		IF @DB_Name LIKE '%complus%' OR @DB_Name LIKE '%compro%'
+			BEGIN
+				PRINT @SQLCMDcom
+					IF @EXECUTENOW = 1
+						BEGIN
+							EXEC (@SQLCMDcom)
+						END
+				IF @SAMID LIKE 'logicmon%'
+					BEGIN
+						SET @SQLCMDlogicmon =REPLACE(@SQLCMDlogicmon,'@SectbAccessMin@',@SectbAccessMin_ECP)
+						PRINT @SQLCMDlogicmon
+					END
+			END
+		PRINT @SQLCMDEND
+			IF @EXECUTENOW = 1
+				BEGIN
+					EXEC (@SQLCMDEND)
+				END
+		
+		SET @cursor_count = @cursor_count+1
+
+		FETCH NEXT FROM db_cursor INTO @DB_Name
+	END
+CLOSE db_cursor
+DEALLOCATE db_cursor
+PRINT '--- FINISHED user: '+@FNAME +' '+ @LNAME +' = ['+ @DOMID +'] ('+ @SECTBUID +') ----------------------------------------------------------------------------------------'
+		FETCH NEXT FROM users_cursor INTO @DOMID,@FNAME,@LNAME,@EMAILADDY,@SECTBUID,@ISCUSTADMIN
+		END
+CLOSE users_cursor
+DEALLOCATE users_cursor

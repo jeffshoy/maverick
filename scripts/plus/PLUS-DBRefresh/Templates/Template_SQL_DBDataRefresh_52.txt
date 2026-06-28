@@ -1,0 +1,109 @@
+USE [ZZZDestDBNameZZZ]
+GO
+DECLARE @ENV varchar(10), @ENVUrlfx varchar(10), @APserver varchar(40), @DBserver varchar(40), @CogServer char(40), @CogDSN varchar(30), @CogSfx varchar(10), @CustomerName nvarchar(150), @PRODtype nvarchar(20), 
+	@CUST nvarchar(3) = left(DB_Name(),3),  
+	@PRODver varchar(3) = '5.2', 
+	@ThisInstanceName nvarchar(100) = convert(nvarchar,(SELECT SERVERPROPERTY('ServerName')))
+
+IF (@ThisInstanceName LIKE '%DPLS%') BEGIN SET @ENV = 'DEV' END 
+IF (@ThisInstanceName LIKE '%PPLS%') BEGIN SET @ENV = 'LIVE' END 
+IF (@ThisInstanceName LIKE '%SPLS%') BEGIN SET @ENV = 'STAGE' END 
+IF (@ThisInstanceName LIKE '%TPLS%') BEGIN SET @ENV = 'TEST' END 
+IF (DB_NAME() LIKE '%demo%') BEGIN SET @ENV = 'Demo'  END
+IF (@ENV = 'LIVE') BEGIN SET @ENVUrlfx = '' END ELSE BEGIN SET @ENVUrlfx = '-' + lower(@ENV) END
+IF (DB_NAME() LIKE '%trn%' OR DB_NAME() LIKE '%ye%') BEGIN SET @ENV = 'TRAINING' ; SET @ENVUrlfx = '-train' END
+IF (DB_NAME() LIKE '%ye%') SET @ENV = 'ARCHIVE' 
+IF (DB_NAME() LIKE '%compro%') BEGIN SET @PRODtype = 'CommunityPro' END ELSE BEGIN SET @PRODtype = 'FinancePro' END
+SET @APserver = 'plus-' + lower(@CUST) + @ENVUrlfx + '.aspgov.com'
+SET @DBserver = 'plus-efp-db-52' + @ENVUrlfx + '.aspgov.com\plus'
+SET @CogSfx = UPPER(LEFT(@ENV,1)) + REPLACE(LOWER(RIGHT(@ENV,LEN(@ENV)-1)),'ing','')
+SET @CogDSN = UPPER(@CUST) + 'ZZZCustSpclDBStrZZZ' + '_' + @PRODtype + '_' + @CogSfx
+SET @CogServer = 'plus-cog11' + @ENVUrlfx + '.aspgov.com'
+SET @CustomerName = (select rtrim(site_name) from [CUSTOMERINFO].efpcustomerinfo.dbo.CustomerProfile WHERE SiteCode = @CUST) + ', ' + (select state_id from [CUSTOMERINFO].efpcustomerinfo.dbo.CustomerProfile WHERE SiteCode = @CUST)  + '  (' + @CogSfx + ')'
+PRINT '5.2 DB  ' + @ENV + '  ' + @ENVUrlfx + '  ' + @PRODtype + ' ' + @PRODver + '  ' + @APserver + '  ' + @DBserver + '  ' + @CogServer + '  ' + @CogDSN + '  ' + @CogSfx + ' for ' + DB_Name() + ' (' + @CustomerName + ')' + ' on ' + @ThisInstanceName 
+SELECT DB_Name() as 'Database', @ENV as 'Environment', @ENVUrlfx as 'Env Suffix', @PRODtype as 'Product Type', @PRODver as 'Product ver', @APserver as 'AP Server', @CogServer as 'Cognos Server', @CogDSN as 'Cognos DSN', @CogSfx as 'Cognos DSN Suffix', @CustomerName as 'Customer Name', @ThisInstanceName as 'Instance'
+
+	IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'ZZZCustZZZ_webuser') BEGIN EXEC sp_adduser 'ZZZCustZZZ_webuser','ZZZCustZZZ_webuser' END	ELSE	BEGIN ALTER USER [ZZZCustZZZ_webuser] WITH LOGIN = [ZZZCustZZZ_webuser] END ; EXEC sp_addrolemember 'PLUS_admin','ZZZCustZZZ_webuser'
+	IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'ZZZCustZZZ_crnuser') BEGIN EXEC sp_adduser 'ZZZCustZZZ_crnuser','ZZZCustZZZ_crnuser' END	ELSE	BEGIN ALTER USER [ZZZCustZZZ_crnuser] WITH LOGIN = [ZZZCustZZZ_crnuser] END ; EXEC sp_addrolemember 'PLUS_admin','ZZZCustZZZ_crnuser'
+	IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'crnuser') BEGIN EXEC sp_adduser 'crnuser','crnuser' END	ELSE	BEGIN ALTER USER [crnuser] WITH LOGIN = [crnuser] END ; EXEC sp_addrolemember 'PLUS_admin','crnuser'
+	IF EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'ZZZCustZZZ_poduser') BEGIN DROP SCHEMA [ZZZCustZZZ_poduser] ; DROP USER [ZZZCustZZZ_poduser] END
+	IF EXISTS (SELECT name FROM sys.database_principals WHERE name = 'ASPGOV\plus_support') BEGIN DROP SCHEMA [ASPGOV\plus_support] ; DROP USER [ASPGOV\plus_support] END
+	IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = 'ASPGOV\PLUS_Support') BEGIN EXEC sp_adduser 'ASPGOV\PLUS_Support','ASPGOV\PLUS_Support' END	ELSE	BEGIN ALTER USER [ASPGOV\PLUS_Support] WITH LOGIN = [ASPGOV\PLUS_Support] END ; EXEC sp_addrolemember 'PLUS_admin','ASPGOV\PLUS_Support'
+	
+	IF (@@SERVERNAME LIKE '%PPLSDB%') BEGIN ALTER DATABASE [ZZZDestDBNameZZZ] SET RECOVERY FULL WITH NO_WAIT END	ELSE	BEGIN ALTER DATABASE [ZZZDestDBNameZZZ] SET RECOVERY SIMPLE WITH NO_WAIT END
+
+	IF (DB_NAME() LIKE '%finpro%')
+		BEGIN
+			IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'webuser_52') BEGIN EXEC sp_adduser 'webuser_52','webuser_52' END	ELSE	BEGIN ALTER USER [webuser_52] WITH LOGIN = [webuser_52] END ; EXEC sp_addrolemember 'PLUS_admin','webuser_52'
+			IF EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'webuser') BEGIN DROP SCHEMA [webuser] ; DROP USER [webuser] END
+		END
+		
+	IF (DB_NAME() NOT LIKE '%attach%')
+		BEGIN
+			SELECT db_name() AS 'DBNAME','menutb_cfg' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.menutb_cfg
+			   UPDATE ZZZDestDBNameZZZ.dbo.menutb_cfg SET customer = rtrim(replace(replace('ZZZCUSTZZZ PRODVERVAR ENVVAR ZZZRestoreDateTimeZZZ','ENVVAR',@ENV),'PRODVERVAR',@PRODver)) , change_date='ZZZCurrentDateTimeZZZ', change_time='ZZZCurrentTimeZZZ', change_uid=SUBSTRING('ZZZCurrentUserZZZ',1,8)
+			   IF (db_name() LIKE '%xtrn%') BEGIN UPDATE ZZZDestDBNameZZZ.dbo.menutb_cfg SET customer = REPLACE(customer,'TRAINING','TRAINING #2') END
+			SELECT db_name() AS 'DBNAME','menutb_cfg' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.menutb_cfg
+			
+			SELECT db_name() AS 'DBNAME','crn_cfg' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.crn_cfg
+			   UPDATE ZZZDestDBNameZZZ.dbo.crn_cfg SET dsn_name = @CogDSN, crn_server = @CogServer, gateway_server = @CogServer, crn_version = 'Cognos11', crn_desc = 'Cognos11', use_ssl = 'Y', gateway_url = '', add_params = ''
+			   --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'crn_cfg' AND COLUMN_NAME = 'change_date_time') BEGIN  UPDATE ZZZDestDBNameZZZ.dbo.crn_cfg SET change_date_time = 'ZZZCurrentDateTimeZZZ'  END
+			   --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'crn_cfg' AND COLUMN_NAME = 'change_uid') BEGIN  UPDATE ZZZDestDBNameZZZ.dbo.crn_cfg SET change_uid = 'ZZZCurrentUserZZZ'  END
+			SELECT db_name() AS 'DBNAME','crn_cfg' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.crn_cfg
+
+			IF (DB_NAME() LIKE '%finpro%')
+				BEGIN
+					SELECT db_name() AS 'DBNAME','fincustom' AS 'TABLENM',udf1 FROM ZZZDestDBNameZZZ.dbo.fincustom WHERE key_name = 'BCP BACKUP'
+					   UPDATE ZZZDestDBNameZZZ.dbo.fincustom SET udf1 = @DBserver WHERE key_name = 'BCP BACKUP'
+					SELECT db_name() AS 'DBNAME','fincustom' AS 'TABLENM',udf1 FROM ZZZDestDBNameZZZ.dbo.fincustom WHERE key_name = 'BCP BACKUP'
+
+					SELECT db_name() AS 'DBNAME','web_profile' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.web_profile WHERE val LIKE '%aspgov%'
+					   UPDATE ZZZDestDBNameZZZ.dbo.web_profile SET val = 'relay.aspgov.com' WHERE descript = 'MailServer'
+					SELECT db_name() AS 'DBNAME','web_profile' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.web_profile WHERE val LIKE '%aspgov%'
+
+					SELECT db_name() AS 'DBNAME','workflow_config' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.workflow_config WHERE setting_key LIKE 'Company%' or setting_key LIKE '%Server' or setting_key LIKE 'BaseURL%' order by row_id
+					   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = @CustomerName WHERE setting_key = 'Company Name'
+					   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = 'https://' + @APserver + '/' WHERE setting_key = 'AppServer'
+					   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = 'https://' + @APserver WHERE setting_key = 'WebServer'
+					   UPDATE ZZZDestDBNameZZZ.dbo.workflow_config SET setting_value = 'relay.aspgov.com' WHERE setting_key = 'EmailServer'
+					SELECT db_name() AS 'DBNAME','workflow_config' AS 'TABLENM',* FROM ZZZDestDBNameZZZ.dbo.workflow_config WHERE setting_key LIKE 'Company%' or setting_key LIKE '%Server' or setting_key LIKE 'BaseURL%' order by row_id
+
+					/*
+					SELECT db_name() AS 'DBNAME','SPI_INTEGRATION_DET' AS 'TABLENM',* FROM SPI_INTEGRATION_DET
+						UPDATE SPI_INTEGRATION_DET SET OPTION_VALUE = (SELECT ('https://' + @APserver + right(OPTION_VALUE,LEN(OPTION_VALUE)-CHARINDEX('.com',OPTION_VALUE)-3)) FROM SPI_INTEGRATION_DET WHERE OPTION_VALUE LIKE 'https://%' AND OPTION_NAME = 'APP_SERVICES_URL') WHERE OPTION_VALUE LIKE 'https://%' AND OPTION_NAME = 'APP_SERVICES_URL'
+						UPDATE SPI_INTEGRATION_DET SET OPTION_VALUE = (SELECT ('https://' + @APserver + right(OPTION_VALUE,LEN(OPTION_VALUE)-CHARINDEX('.com',OPTION_VALUE)-3)) FROM SPI_INTEGRATION_DET WHERE OPTION_VALUE LIKE 'https://%' AND OPTION_NAME = 'LINK_LOGIN_URL') WHERE OPTION_VALUE LIKE 'https://%' AND OPTION_NAME = 'LINK_LOGIN_URL'
+						UPDATE SPI_INTEGRATION_DET SET OPTION_VALUE = (SELECT ('https://' + @APserver + right(OPTION_VALUE,LEN(OPTION_VALUE)-CHARINDEX('.com',OPTION_VALUE)-3)) FROM SPI_INTEGRATION_DET WHERE OPTION_VALUE LIKE 'https://%' AND OPTION_NAME = 'POD_URL') WHERE OPTION_VALUE LIKE 'https://%' AND OPTION_NAME = 'POD_URL'
+					SELECT db_name() AS 'DBNAME','SPI_INTEGRATION_DET' AS 'TABLENM',* FROM SPI_INTEGRATION_DET
+					*/
+
+					-- these SHOULD be getting set by Dev/Installer's db-upgrade process, but doing them here too, just in case, for now
+					IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_createview') GRANT EXECUTE ON [dbo].[spi_createview] TO [PLUS_admin] ELSE PRINT 'Stored Procedure Does Not Exist: spi_createview'
+					IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_dropview')   GRANT EXECUTE ON [dbo].[spi_dropview] TO [PLUS_admin]   ELSE PRINT 'Stored Procedure Does Not Exist: spi_dropview'
+					IF EXISTS (SELECT * FROM sys.objects WHERE name = 'spi_fnc_CreateHashValue') GRANT EXECUTE ON [dbo].[spi_fnc_CreateHashValue] TO [public] ELSE PRINT 'Stored Procedure Does Not Exist: spi_fnc_CreateHashValue'
+					IF EXISTS (SELECT * FROM sys.objects WHERE name = 'spi_CheckSecurity') GRANT EXECUTE ON [dbo].[spi_CheckSecurity] TO [PLUS_datareader] ELSE PRINT 'Function Does Not Exist: spi_CheckSecurity'
+					IF EXISTS (SELECT * FROM sys.objects WHERE name = 'spi_CheckSecurityByResource') GRANT EXECUTE ON [dbo].[spi_CheckSecurityByResource] TO [PLUS_datareader] ELSE PRINT 'Function Does Not Exist: spi_CheckSecurityByResource'
+					IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_GetColumnsForSimpleSearch') GRANT EXECUTE ON [dbo].[spi_GetColumnsForSimpleSearch] TO [public] ELSE PRINT 'Function Does Not Exist: spi_GetColumnsForSimpleSearch'
+					
+					-- From PLUS_DB-Onboarding_52.sql
+					ALTER DATABASE [ZZZDestDBNameZZZ] SET COMPATIBILITY_LEVEL = 120 ; 
+				END
+			ELSE
+				BEGIN	--compro databases
+					-- From PLUS_DB-Onboarding_52.sql
+					IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE LOWER(name) = 'webuser') BEGIN EXEC sp_adduser 'webuser','webuser' END	ELSE	BEGIN ALTER USER [webuser] WITH LOGIN = [webuser] END ; EXEC sp_addrolemember 'PLUS_admin','webuser' ; 
+					ALTER DATABASE [ZZZDestDBNameZZZ] SET COMPATIBILITY_LEVEL = 140 ; 
+				END
+			
+
+			-- so Support Team, Developers and Installers can write data, alter views, etc, using their CLOUD accounts with SSMS, but still not hork up SQL - Dev Only
+			IF (@@SERVERNAME LIKE '%DPLSDB%') 
+				BEGIN 
+					IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'spi_createview') 
+						BEGIN
+							EXEC sp_addrolemember 'PLUS_admin','CLOUD\PLUS_team_AppSupport'
+							EXEC sp_addrolemember 'PLUS_admin','CLOUD\PLUS_team_Developers'
+							EXEC sp_addrolemember 'PLUS_admin','CLOUD\PLUS_team_Installers'
+						END
+				END
+			
+		END

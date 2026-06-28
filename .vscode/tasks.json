@@ -45,6 +45,42 @@
       "problemMatcher": []
     },
     {
+      "label": "PLUS: New Customer User",
+      "detail": "Create a new PLUS customer user (aspgov.pri + SQL + rpt + centroid)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/plus/New-PLUSCustomerUser/New-PLUSCustomerUser.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "PLUS: Enable Customer User",
+      "detail": "Re-enable a terminated PLUS customer user",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/plus/Enable-PLUSCustomerUser/Enable-PLUSCustomerUser.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "PLUS: Disable Customer User",
+      "detail": "Terminate a PLUS customer user — SQL revoke + AD disable + centroid disable + rpt removal",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/plus/Disable-PLUSCustomerUser/Disable-PLUSCustomerUser.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "PLUS: DB Refresh",
+      "detail": "Backup PRD → restore to STG/TRN → run post-restore data refresh SQL",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/scripts/plus/PLUS-DBRefresh/Invoke-PLUSDBRefresh.ps1"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
       "label": "ADSSP: Test Connection",
       "type": "shell",
       "command": "pwsh",
