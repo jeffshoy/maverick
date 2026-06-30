@@ -9,7 +9,7 @@
     (config, scripts, templates, support launcher) to \\<server>\C$\PLUS\Scripts\
     on all six RDSH servers. Requires admin share access (domain admin or delegated rights).
 
-    Dev-only folders (PLUS-DBRefresh\Examples, PLUS-DBRefresh\Tests) are excluded
+    Dev-only folders (PLUS-RefreshDBData\Examples, PLUS-RefreshDBData\Tests) are excluded
     from the RDSH copy — they are for developer reference only.
 
 .PARAMETER Servers
@@ -49,8 +49,8 @@ $ErrorActionPreference = 'Stop'
 
 # Relative paths (from SourceRoot) that are dev-only and should not land on RDSH servers
 $devOnlyFolders = @(
-    'PLUS-DBRefresh\Examples',
-    'PLUS-DBRefresh\Tests'
+    'PLUS-RefreshDBData\Examples',
+    'PLUS-RefreshDBData\Tests'
 )
 
 $results = @()

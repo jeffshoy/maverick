@@ -7,7 +7,7 @@ Standalone scripts replacing legacy PLUSSysAdmins module functions. No VM workst
 | [`New-PLUSCustomerUser/`](New-PLUSCustomerUser/README.md) | `PLUS: New Customer User` | Support / SRE | `PLUS_Create_CustomerUser` |
 | [`Enable-PLUSCustomerUser/`](Enable-PLUSCustomerUser/README.md) | `PLUS: Enable Customer User` | Support / SRE | `PLUS_CustomerUsers_QuickSetup -Reenable` |
 | [`Disable-PLUSCustomerUser/`](Disable-PLUSCustomerUser/README.md) | `PLUS: Disable Customer User` | Support / SRE | `PLUS_TerminateCustUser` |
-| [`PLUS-DBRefresh/`](PLUS-DBRefresh/README.md) | `PLUS: DB Refresh` | DBA / SRE | `Invoke-PLUSSqlDBRefresh` + `Update-PLUSDBData` |
+| [`PLUS-RefreshDBData/`](PLUS-RefreshDBData/README.md) | `PLUS: DB Refresh` | DBA / SRE | `Invoke-PLUSSqlDBRefresh` + `Update-PLUSDBData` |
 
 ## Shared config
 
