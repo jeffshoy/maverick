@@ -1,0 +1,104 @@
+trigger:
+- none
+
+name: palegacysharedservices-rdsh-setup
+
+parameters:
+- name: region
+  type: string
+  displayName: Region
+  default: us-east-1
+  values:
+  - us-east-1
+  - us-west-2
+- name: use_pipeline_aws_vars
+  displayName: Use pipeline AWS variables as credentials
+  type: boolean
+  default: false
+- name: use_custom_pool
+  displayName: Use Custom Agent Pool
+  type: boolean
+  default: false
+- name: agent_pool_name
+  displayName: Custom Agent Pool Name
+  default: Azure Pipelines
+
+variables:
+- template: account/361362055558/shared.yaml@config
+- ${{ if eq(parameters.region, 'us-east-1') }}:
+  - template: account/361362055558/primary_region.yaml@config
+- ${{ if eq(parameters.region, 'us-west-2') }}:
+  - template: account/361362055558/secondary_region.yaml@config
+- ${{ if eq(parameters.use_custom_pool, true) }}:
+  - name: azdo_agent_pool
+    value: ${{ parameters.agent_pool_name }}
+- ${{ else }}:
+  - name: azdo_agent_pool
+    value: ${{ variables.azdo_agent_pool }}
+- name: TF_LOG
+  value: "off"
+- ${{ if and(eq(parameters.use_custom_pool, true), contains(variables.azdo_agent_pool, 'Azure')) }}:
+  - name: azdo_agent_container
+    value: ""
+  - name: azdo_agent_image
+    value: ubuntu-22.04
+- ${{ else }}:
+  - name: azdo_agent_container
+    value: ${{ variables.ecr_registry }}/csqr-azdo-agent-default:1.4.5
+- name: azdo_resources
+  value: $[ convertToJson(resources) ]
+
+pool:
+  name: $(agent_pool)
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: Cloud Foundation/cst-pipeline-templates
+      ref: develop
+    - repository: cloudops
+      name: Cloud-PA/cloudops
+      type: git
+      ref: ${{ variables['Build.SourceBranch'] }}
+    - repository: config
+      type: git
+      name: Cloud Foundation/cloud-foundation-configs
+      ref: main
+  containers:
+  - container: azdo_agent
+    image: '$(azdo_agent_container)'
+
+stages:
+  - stage: rdsh_setup
+    displayName: Ansible - PALegacy RDSH Setup
+    ${{ if and(eq(parameters.use_custom_pool, true), eq(variables.azdo_agent_pool, 'Azure Pipelines')) }}:
+      pool:
+        name: $(azdo_agent_pool)
+        vmImage: $(azdo_agent_image)
+    ${{ else }}:
+      pool: $(azdo_agent_pool)
+    dependsOn: []
+    jobs:
+    - template: ansible.yml@templates
+      parameters:
+        aws_account_id: ${{ variables.shared_services_aws_account_id }}
+        aws_partition: ${{ variables.aws_partition }}
+        aws_region: ${{ variables.aws_region }}
+        ansible_galaxy: true
+        ansible_connection: 'winrm'
+        ansible_inventory: 'inventory/aws_ec2.yml'
+        ansible_limit: ''
+        ansible_playbook: 'palegacysharedservices-rdsh-setup.yml'
+        assume_role_name: ${{ variables.target_deployment_role }}
+        ansible_requirements_file: '$(Build.SourcesDirectory)/cloudops/ansible/collections/requirements.yml'
+        ansible_roles_path: $(Build.SourcesDirectory)/cloudops/ansible/roles
+        playbook_tags: 'always'
+        security_group_name: inf-palegacysharedservices-internal
+        secgroup_access_port_num: 5986
+        session_duration_seconds: 3600
+        vars:
+          - 'aws_region=${{ variables.aws_region }}'
+          - 'assumed_role=$CREDS'
+        working_dir: $(Build.SourcesDirectory)/cloudops/ansible
+        checkout_repos: ["cloudops", "config"]

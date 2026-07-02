@@ -4,6 +4,10 @@
 # Installs the RD Session Host Windows role and adds the AD access group to
 # Remote Desktop Users on all INF-WSRDS* servers.
 #
+# Connects via SSM port-forward tunnel — no direct WinRM network path required.
+# Inventory uses EC2 Name tags as hostnames; instance IDs are resolved at
+# runtime so replacements are picked up automatically without config changes.
+#
 # Usage:
 #   ansible-playbook palegacysharedservices-rdsh-setup.yml \
 #     -e "aws_region=us-east-1"
@@ -11,12 +15,73 @@
 # Targets all instances tagged cst_application=inf-admin-rdsh in the
 # specified region via the aws_ec2 dynamic inventory.
 
+- name: Open SSM port-forward tunnels
+  gather_facts: false
+  hosts: "tag_cst_application_inf_admin_rdsh:&region_{{ aws_region | replace('-', '_') }}"
+  tasks:
+    - name: Install AWS Session Manager plugin
+      delegate_to: localhost
+      run_once: true
+      shell: |
+        if ! command -v session-manager-plugin &>/dev/null; then
+          curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" \
+            -o /tmp/session-manager-plugin.deb
+          sudo dpkg -i /tmp/session-manager-plugin.deb
+        fi
+      changed_when: false
+      tags: always
+
+    - name: Assign tunnel port per host
+      set_fact:
+        ssm_tunnel_port: "{{ 15985 + ansible_play_hosts.index(inventory_hostname) }}"
+      tags: always
+
+    - name: Start SSM port-forward to WinRM
+      delegate_to: localhost
+      shell: |
+        nohup aws ssm start-session \
+          --target {{ instance_id }} \
+          --document-name AWS-StartPortForwardingSession \
+          --parameters '{"portNumber":["5986"],"localPortNumber":["{{ ssm_tunnel_port }}"]}' \
+          --region {{ aws_region }} \
+          > /tmp/ssm-tunnel-{{ instance_id }}.log 2>&1 &
+        sleep 10
+      changed_when: false
+      tags: always
+
+    # WinRM HTTPS (Microsoft-HTTPAPI) validates the HTTP Host header against its
+    # URL reservation — a loopback IP (127.0.0.1) triggers "Invalid Hostname 400".
+    # Adding a /etc/hosts entry lets pywinrm connect to the SSM tunnel loopback
+    # while still sending the real server name in the Host header.
+    - name: Map server hostname to loopback so WinRM accepts the Host header
+      delegate_to: localhost
+      shell: |
+        grep -qxF "127.0.0.1 {{ inventory_hostname | lower }}" /etc/hosts || \
+        echo "127.0.0.1 {{ inventory_hostname | lower }}" >> /etc/hosts
+      changed_when: false
+      tags: always
+
+    - name: Cat SSM tunnel log (debug — remove once working)
+      delegate_to: localhost
+      shell: cat /tmp/ssm-tunnel-{{ instance_id }}.log 2>/dev/null || echo "no log yet"
+      changed_when: false
+      register: ssm_tunnel_log
+      tags: always
+
+    - name: Show SSM tunnel log
+      debug:
+        msg: "{{ ssm_tunnel_log.stdout_lines }}"
+      tags: always
+
 - name: Configure RDSH terminal servers
   gather_facts: true
-  hosts: "tag_cst_application_inf_admin_rdsh"
+  hosts: "tag_cst_application_inf_admin_rdsh:&region_{{ aws_region | replace('-', '_') }}"
   vars:
-    ansible_password: "{{ lookup('aws_ssm', '/inf/palegacysharedservices/' + inventory_hostname_short | lower + '/admin_password',
-                          region=aws_region, shortnames=true, bypath=false) }}"
+    # Use the server name (not 127.0.0.1) so the HTTP Host header matches the
+    # WinRM URL reservation. /etc/hosts on the agent resolves it to the SSM tunnel.
+    ansible_host: "{{ inventory_hostname | lower }}"
+    ansible_port: "{{ ssm_tunnel_port }}"
+    ansible_password: "{{ lookup('aws_ssm', '/inf/palegacysharedservices/' + inventory_hostname | lower + '/admin_password', region=aws_region, shortnames=true, bypath=false) }}"
     aws_region: "{{ aws_region | default('us-east-1') }}"
   vars_files:
     - vars/winrm_connection.yml
@@ -24,3 +89,17 @@
     - name: Include RDSH setup role
       include_role:
         name: rdsh_setup
+        apply:
+          tags: always
+      tags: always
+
+- name: Close SSM port-forward tunnels
+  gather_facts: false
+  hosts: "tag_cst_application_inf_admin_rdsh:&region_{{ aws_region | replace('-', '_') }}"
+  tasks:
+    - name: Kill SSM port-forward processes
+      delegate_to: localhost
+      shell: |
+        pgrep -f "ssm.*{{ instance_id }}" | xargs -r kill || true
+      changed_when: false
+      tags: always

@@ -6,18 +6,90 @@
     state: present
   register: rdsh_install
 
-- name: Reboot if required after RDSH role install
-  win_reboot:
-    reboot_timeout: 300
-    post_reboot_delay: 30
+- name: Trigger reboot after RDSH role install
+  win_shell: Start-Sleep -Seconds 3; Restart-Computer -Force
+  when: rdsh_install.reboot_required
+  ignore_errors: true
+  ignore_unreachable: true
+
+- name: Reconnect SSM tunnel after RDSH reboot
+  delegate_to: localhost
+  when: rdsh_install.reboot_required
+  shell: |
+    pgrep -f "ssm.*{{ instance_id }}" | xargs -r kill || true
+    sleep 30
+    for i in $(seq 1 60); do
+      STATUS=$(aws ssm describe-instance-information \
+        --filters "Key=InstanceIds,Values={{ instance_id }}" \
+        --region {{ aws_region }} \
+        --query 'InstanceInformationList[0].PingStatus' \
+        --output text 2>/dev/null || echo "none")
+      if [ "$STATUS" = "Online" ]; then
+        echo "SSM Online after attempt $i"
+        break
+      fi
+      echo "Waiting for SSM agent... attempt $i (status: $STATUS)"
+      sleep 10
+    done
+    nohup aws ssm start-session \
+      --target {{ instance_id }} \
+      --document-name AWS-StartPortForwardingSession \
+      --parameters '{"portNumber":["5986"],"localPortNumber":["{{ ssm_tunnel_port }}"]}' \
+      --region {{ aws_region }} \
+      > /tmp/ssm-tunnel-{{ instance_id }}.log 2>&1 &
+    sleep 15
+  changed_when: false
+
+- name: Clear unreachable state after RDSH reboot reconnect
+  meta: clear_host_errors
   when: rdsh_install.reboot_required
 
-- name: Add R_AWSCOMM_SSO_cst-comm-infrdsaccess to Remote Desktop Users
-  win_group_membership:
-    name: "Remote Desktop Users"
-    members:
-      - "CLOUD\\R_AWSCOMM_SSO_cst-comm-infrdsaccess"
+- name: Install RSAT AD tools
+  win_feature:
+    name:
+      - RSAT-AD-Tools
+      - RSAT-AD-PowerShell
+    include_management_tools: true
     state: present
+  register: rsat_install
+
+- name: Trigger reboot after RSAT install
+  win_shell: Start-Sleep -Seconds 3; Restart-Computer -Force
+  when: rsat_install.reboot_required
+  ignore_errors: true
+  ignore_unreachable: true
+
+- name: Reconnect SSM tunnel after RSAT reboot
+  delegate_to: localhost
+  when: rsat_install.reboot_required
+  shell: |
+    pgrep -f "ssm.*{{ instance_id }}" | xargs -r kill || true
+    sleep 30
+    for i in $(seq 1 60); do
+      STATUS=$(aws ssm describe-instance-information \
+        --filters "Key=InstanceIds,Values={{ instance_id }}" \
+        --region {{ aws_region }} \
+        --query 'InstanceInformationList[0].PingStatus' \
+        --output text 2>/dev/null || echo "none")
+      if [ "$STATUS" = "Online" ]; then
+        echo "SSM Online after attempt $i"
+        break
+      fi
+      echo "Waiting for SSM agent... attempt $i (status: $STATUS)"
+      sleep 10
+    done
+    nohup aws ssm start-session \
+      --target {{ instance_id }} \
+      --document-name AWS-StartPortForwardingSession \
+      --parameters '{"portNumber":["5986"],"localPortNumber":["{{ ssm_tunnel_port }}"]}' \
+      --region {{ aws_region }} \
+      > /tmp/ssm-tunnel-{{ instance_id }}.log 2>&1 &
+    sleep 15
+  changed_when: false
+
+- name: Clear unreachable state after RSAT reboot reconnect
+  meta: clear_host_errors
+  when: rsat_install.reboot_required
 
 - name: Verify RDSH role is active
   win_shell: |
@@ -25,3 +97,74 @@
   register: rdsh_state
   changed_when: false
   failed_when: rdsh_state.stdout.strip() != 'Installed'
+
+- name: Set timezone
+  win_timezone:
+    timezone: "{{ 'Pacific Standard Time' if aws_region == 'us-west-2' else 'Eastern Standard Time' }}"
+
+# --- winget applications ---
+# Each entry: id = winget package ID, name = display name for task output.
+# Idempotent: winget exits 0 on already-installed packages (exit code -1978335189
+# is treated as already installed by the failed_when guard).
+- name: Install applications via winget
+  win_shell: |
+    winget install --id {{ item.id }} --exact --silent `
+      --accept-package-agreements --accept-source-agreements
+  loop:
+    - { id: "Microsoft.PowerShell",              name: "PowerShell 7" }
+    - { id: "Microsoft.WindowsTerminal",          name: "Windows Terminal" }
+    - { id: "JanDeDobbeleer.OhMyPosh",            name: "Oh My Posh" }
+    - { id: "Git.Git",                            name: "Git" }
+    - { id: "Notepad++.Notepad++",                name: "Notepad++" }
+    - { id: "WinSCP.WinSCP",                      name: "WinSCP" }
+    - { id: "PuTTY.PuTTY",                        name: "PuTTY" }
+    - { id: "Microsoft.Sysinternals.Suite",       name: "Sysinternals Suite" }
+    - { id: "WiresharkFoundation.Wireshark",      name: "Wireshark" }
+    - { id: "VanDyke.SecureCRT",                  name: "SecureCRT" }
+    - { id: "Nmap.Nmap",                          name: "Nmap" }
+  loop_control:
+    label: "{{ item.name }}"
+  register: winget_result
+  changed_when: "'Successfully installed' in winget_result.stdout"
+  # winget exit code -1978335189 (0x8A150021) = already installed — treat as ok
+  failed_when: winget_result.rc != 0 and winget_result.rc != -1978335189
+
+# --- PowerShell 7 post-install configuration ---
+
+- name: Set PowerShell 7 as default SSH shell
+  win_regedit:
+    path: HKLM:\SOFTWARE\OpenSSH
+    name: DefaultShell
+    data: 'C:\Program Files\PowerShell\7\pwsh.exe'
+    type: string
+    state: present
+
+- name: Configure Oh My Posh in PowerShell 7 profile (all users)
+  win_shell: |
+    $profileDir = "C:\Program Files\PowerShell\7"
+    $profilePath = "$profileDir\profile.ps1"
+    $ompLine = 'oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\jandedobbeleer.omp.json" | Invoke-Expression'
+    if (-not (Test-Path $profilePath) -or (Get-Content $profilePath -Raw) -notmatch 'oh-my-posh') {
+        Add-Content -Path $profilePath -Value $ompLine
+    }
+  changed_when: true
+
+# Seed Windows Terminal settings into the Default user profile so every new
+# user login inherits PS7 as the default shell. WT's auto-detected PS7 profile
+# always uses the stable GUID {574e775e-4f2a-5b96-ac1e-a2962a402336}.
+- name: Create Windows Terminal LocalState dir in Default user profile
+  win_file:
+    path: 'C:\Users\Default\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState'
+    state: directory
+
+- name: Write Windows Terminal settings to Default user profile
+  win_copy:
+    dest: 'C:\Users\Default\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
+    content: |
+      {
+          "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+          "profiles": {
+              "defaults": {}
+          },
+          "schemes": []
+      }

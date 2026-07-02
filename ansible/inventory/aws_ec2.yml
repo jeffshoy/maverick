@@ -6,7 +6,11 @@ regions:
 keyed_groups:
   - prefix: tag
     key: tags
+  - prefix: region
+    key: placement.region
+    separator: "_"
 hostnames:
-  - private-ip-address
+  - tag:Name
 compose:
-  ansible_host: private-ip-address
+  ansible_host: tags.Name | lower
+  instance_id: instance_id
