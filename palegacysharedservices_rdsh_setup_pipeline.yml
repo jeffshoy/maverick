@@ -86,7 +86,7 @@ stages:
         aws_partition: ${{ variables.aws_partition }}
         aws_region: ${{ variables.aws_region }}
         ansible_galaxy: true
-        ansible_connection: 'winrm'
+        ansible_connection: 'aws_ssm'
         ansible_inventory: 'inventory/aws_ec2.yml'
         ansible_limit: ''
         ansible_playbook: 'palegacysharedservices-rdsh-setup.yml'
@@ -94,8 +94,6 @@ stages:
         ansible_requirements_file: '$(Build.SourcesDirectory)/cloudops/ansible/collections/requirements.yml'
         ansible_roles_path: $(Build.SourcesDirectory)/cloudops/ansible/roles
         playbook_tags: 'always'
-        security_group_name: inf-palegacysharedservices-internal
-        secgroup_access_port_num: 5986
         session_duration_seconds: 3600
         vars:
           - 'aws_region=${{ variables.aws_region }}'

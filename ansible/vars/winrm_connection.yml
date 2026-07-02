@@ -1,12 +1,10 @@
 ---
-# WinRM connection settings for Windows hosts via SSM port-forward tunnel.
-# ansible_port is set per-host as a fact (ssm_tunnel_port) in the tunnel play
-# so it is not defined here — facts take precedence over vars_files.
-ansible_connection: winrm
-ansible_user: Administrator
-ansible_winrm_server_cert_validation: ignore
-ansible_winrm_transport: ntlm
-ansible_winrm_scheme: https
-# NTLM message-level encryption conflicts with TLS when tunneled via SSM loopback.
-# TLS already encrypts the wire; disabling message encryption resolves HTTP 400.
-ansible_winrm_message_encryption: never
+# Connection settings for Windows hosts via AWS SSM Session Manager.
+# Authentication is IAM-based — no Windows credentials required.
+# The pipeline runner role (cst-role-prd-deployment) calls ssm:StartSession;
+# commands run as SYSTEM via the SSM agent on the target instance.
+ansible_connection: community.aws.aws_ssm
+ansible_shell_type: powershell
+ansible_aws_ssm_bucket_name: cst-comm-palegacysharedservices-media
+ansible_aws_ssm_s3_addressing_style: path
+ansible_aws_ssm_s3_key_prefix: ansible-staging

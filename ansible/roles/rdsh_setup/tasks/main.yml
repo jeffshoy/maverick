@@ -6,42 +6,9 @@
     state: present
   register: rdsh_install
 
-- name: Trigger reboot after RDSH role install
-  win_shell: Start-Sleep -Seconds 3; Restart-Computer -Force
-  when: rdsh_install.reboot_required
-  ignore_errors: true
-  ignore_unreachable: true
-
-- name: Reconnect SSM tunnel after RDSH reboot
-  delegate_to: localhost
-  when: rdsh_install.reboot_required
-  shell: |
-    pgrep -f "ssm.*{{ instance_id }}" | xargs -r kill || true
-    sleep 30
-    for i in $(seq 1 60); do
-      STATUS=$(aws ssm describe-instance-information \
-        --filters "Key=InstanceIds,Values={{ instance_id }}" \
-        --region {{ aws_region }} \
-        --query 'InstanceInformationList[0].PingStatus' \
-        --output text 2>/dev/null || echo "none")
-      if [ "$STATUS" = "Online" ]; then
-        echo "SSM Online after attempt $i"
-        break
-      fi
-      echo "Waiting for SSM agent... attempt $i (status: $STATUS)"
-      sleep 10
-    done
-    nohup aws ssm start-session \
-      --target {{ instance_id }} \
-      --document-name AWS-StartPortForwardingSession \
-      --parameters '{"portNumber":["5986"],"localPortNumber":["{{ ssm_tunnel_port }}"]}' \
-      --region {{ aws_region }} \
-      > /tmp/ssm-tunnel-{{ instance_id }}.log 2>&1 &
-    sleep 15
-  changed_when: false
-
-- name: Clear unreachable state after RDSH reboot reconnect
-  meta: clear_host_errors
+- name: Reboot after RDSH role install
+  ansible.windows.win_reboot:
+    reboot_timeout: 600
   when: rdsh_install.reboot_required
 
 - name: Install RSAT AD tools
@@ -53,42 +20,9 @@
     state: present
   register: rsat_install
 
-- name: Trigger reboot after RSAT install
-  win_shell: Start-Sleep -Seconds 3; Restart-Computer -Force
-  when: rsat_install.reboot_required
-  ignore_errors: true
-  ignore_unreachable: true
-
-- name: Reconnect SSM tunnel after RSAT reboot
-  delegate_to: localhost
-  when: rsat_install.reboot_required
-  shell: |
-    pgrep -f "ssm.*{{ instance_id }}" | xargs -r kill || true
-    sleep 30
-    for i in $(seq 1 60); do
-      STATUS=$(aws ssm describe-instance-information \
-        --filters "Key=InstanceIds,Values={{ instance_id }}" \
-        --region {{ aws_region }} \
-        --query 'InstanceInformationList[0].PingStatus' \
-        --output text 2>/dev/null || echo "none")
-      if [ "$STATUS" = "Online" ]; then
-        echo "SSM Online after attempt $i"
-        break
-      fi
-      echo "Waiting for SSM agent... attempt $i (status: $STATUS)"
-      sleep 10
-    done
-    nohup aws ssm start-session \
-      --target {{ instance_id }} \
-      --document-name AWS-StartPortForwardingSession \
-      --parameters '{"portNumber":["5986"],"localPortNumber":["{{ ssm_tunnel_port }}"]}' \
-      --region {{ aws_region }} \
-      > /tmp/ssm-tunnel-{{ instance_id }}.log 2>&1 &
-    sleep 15
-  changed_when: false
-
-- name: Clear unreachable state after RSAT reboot reconnect
-  meta: clear_host_errors
+- name: Reboot after RSAT install
+  ansible.windows.win_reboot:
+    reboot_timeout: 600
   when: rsat_install.reboot_required
 
 - name: Verify RDSH role is active

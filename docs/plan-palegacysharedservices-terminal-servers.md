@@ -112,29 +112,30 @@ Two new VPCs (`PALegacySharedServicesAlternate-USE1` and `PALegacySharedServices
 
 | Item | Value |
 |---|---|
-| USE1 VPC | `vpc-03ad69aad26522702` (PALegacySharedServicesAlternate-USE1, **new**) |
+| USE1 VPC | `vpc-03ad69aad26522702` (PALegacySharedServicesAlternate-USE1) |
 | USE1 CIDR | `10.0.15.0/24` |
 | USE1 Subnet1 | `MSADConnectors-use1az4` — `10.0.15.0/28` — use1-az4 (us-east-1d) — `subnet-076d1828a602da486` |
 | USE1 Subnet2 | `MSADConnectors-use1az1` — `10.0.15.16/28` — use1-az1 (us-east-1b) — `subnet-0999ef9a27b42b73d` |
 | USE1 TGW attachment | `tgw-attach-037b90a827469c808` → `TGW-PALegacy-US-East-1-CldSvcs` |
-| USW2 VPC | `vpc-0f7fcace897bad052` (PALegacySharedServicesAlternate-USW2, **new**) |
+| USE1 AD Connector | `d-906674c65d` — **Active** (2026-07-01) |
+| USW2 VPC | `vpc-0f7fcace897bad052` (PALegacySharedServicesAlternate-USW2) |
 | USW2 CIDR | `10.1.15.0/24` |
 | USW2 Subnet1 | `MSADConnectors-usw2az1` — `10.1.15.0/28` — usw2-az1 (us-west-2a) — `subnet-0a5378dfb0720e4a4` |
 | USW2 Subnet2 | `MSADConnectors-usw2az2` — `10.1.15.16/28` — usw2-az2 (us-west-2b) — `subnet-0ee342a4ffaa765e6` |
 | USW2 TGW attachment | `tgw-attach-0bb0550d4c4908755` → `TGW-PALegacy-US-West-2-CldSvcs` |
-| AD service account | `awslmsvc` in `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl` — password >30 complex characters (from PBI 1531539) |
-| Service account password in SSM SecureString | **TBD — create before AD Connector Terraform apply** |
+| USW2 AD Connector | `d-9267c48005` — **Creating** — blocked by FTD (see Networking Blockers) |
+| AD service account | `awsadssvc` in `OU=Service Accounts,OU=Cloud,DC=cloud,DC=lcl` — SSM path `/inf/palegacysharedservices/awsadssvc/password` (both regions) |
 
-**Note on service account credential rotation:** Explore automating rotation of the `awslmsvc` password (e.g. AWS Secrets Manager rotation Lambda → updates SSM SecureString + AD password). Not required for initial deployment but desirable long-term.
+**Note on service account credential rotation:** Explore automating rotation of the `awsadssvc` password (e.g. AWS Secrets Manager rotation Lambda → updates SSM SecureString + AD password). Not required for initial deployment but desirable long-term.
 
 ### Terraform work remaining
 
 - ~~New VPC + subnets in 10.x space (both regions)~~ — **Done** (PALegacySharedServicesAlternate-USE1/USW2 applied 2026-06-25)
-- `aws_directory_service_connector` resource in `cloud-foundation-palegacysharedservices`
-- SSM SecureString parameter for service account password (`/inf/palegacysharedservices/awslmsvc/password` — both regions)
-- Update `ad_directory_id_use1` / `ad_directory_id_usw2` in `palegacysharedservices.tfvars` to the new connector directory IDs
-- Populate `ad_dns_ip_use1` / `ad_dns_ip_usw2` with the connector DC IPs
-- Add `directoryOU` back to SSM association parameters (cross-account `ds:CreateComputer` limitation goes away with an owned connector)
+- ~~`aws_directory_service_connector` resource in `cloud-foundation-palegacysharedservices`~~ — **Done** (branch `fix/palegacy-ad-connector-alternate-vpc` merged; uses Alternate VPCs, `awsadssvc` service account, `Rename-Computer` in user_data)
+- ~~SSM SecureString parameter for service account password~~ — **Done** (both regions)
+- ~~Update `ad_directory_id_use1` / `ad_directory_id_usw2` in `palegacysharedservices.tfvars`~~ — **Done**
+- ~~Populate `ad_dns_ip_use1` / `ad_dns_ip_usw2` with the connector DC IPs~~ — **Done**
+- ~~Add `directoryOU` back to SSM association parameters~~ — **Done**
 - Update `security_groups.tf` egress — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs; remove CGNAT rules once shared Managed AD is no longer used
 
 ---
@@ -177,7 +178,9 @@ SSM Association with `AWS-JoinDirectoryServiceDomain`. Directory ID and DNS IPs 
 - us-east-1: `OU=PALegacyUSE1,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl`
 - us-west-2: `OU=PALegacyUSW2,OU=Workstations,OU=AWS,OU=Servers,OU=Cloud,DC=cloud,DC=lcl`
 
-**RDP access group:** `R_AWSCOMM_SSO_cst-comm-infrdsaccess` in `cloud.lcl/Resources/AWSCOMMSSO` — added to `Remote Desktop Users` on each RDSH server by the Ansible playbook.
+**RDP access group:** `R_AWSCOMM_SSO_cst-comm-infrdsaccess` in `cloud.lcl/Resources/AWSCOMMSSO` — added to `Remote Desktop Users` by GPO (`INF_RDSUsers`, linked to `OU=PALegacyUSE1`). No longer managed by Ansible.
+
+**Local admin account:** Managed by GPO (`Local Account and Password Policyx64`, enforced domain-wide, renames RID-500 to `sgpschief`) and LAPS. A GPO override (`Local Account and Password Policy Override`, linked to `OU=PALegacyUSE1`, enforced) sets the name back to `Administrator` and disables LAPS for these servers — required for Ansible WinRM auth. With the switch to `community.aws.aws_ssm` this is no longer relevant to Ansible connectivity.
 
 ---
 
@@ -205,7 +208,7 @@ SSM Association with `AWS-JoinDirectoryServiceDomain`. Directory ID and DNS IPs 
 - `palegacysharedservices-rdsh-setup.yml` — installs RDS-RD-Server role, adds AD access group to Remote Desktop Users
 - `palegacysharedservices-ssms-setup.yml` — downloads SSMS installer from S3 media bucket and installs silently
 
-Both playbooks retrieve the Administrator password from SSM Parameter Store (`/inf/palegacysharedservices/<instance>/admin_password`) and connect via WinRM NTLM on port 5986.
+**Connection method:** `community.aws.aws_ssm` — IAM-based, no Windows credentials required. Commands run as SYSTEM via the SSM agent. The pipeline runner's assumed role (`cst-role-prd-deployment`) calls `ssm:StartSession`; large output is staged to `s3://cst-comm-palegacysharedservices-media/ansible-staging/`. WinRM/NTLM and local Administrator password lookups have been removed.
 
 ### Required application installs (PBI 1531541) — TODO
 
@@ -246,17 +249,18 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | 3 | ~~**Run spoke-networking pipeline** for PALegacySharedServices-use1, usw2, Alternate-USE1, Alternate-USW2~~ | ~~CloudOps~~ | **Done** — all four stacks applied 2026-06-25. vpc-endpoints → main merged as PR 164063 |
 | 4 | ~~**AD Connector CIDRs confirmed**~~ | ~~Aarron Lacey~~ | **Done** — confirmed 06/18/2026; separate VPCs required and deployed |
 | 5 | ~~**AD service account**~~ | ~~cloud.lcl AD team~~ | **Done** — `awsadssvc` created and delegated `Create Computer Objects` on `OU=PALegacyUSE1` and `OU=PALegacyUSW2`. Note: `awslmsvc` was deleted. |
-| 6 | ~~**AD Connector Terraform**~~ — connector resource, SSM secret | ~~CloudOps~~ | **Done** — `aws_directory_service_directory` (ADConnector) deployed in USE1 as `d-9066755bec` (Active). Connector uses dedicated Alternate VPCs with 10.x CIDRs. |
+| 6 | ~~**AD Connector Terraform**~~ — connector resource, SSM secret | ~~CloudOps~~ | **Done** — `fix/palegacy-ad-connector-alternate-vpc` merged. USE1 connector `d-906674c65d` Active (2026-07-01). USW2 connector `d-9267c48005` Creating — blocked on FTD rule (networking blocker #1). |
 | 7 | ~~**Populate SSM SecureString** `/inf/palegacysharedservices/awsadssvc/password` in us-east-1 and us-west-2~~ | ~~CloudOps~~ | **Done** — parameter created in both regions. |
 | 8 | ~~**Update tfvars** with connector DC IPs and service account~~ | ~~CloudOps~~ | **Done** — `ad_connector_dns_ips_use1/usw2`, `ad_connector_username`, `ad_connector_password_ssm_path` set in `palegacysharedservices.tfvars` |
-| 9 | ~~**Deploy palegacysharedservices USE1**~~ (deploy pipeline) | ~~CloudOps~~ | **Done** — pipeline applied 2026-06-28. INF-WSRDS001/002/003 and INF-WSSQL001 deployed and domain-joined to `OU=PALegacyUSE1`. |
-| 9a | **Deploy palegacysharedservices USW2** | CloudOps | **Blocked** — see networking blocker #1 below. |
+| 9 | ~~**Deploy palegacysharedservices USE1**~~ (deploy pipeline) | ~~CloudOps~~ | **Done** — pipeline applied 2026-07-01. INF-WSRDS001/002/003 and INF-WSSQL001 created and domain-joined to `OU=PALegacyUSE1`. TGW subnets tgw-az1/tgw-az4 in place. |
+| 9a | **Deploy palegacysharedservices USW2** | CloudOps | **Blocked** — USW2 pipeline has applied infrastructure (instances, TGW subnets tgw-az1/tgw-az2 confirmed `available`). AD connector `d-9267c48005` stuck in Creating pending FTD rule (networking blocker #1). |
 | 10 | **Enable LM UBS** — set `lm_ubs_enabled = true`, run `register-identity-provider` CLI step | CloudOps | Blocked on item 9a (USW2 must be deployed first) |
 | 11 | ~~**Add `directoryOU` back** to SSM association parameters~~ | ~~CloudOps~~ | **Done** — `directoryOU` added to `AWS-JoinDirectoryServiceDomain` parameters. All USE1 instances joined to correct OUs. |
 | 12 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | No — deferred; FTDv controls access |
 | 13 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group → LM subscriptions | CloudOps | No — manual runbook step covers it initially |
-| 14 | **Ansible: add `R_AWSCOMM_SSO_cst-comm-infrdsaccess`** to Remote Desktop Users on all instances | CloudOps | Blocked on networking blocker #2 (domain connectivity needed for domain group resolution) |
-| 15 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after domain join working |
+| 14 | ~~**Ansible: add `R_AWSCOMM_SSO_cst-comm-infrdsaccess`** to Remote Desktop Users~~ | ~~CloudOps~~ | **Done** — handled by GPO `INF_RDSUsers` linked to `OU=PALegacyUSE1`. Removed from Ansible role. |
+| 15 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after Ansible SSM connection confirmed working |
+| 16 | **Migrate Ansible connection to `community.aws.aws_ssm`** — remove WinRM/NTLM dependency | CloudOps | In progress — `feature/rdsh-ssm-connection` (cloudops), `feature/ansible-ssm-staging-iam` (palegacysharedservices). IAM Terraform apply required before first run. |
 
 ---
 
@@ -277,20 +281,19 @@ Confirmed via port scan 2026-06-28 from probe instances `i-0549fab81b7482a59` (u
 
 ### Blocker 2 — USE1 instances: no DC connectivity from instance subnets
 
-**Action required: Networking team**
+**Action required: Networking team**  
+**Status: RESOLVED for USE1 as of 2026-07-01. USW2 equivalent rule still needed.**
 
-RDSH and WSSQL instances in `172.30.43.x` cannot reach the USE1 domain controllers directly.
-Domain join succeeded (runs from AWS DS service plane), but live AD lookups, GP, Kerberos, and domain user logins all fail from the instances.
-This blocks domain user RDP access and Ansible domain-level configuration.
+USE1 FTD rule allowing `172.30.43.0/24` → `172.30.20.0/24` was added by the networking team. Domain join, Kerberos, and AD group lookups now succeed from USE1 instances.
 
-The equivalent rule will be needed in USW2 for `172.29.43.x` once that pipeline runs.
+USW2 equivalent rule (`172.29.43.0/24` → `172.29.20.0/24`) still needed — to be added when the networking team addresses blocker #1.
 
-| Source | Destination | Required Ports |
-|---|---|---|
-| `172.30.43.0/24` (pri-sub-3-INFWS-az4/az1, USE1) | `172.30.20.20` (inf-svrdc001) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 |
-| `172.30.43.0/24` (pri-sub-3-INFWS-az4/az1, USE1) | `172.30.20.21` (inf-svrdc002) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 |
-| `172.29.43.0/24` (pri-sub-3-INFWS-az1/az2, USW2) | `172.29.20.20` (inf-svrdc011) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 |
-| `172.29.43.0/24` (pri-sub-3-INFWS-az1/az2, USW2) | `172.29.20.21` (inf-svrdc012) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 |
+| Source | Destination | Required Ports | Status |
+|---|---|---|---|
+| `172.30.43.0/24` (pri-sub-3-INFWS-az4/az1, USE1) | `172.30.20.20` (inf-svrdc001) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 | **Done** |
+| `172.30.43.0/24` (pri-sub-3-INFWS-az4/az1, USE1) | `172.30.20.21` (inf-svrdc002) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 | **Done** |
+| `172.29.43.0/24` (pri-sub-3-INFWS-az1/az2, USW2) | `172.29.20.20` (inf-svrdc011) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 | **Pending** |
+| `172.29.43.0/24` (pri-sub-3-INFWS-az1/az2, USW2) | `172.29.20.21` (inf-svrdc012) | TCP/UDP 53, 88, 135, 389, 445, 636, 3268, 49152-65535 | **Pending** |
 
 ---
 
