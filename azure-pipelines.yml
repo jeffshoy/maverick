@@ -1,0 +1,188 @@
+# One-time manual setup required in Azure DevOps before this pipeline will run:
+#   1. Project Settings > Service connections > New > Azure Resource Manager (Service Principal).
+#      Name it to match `azureServiceConnection` below, grant it Contributor on the target
+#      subscription (or resource groups) plus Storage Blob Data Contributor on the
+#      rg-tfstate-core/sttfstatemaverick state storage account.
+#   2. Pipelines > Environments > create "aks-dev" and "aks-prod".
+#      On "aks-prod", add an Approvals check (Approvals and checks > Approvals) so a human
+#      must approve before terraform apply runs against prod.
+#   3. Pipelines > New pipeline > point at this file.
+#   4. Repos > Branches > main > Branch policies > Build Validation > require this pipeline,
+#      so PRs can't merge until Validate/Plan_Dev/Plan_Prod succeed.
+#   5. If posting the plan as a PR comment, enable "Contribute to pull requests" for the
+#      Project Build Service identity (Project Settings > Repositories > Security).
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  terraformVersion: "1.11.4"
+  azureServiceConnection: "azure-terraform-sc" # TODO: set to your ARM service connection name
+  isPR: $[eq(variables['Build.Reason'], 'PullRequest')]
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Validate
+    jobs:
+      - job: FormatCheck
+        steps:
+          - template: templates/install-terraform.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+          - script: terraform fmt -check -recursive
+            displayName: "terraform fmt -check"
+
+      - job: ValidateDev
+        steps:
+          - template: templates/install-terraform.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+          - script: |
+              set -e
+              terraform init -backend=false -input=false
+              terraform validate
+            workingDirectory: environments/dev
+            displayName: "terraform validate (dev)"
+
+      - job: ValidateProd
+        steps:
+          - template: templates/install-terraform.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+          - script: |
+              set -e
+              terraform init -backend=false -input=false
+              terraform validate
+            workingDirectory: environments/prod
+            displayName: "terraform validate (prod)"
+
+  - stage: Plan_Dev
+    dependsOn: Validate
+    jobs:
+      - job: Plan
+        steps:
+          - template: templates/install-terraform.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+          - task: AzureCLI@2
+            displayName: "terraform plan (dev)"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              inlineScript: |
+                set -e
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_CLIENT_SECRET=$servicePrincipalKey
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                terraform init -input=false
+                terraform plan -input=false -out=tfplan
+              workingDirectory: environments/dev
+          - publish: environments/dev/tfplan
+            artifact: tfplan-dev
+
+  - stage: Plan_Prod
+    dependsOn: Validate
+    jobs:
+      - job: Plan
+        steps:
+          - template: templates/install-terraform.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+          - task: AzureCLI@2
+            displayName: "terraform plan (prod)"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              inlineScript: |
+                set -e
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_CLIENT_SECRET=$servicePrincipalKey
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                terraform init -input=false
+                terraform plan -input=false -out=tfplan
+              workingDirectory: environments/prod
+          - publish: environments/prod/tfplan
+            artifact: tfplan-prod
+
+  - stage: Apply_Dev
+    dependsOn: Plan_Dev
+    condition: and(succeeded(), eq(variables.isPR, false))
+    jobs:
+      - deployment: Apply
+        environment: aks-dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: templates/install-terraform.yml
+                  parameters:
+                    terraformVersion: $(terraformVersion)
+                - download: current
+                  artifact: tfplan-dev
+                - task: AzureCLI@2
+                  displayName: "terraform apply (dev)"
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    addSpnToEnvironment: true
+                    inlineScript: |
+                      set -e
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_CLIENT_SECRET=$servicePrincipalKey
+                      export ARM_TENANT_ID=$tenantId
+                      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                      cp $(Pipeline.Workspace)/tfplan-dev/tfplan .
+                      terraform init -input=false
+                      terraform apply -input=false -auto-approve tfplan
+                    workingDirectory: environments/dev
+
+  - stage: Apply_Prod
+    dependsOn:
+      - Apply_Dev
+      - Plan_Prod
+    condition: and(succeeded(), eq(variables.isPR, false))
+    jobs:
+      - deployment: Apply
+        environment: aks-prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: templates/install-terraform.yml
+                  parameters:
+                    terraformVersion: $(terraformVersion)
+                - download: current
+                  artifact: tfplan-prod
+                - task: AzureCLI@2
+                  displayName: "terraform apply (prod)"
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    addSpnToEnvironment: true
+                    inlineScript: |
+                      set -e
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_CLIENT_SECRET=$servicePrincipalKey
+                      export ARM_TENANT_ID=$tenantId
+                      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                      cp $(Pipeline.Workspace)/tfplan-prod/tfplan .
+                      terraform init -input=false
+                      terraform apply -input=false -auto-approve tfplan
+                    workingDirectory: environments/prod
