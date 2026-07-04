@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(terraform version *)",
+      "Bash(terraform init *)",
+      "Bash(terraform fmt *)",
+      "Bash(git -C /c/terraform/aks-azure-terraform status)",
+      "Bash(az storage *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Move Azure AKS Terraform project into azure-aks-terraform/ subdirectory *)"
+    ]
+  }
+}

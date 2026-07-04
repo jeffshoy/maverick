@@ -6,7 +6,9 @@
 #   2. Pipelines > Environments > create "aks-dev" and "aks-prod".
 #      On "aks-prod", add an Approvals check (Approvals and checks > Approvals) so a human
 #      must approve before terraform apply runs against prod.
-#   3. Pipelines > New pipeline > point at this file.
+#   3. Pipelines > New pipeline > point at azure-aks-terraform/azure-pipelines.yml.
+#      This repo also hosts an unrelated AWS Terraform project at the root, so the
+#      trigger/pr path filters below scope this pipeline to azure-aks-terraform/* only.
 #   4. Repos > Branches > main > Branch policies > Build Validation > require this pipeline,
 #      so PRs can't merge until Validate/Plan_Dev/Plan_Prod succeed.
 #   5. If posting the plan as a PR comment, enable "Contribute to pull requests" for the
@@ -16,11 +18,17 @@ trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - azure-aks-terraform/*
 
 pr:
   branches:
     include:
       - main
+  paths:
+    include:
+      - azure-aks-terraform/*
 
 variables:
   terraformVersion: "1.11.4"
@@ -50,7 +58,7 @@ stages:
               set -e
               terraform init -backend=false -input=false
               terraform validate
-            workingDirectory: environments/dev
+            workingDirectory: azure-aks-terraform/environments/dev
             displayName: "terraform validate (dev)"
 
       - job: ValidateProd
@@ -62,7 +70,7 @@ stages:
               set -e
               terraform init -backend=false -input=false
               terraform validate
-            workingDirectory: environments/prod
+            workingDirectory: azure-aks-terraform/environments/prod
             displayName: "terraform validate (prod)"
 
   - stage: Plan_Dev
@@ -88,8 +96,8 @@ stages:
                 export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
                 terraform init -input=false
                 terraform plan -input=false -out=tfplan
-              workingDirectory: environments/dev
-          - publish: environments/dev/tfplan
+              workingDirectory: azure-aks-terraform/environments/dev
+          - publish: azure-aks-terraform/environments/dev/tfplan
             artifact: tfplan-dev
 
   - stage: Plan_Prod
@@ -115,8 +123,8 @@ stages:
                 export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
                 terraform init -input=false
                 terraform plan -input=false -out=tfplan
-              workingDirectory: environments/prod
-          - publish: environments/prod/tfplan
+              workingDirectory: azure-aks-terraform/environments/prod
+          - publish: azure-aks-terraform/environments/prod/tfplan
             artifact: tfplan-prod
 
   - stage: Apply_Dev
@@ -150,7 +158,7 @@ stages:
                       cp $(Pipeline.Workspace)/tfplan-dev/tfplan .
                       terraform init -input=false
                       terraform apply -input=false -auto-approve tfplan
-                    workingDirectory: environments/dev
+                    workingDirectory: azure-aks-terraform/environments/dev
 
   - stage: Apply_Prod
     dependsOn:
@@ -185,4 +193,4 @@ stages:
                       cp $(Pipeline.Workspace)/tfplan-prod/tfplan .
                       terraform init -input=false
                       terraform apply -input=false -auto-approve tfplan
-                    workingDirectory: environments/prod
+                    workingDirectory: azure-aks-terraform/environments/prod
