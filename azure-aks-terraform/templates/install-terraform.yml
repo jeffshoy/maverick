@@ -1,0 +1,11 @@
+parameters:
+  - name: terraformVersion
+    type: string
+
+steps:
+  - script: |
+      set -e
+      curl -sSL "https://releases.hashicorp.com/terraform/${{ parameters.terraformVersion }}/terraform_${{ parameters.terraformVersion }}_linux_amd64.zip" -o terraform.zip
+      unzip -o terraform.zip -d "$(Agent.ToolsDirectory)/terraform"
+      echo "##vso[task.prependpath]$(Agent.ToolsDirectory)/terraform"
+    displayName: "Install Terraform ${{ parameters.terraformVersion }}"
