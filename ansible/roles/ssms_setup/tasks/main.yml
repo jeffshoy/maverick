@@ -1,20 +1,191 @@
 ---
-- name: Download SSMS installer from S3 media bucket
+- name: Set timezone
+  win_timezone:
+    timezone: "{{ 'Pacific Standard Time' if aws_region == 'us-west-2' else 'Eastern Standard Time' }}"
+
+# PSReadLine writes a stray 'm' to stdout when it cannot access its history
+# file under the SSM Session Manager restricted token. That character corrupts
+# Ansible's path capture (e.g. 'mC:\...'). Fix: create the directory so
+# PSReadLine stops erroring, and install a profile that suppresses SaveNothing.
+- name: Suppress PSReadLine history noise for SSM sessions
   win_shell: |
-    aws s3 cp "s3://cst-comm-palegacysharedservices-media/installers/SSMS-Setup-ENU.exe" `
-        "C:\Windows\Temp\SSMS-Setup-ENU.exe" --region {{ aws_region }}
-  args:
-    creates: C:\Windows\Temp\SSMS-Setup-ENU.exe
+    New-Item -ItemType Directory -Force `
+        -Path "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine" | Out-Null
+    $p = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\profile.ps1"
+    if (-not (Test-Path $p) -or (Get-Content $p -Raw) -notmatch 'SaveNothing') {
+        Set-Content -Path $p `
+            -Value "try { Set-PSReadLineOption -HistorySaveStyle SaveNothing } catch {}" `
+            -NoNewline
+    }
+  changed_when: false
 
-- name: Install SSMS silently
-  win_package:
-    path: C:\Windows\Temp\SSMS-Setup-ENU.exe
-    arguments: /install /quiet /norestart
-    state: present
-  register: ssms_install
+# SSMS download, install, and Chocolatey package installs all run via SSM Run
+# Command (Play 4). The SSMS VS bootstrapper downloads ~600MB of components
+# from Microsoft CDN during install, taking 60-90 minutes. SSM Session Manager
+# times out at 3600s which is not enough. SSM Run Command has its own
+# configurable timeout (Play 4 sets it to 10800s / 3 hours).
+#
+# The presigned URL for the SSMS bootstrapper (generated in Play 1) is baked
+# into the script content here via Jinja2 templating before win_copy writes it.
+- name: Write combined SSMS + Chocolatey install script to disk
+  win_copy:
+    content: |
+      $ErrorActionPreference = "Stop"
+      $log = "C:\Windows\Temp\ssms-choco-install.log"
+      function Log {
+          param([string]$m)
+          $line = "$(Get-Date -Format 'HH:mm:ss')  $m"
+          Add-Content -Path $log -Value $line
+          Write-Host $line
+      }
 
-- name: Reboot if required after SSMS install
-  win_reboot:
-    reboot_timeout: 300
-    post_reboot_delay: 30
-  when: ssms_install.reboot_required
+      # --- SSMS install ---
+      # Download bootstrapper from S3 (VPC endpoint — no proxy needed).
+      # Run installer after setting system proxy so the VS bootstrapper can
+      # reach Microsoft CDN (download.visualstudio.microsoft.com) for components.
+      $ssmsExe = "C:\Windows\Temp\SSMS-Setup-ENU.exe"
+      if (-not (Test-Path $ssmsExe)) {
+          Log "Downloading SSMS bootstrapper from S3..."
+          $progressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "{{ ssms_presign_url }}" `
+              -OutFile $ssmsExe -UseBasicParsing
+          Log "Download complete: $((Get-Item $ssmsExe).Length) bytes"
+      } else {
+          Log "SSMS bootstrapper already on disk - skipping download"
+      }
+
+      $ssmsInstalled = Get-ItemProperty `
+          'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+          'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' `
+          -ErrorAction SilentlyContinue |
+          Where-Object { $_.DisplayName -like 'SQL Server Management Studio*' } |
+          Select-Object -First 1
+
+      if ($ssmsInstalled) {
+          Log "SSMS already installed: $($ssmsInstalled.DisplayName) $($ssmsInstalled.DisplayVersion)"
+      } else {
+          Log "Setting system proxy for SSMS component downloads..."
+          netsh winhttp set proxy 172.30.20.55:8080 | Out-Null
+
+          Log "Installing SSMS (this downloads ~600MB from Microsoft CDN)..."
+          $proc = Start-Process -FilePath $ssmsExe `
+              -ArgumentList '--install', '--quiet', '--norestart' `
+              -Wait -PassThru -NoNewWindow
+          Log "SSMS installer exit code: $($proc.ExitCode)"
+
+          netsh winhttp reset proxy | Out-Null
+
+          if ($proc.ExitCode -notin @(0, 3010)) {
+              Log "FATAL: SSMS install failed (exit $($proc.ExitCode))"
+              exit 1
+          }
+          if ($proc.ExitCode -eq 3010) {
+              Log "SSMS installed successfully - reboot required to complete"
+          } else {
+              Log "SSMS installed successfully"
+          }
+      }
+
+      # --- Chocolatey bootstrap + packages ---
+      netsh winhttp set proxy 172.30.20.55:8080 | Out-Null
+      $env:HTTPS_PROXY = "http://172.30.20.55:8080"
+      $env:HTTP_PROXY  = "http://172.30.20.55:8080"
+      Log "Proxy set for Chocolatey"
+
+      $chocoInstall = 'C:\ProgramData\chocolatey'
+      $chocoBin     = "$chocoInstall\bin"
+      $chocoExe     = "$chocoBin\choco.exe"
+      $env:ChocolateyInstall = $chocoInstall
+
+      if (-not (Test-Path $chocoExe)) {
+          Log "Installing Chocolatey..."
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+          $proxy = New-Object System.Net.WebProxy("http://172.30.20.55:8080", $true)
+          $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
+          [System.Net.WebRequest]::DefaultWebProxy = $proxy
+          $wc = New-Object System.Net.WebClient
+          $wc.Proxy = $proxy
+          $installScript = $wc.DownloadString('https://community.chocolatey.org/install.ps1')
+          try {
+              Invoke-Expression $installScript
+          } catch {
+              if ($_ -notmatch 'registry access') { throw }
+              Log "Registry access blocked - manually completing Chocolatey binary placement"
+              $found = Get-ChildItem 'C:\Windows\TEMP\chocolatey' -Filter 'choco.exe' -Recurse `
+                  -ErrorAction SilentlyContinue | Select-Object -First 1
+              if (-not $found) { Log "choco.exe not found in extracted nupkg"; exit 1 }
+              $nupkgTools = $found.DirectoryName
+              Log "Copying binaries from: $nupkgTools"
+              foreach ($d in @('bin', 'config', 'helpers', 'lib', 'lib-bad', 'lib-good', 'logs', 'temp')) {
+                  New-Item -ItemType Directory -Force -Path "$chocoInstall\$d" | Out-Null
+              }
+              Get-ChildItem $nupkgTools -File | Copy-Item -Destination $chocoBin -Force
+              Log "Chocolatey binaries placed to $chocoBin"
+              if (Test-Path "$nupkgTools\helpers") {
+                  New-Item -ItemType Directory -Force -Path "$chocoInstall\helpers" | Out-Null
+                  Copy-Item "$nupkgTools\helpers\*" "$chocoInstall\helpers" -Recurse -Force
+              }
+          }
+          if (-not (Test-Path $chocoExe)) {
+              Log "choco.exe not found at $chocoExe after install"; exit 1
+          }
+          Log "Chocolatey installed: $(& $chocoExe --version)"
+      } else {
+          Log "Chocolatey already present: $(& $chocoExe --version)"
+      }
+
+      $helpersTarget = "$chocoInstall\helpers"
+      New-Item -ItemType Directory -Force -Path $helpersTarget | Out-Null
+      Log "Refreshing helpers from nupkg..."
+      $chocoVer  = (& $chocoExe --version).Trim()
+      $nupkgUrl  = "https://community.chocolatey.org/api/v2/package/chocolatey/$chocoVer"
+      $nupkgZip  = "$env:TEMP\choco-helpers.zip"
+      $nupkgDir  = "$env:TEMP\choco-helpers"
+      [System.Net.WebRequest]::DefaultWebProxy = New-Object System.Net.WebProxy("http://172.30.20.55:8080", $true)
+      (New-Object System.Net.WebClient).DownloadFile($nupkgUrl, $nupkgZip)
+      Remove-Item -Recurse -Force $nupkgDir -ErrorAction SilentlyContinue
+      Expand-Archive -Path $nupkgZip -DestinationPath $nupkgDir -Force
+      $nupkgHelpers = Get-ChildItem $nupkgDir -Directory -Recurse -Filter 'helpers' | Select-Object -First 1
+      if ($nupkgHelpers) {
+          Copy-Item ($nupkgHelpers.FullName + '\*') $helpersTarget -Recurse -Force
+          Log "Helpers refreshed from nupkg"
+      } else {
+          $psm1Files = Get-ChildItem $nupkgDir -Filter '*.psm1' -Recurse
+          if ($psm1Files) {
+              $psm1Files | Copy-Item -Destination $helpersTarget -Force
+              Log "Helpers placed (PSM1 only): $($psm1Files.Name -join ', ')"
+          } else {
+              Log "helpers not found in chocolatey nupkg"; exit 1
+          }
+      }
+
+      $env:Path = "$chocoBin;$env:Path"
+      & $chocoExe config set proxy http://172.30.20.55:8080 | Out-Null
+      Log "Chocolatey proxy configured"
+
+      $packages = @('git', 'notepadplusplus')
+      $failed = @()
+      foreach ($pkg in $packages) {
+          Log "--- Installing $pkg ---"
+          & $chocoExe install $pkg -y --no-progress 2>&1 | ForEach-Object { Log $_ }
+          $rc = $LASTEXITCODE
+          Log "exit: $rc"
+          if ($rc -ne 0) {
+              Log "FAILED: $pkg (exit $rc)"
+              $failed += $pkg
+          }
+      }
+
+      netsh winhttp reset proxy | Out-Null
+      & $chocoExe config unset proxy | Out-Null
+      $env:HTTPS_PROXY = ""
+      $env:HTTP_PROXY  = ""
+      Log "Proxy cleared"
+
+      if ($failed.Count -gt 0) {
+          Log "FATAL: Failed packages: $($failed -join ', ')"
+          exit 1
+      }
+      Log "All packages installed successfully"
+    dest: C:\Windows\Temp\ssms-choco-install.ps1
+  tags: always

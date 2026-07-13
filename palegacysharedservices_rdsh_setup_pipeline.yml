@@ -94,6 +94,8 @@ stages:
         ansible_requirements_file: '$(Build.SourcesDirectory)/cloudops/ansible/collections/requirements.yml'
         ansible_roles_path: $(Build.SourcesDirectory)/cloudops/ansible/roles
         playbook_tags: 'always'
+        security_group_name: inf-palegacysharedservices-internal
+        secgroup_access_port_num: 5986
         session_duration_seconds: 3600
         vars:
           - 'aws_region=${{ variables.aws_region }}'

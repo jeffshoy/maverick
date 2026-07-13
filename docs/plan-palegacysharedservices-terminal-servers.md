@@ -85,20 +85,52 @@ DS interface endpoint (`com.amazonaws.<region>.ds`) is defined in the networking
 
 ### How it works
 
-1. Register the cloud.lcl AD Connector directory with AWS License Manager UBS
-2. Subscribe authorized AD users by `samAccountName` — they receive a SAL; unsubscribed users cannot connect once the 120-day grace period expires
-3. Each RDSH instance is associated with the `AWS-LicenseManager-UserSubscriptionsHandler` SSM document (Terraform-managed, `lm_ubs_enabled = true`), which reports active sessions back to License Manager for billing
+1. Register the cloud.lcl self-managed AD directory with AWS License Manager UBS (`register-identity-provider`)
+2. Create the RDS license server endpoint (`create-license-server-endpoint`) — AWS provisions two EC2 license server nodes, joins them to `OU=LicenseServer,DC=cloud,DC=lcl`, and creates a Route 53 DNS record pointing at them
+3. Configure a GPO on the RDSH/WSSQL OUs to point at the LM UBS license server hostname and set Per User licensing mode
+4. Subscribe authorized AD users by `samAccountName` via `start-product-subscription` — each subscribed user receives a SAL; unsubscribed users cannot connect once the 120-day grace period expires
+5. Each RDSH instance is associated with the `AWS-LicenseManager-UserSubscriptionsHandler` SSM document, which reports active sessions back to License Manager for billing and CAL tracking
+
+**Important:** The `AWS-LicenseManager-UserSubscriptionsHandler` SSM document is published by AWS to the account only after the first user subscription is activated — it does not exist at identity provider registration time. The `aws_ssm_association.lm_ubs_rdsh` Terraform resource must be removed from `ssm_associations.tf`; LM UBS manages instance associations itself when users are subscribed, so Terraform cannot pre-create it (see Open Items).
 
 ### Access control
 
 **AD group:** `R_AWSCOMM_SSO_cst-comm-infrdsaccess` in `cloud.lcl/Resources/AWSCOMMSSO`  
-Added to `Remote Desktop Users` on each RDSH server by the Ansible playbook.
+Added to `Remote Desktop Users` on each RDSH server by GPO (`INF_RDSUsers`).
 
-**License Manager sync:** AWS UBS has no native AD group support; users must be subscribed individually. The `inf-rdsh-lm-sync` PowerShell script (TODO — see Open Items) reads the AD group and reconciles against current LM subscriptions. Until it exists, subscriptions are managed manually via the runbook.
+**License Manager sync:** AWS UBS has no native AD group support — subscriptions are per-user only. The `inf-rdsh-lm-sync` PowerShell script (see Open Items) reads the AD group membership and reconciles against current LM subscriptions using `start-product-subscription` / `stop-product-subscription`. Until the script exists, subscriptions are managed manually:
 
-### Current status: `lm_ubs_enabled = false`
+```powershell
+# Subscribe a user
+aws license-manager-user-subscriptions start-product-subscription `
+  --username <samAccountName> `
+  --product REMOTE_DESKTOP_SERVICES `
+  --identity-provider 'ActiveDirectoryIdentityProvider={DirectoryId=sd-374859fdca}' `
+  --profile PALegacySharedServices --region us-east-1
 
-LM UBS was blocked by the shared Managed AD cross-account limitation — the `AWS-LicenseManager-UserSubscriptionsHandler` SSM document only exists in the directory owner account. The AD Connector (Phase 1 completion item) resolves this: using a connector owned by PALegacySharedServices removes the shared directory restriction. Set `lm_ubs_enabled = true` in tfvars after the connector is deployed and verified.
+# List current subscriptions
+aws license-manager-user-subscriptions list-product-subscriptions `
+  --product REMOTE_DESKTOP_SERVICES `
+  --identity-provider 'ActiveDirectoryIdentityProvider={DirectoryId=sd-374859fdca}' `
+  --profile PALegacySharedServices --region us-east-1
+```
+
+### Current status: USE1 LIVE as of 2026-07-09
+
+| Component | Status | Detail |
+|---|---|---|
+| Identity provider | **REGISTERED** | `IdentityProvider-c6cf9edc-c3d7-0ffd-1bfd-8b0582187f4d`, self-managed AD (`sd-374859fdca`) |
+| License server endpoint | **PROVISIONED** | `lse-0ccfa254-0c30-dac8-1591-033d91160a98`, two healthy nodes at `10.0.15.4` and `10.0.15.20` |
+| License server DNS | `361362055558-d0c6fd83-e52a-4b36-8cbf-4a3b68aeae0f.license-manager-user-subscriptions-license-server.amazon.com` | |
+| GPO | **Applied** | `INF_RDSUsers` linked to `OU=Workstations,OU=AWS,OU=Servers,OU=Cloud` — sets `LicensingMode=4 (Per User)` and `LicenseServers` on all 4 servers |
+| Secrets Manager secret | `license-manager-user-palegacysharedservices-awsadssvc-5nG21r` | username: `awsadssvc` (plain sAMAccountName — no domain qualifier) |
+| `lm_ubs_enabled` tfvars | `true` (USE1), `false` (USW2) | PR 167199 merged |
+
+**AD permissions required on `awsadssvc`** (applied 2026-07-09 via SSM to INF-SVRDC002):
+- CreateChild/DeleteChild on OU objects at domain root — to create `OU=LicenseServer`
+- CreateChild/DeleteChild + GenericAll on Computer objects (descendant scope) — to domain-join license server EC2s
+- WriteProperty on `member` attribute of Group objects (descendant scope) — to add servers to Terminal Servers group
+- ReadProperty+WriteProperty on `msTSLicenseVersion*` and `msTSManagingLS*` on User objects — for RDS CAL report generation
 
 ---
 
@@ -254,10 +286,12 @@ Stock Amazon AMI + post-deploy Ansible configuration. `lifecycle { ignore_change
 | 8 | ~~**Update tfvars** with connector DC IPs and service account~~ | ~~CloudOps~~ | **Done** — `ad_connector_dns_ips_use1/usw2`, `ad_connector_username`, `ad_connector_password_ssm_path` set in `palegacysharedservices.tfvars` |
 | 9 | ~~**Deploy palegacysharedservices USE1**~~ (deploy pipeline) | ~~CloudOps~~ | **Done** — pipeline applied 2026-07-01. INF-WSRDS001/002/003 and INF-WSSQL001 created and domain-joined to `OU=PALegacyUSE1`. TGW subnets tgw-az1/tgw-az4 in place. |
 | 9a | **Deploy palegacysharedservices USW2** | CloudOps | **Blocked** — USW2 pipeline has applied infrastructure (instances, TGW subnets tgw-az1/tgw-az2 confirmed `available`). AD connector `d-9267c48005` stuck in Creating pending FTD rule (networking blocker #1). |
-| 10 | **Enable LM UBS** — set `lm_ubs_enabled = true`, run `register-identity-provider` CLI step | CloudOps | Blocked on item 9a (USW2 must be deployed first) |
+| 10 | ~~**Enable LM UBS USE1**~~ — identity provider, license server endpoint, GPO, `lm_ubs_enabled = true` | CloudOps | **Done** — USE1 REGISTERED and PROVISIONED 2026-07-09. PR 167199 merged. See Licensing section for full status. |
+| 10a | **Remove `aws_ssm_association.lm_ubs_rdsh` from `ssm_associations.tf`** | CloudOps | **Blocking Terraform apply** — document `AWS-LicenseManager-UserSubscriptionsHandler` is published by AWS only after first user subscription; Terraform cannot pre-create it. Remove the resource; LM UBS manages instance associations itself. Also add `INF-WSSQL001` to LM UBS scope via the correct mechanism. |
+| 10b | **Enable LM UBS USW2** — repeat `register-identity-provider` + `create-license-server-endpoint` for us-west-2 once USW2 AD connector is Active | CloudOps | Blocked on 9a |
 | 11 | ~~**Add `directoryOU` back** to SSM association parameters~~ | ~~CloudOps~~ | **Done** — `directoryOU` added to `AWS-JoinDirectoryServiceDomain` parameters. All USE1 instances joined to correct OUs. |
 | 12 | **Update SG egress** — replace `100.64.0.0/10` CGNAT rules with connector subnet CIDRs | CloudOps | No — deferred; FTDv controls access |
-| 13 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group → LM subscriptions | CloudOps | No — manual runbook step covers it initially |
+| 13 | **`inf-rdsh-lm-sync` script** — PowerShell to sync AD group `R_AWSCOMM_SSO_cst-comm-infrdsaccess` → LM subscriptions. Logic: read AD group members, call `list-product-subscriptions`, diff, call `start-product-subscription` for new members and `stop-product-subscription` for removed members. Run as a scheduled SSM Automation or EventBridge-triggered Lambda. | CloudOps | No — manual `start-product-subscription` covers it initially |
 | 14 | ~~**Ansible: add `R_AWSCOMM_SSO_cst-comm-infrdsaccess`** to Remote Desktop Users~~ | ~~CloudOps~~ | **Done** — handled by GPO `INF_RDSUsers` linked to `OU=PALegacyUSE1`. Removed from Ansible role. |
 | 15 | **Ansible: install required apps** on RDSH hosts — CarbonBlack, Tanium, Rapid7, NPM Client, RSAT, SecureCRT (PBI 1531541) | CloudOps | No — after Ansible SSM connection confirmed working |
 | 16 | **Migrate Ansible connection to `community.aws.aws_ssm`** — remove WinRM/NTLM dependency | CloudOps | In progress — `feature/rdsh-ssm-connection` (cloudops), `feature/ansible-ssm-staging-iam` (palegacysharedservices). IAM Terraform apply required before first run. |

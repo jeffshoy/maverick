@@ -17,13 +17,102 @@
 # Targets all instances tagged cst_application=inf-admin-rdsh in the
 # specified region via the aws_ec2 dynamic inventory.
 
+- name: Install session-manager-plugin on controller
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Check if session-manager-plugin is already installed to /tmp
+      ansible.builtin.stat:
+        path: /tmp/session-manager-plugin
+      register: smp_stat
+      tags: always
+
+    - name: Download and install session-manager-plugin (no root required)
+      when: not smp_stat.stat.exists
+      tags: always
+      block:
+        - name: Download session-manager-plugin deb
+          ansible.builtin.get_url:
+            url: "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb"
+            dest: /tmp/session-manager-plugin.deb
+            mode: '0644'
+
+        - name: Extract deb without installing (dpkg --extract, no root)
+          ansible.builtin.command:
+            cmd: dpkg --extract /tmp/session-manager-plugin.deb /tmp/smp
+          changed_when: true
+
+        - name: Copy binary from actual install path to /tmp (deb uses sessionmanagerplugin/bin/, not /usr/local/bin/)
+          ansible.builtin.copy:
+            src: /tmp/smp/usr/local/sessionmanagerplugin/bin/session-manager-plugin
+            dest: /tmp/session-manager-plugin
+            mode: '0755'
+            remote_src: true
+
+    # Stage the winget msixbundle to S3 so instances can pull it via the
+    # S3 VPC endpoint instead of downloading 207MB from GitHub over SSM.
+    # The controller has internet; the instances do not. A presigned URL
+    # lets the instances authenticate with S3 without needing the AWS CLI.
+    - name: Check if winget bundle is already staged in S3
+      ansible.builtin.command:
+        cmd: aws s3 ls s3://cst-comm-palegacysharedservices-media/ansible-staging/winget/winget.msixbundle --region us-east-1
+      register: winget_s3_check
+      changed_when: false
+      failed_when: false
+      tags: always
+
+    - name: Download winget msixbundle on controller (has internet)
+      ansible.builtin.get_url:
+        url: "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+        dest: /tmp/winget.msixbundle
+        mode: '0644'
+        timeout: 300
+      when: winget_s3_check.rc != 0
+      tags: always
+
+    - name: Upload winget msixbundle to S3 staging bucket
+      ansible.builtin.command:
+        cmd: aws s3 cp /tmp/winget.msixbundle s3://cst-comm-palegacysharedservices-media/ansible-staging/winget/winget.msixbundle --region us-east-1
+      when: winget_s3_check.rc != 0
+      changed_when: true
+      tags: always
+
+    - name: Generate presigned URL for instances to pull winget from S3
+      ansible.builtin.command:
+        cmd: aws s3 presign s3://cst-comm-palegacysharedservices-media/ansible-staging/winget/winget.msixbundle --region us-east-1 --expires-in 7200
+      register: winget_presign
+      changed_when: false
+      tags: always
+
+    - name: Store presigned URL as fact for RDSH play
+      ansible.builtin.set_fact:
+        winget_presign_url: "{{ winget_presign.stdout | trim }}"
+      tags: always
+
+    - name: Generate presigned URL for SSMS installer
+      ansible.builtin.command:
+        cmd: aws s3 presign s3://cst-comm-palegacysharedservices-media/installers/SSMS-Setup-ENU.exe --region us-east-1 --expires-in 7200
+      register: ssms_presign
+      changed_when: false
+      tags: always
+
+    - name: Store SSMS presigned URL as fact
+      ansible.builtin.set_fact:
+        ssms_presign_url: "{{ ssms_presign.stdout | trim }}"
+      tags: always
+
 - name: Configure RDSH terminal servers
   gather_facts: true
   hosts: "tag_cst_application_inf_admin_rdsh:&region_{{ aws_region | replace('-', '_') }}"
   vars:
     ansible_aws_ssm_instance_id: "{{ instance_id }}"
     ansible_aws_ssm_region: "{{ aws_region | default('us-east-1') }}"
+    # 60 minutes — the app-install session runs 11 winget packages sequentially
+    # through the on-prem proxy. Default 300s is too low for this workload.
+    ansible_aws_ssm_timeout: 3600
     aws_region: "{{ aws_region | default('us-east-1') }}"
+    winget_presign_url: "{{ hostvars['localhost']['winget_presign_url'] }}"
   vars_files:
     - vars/winrm_connection.yml
   tasks:
@@ -32,4 +121,167 @@
         name: rdsh_setup
         apply:
           tags: always
+      tags: always
+
+- name: Configure SQL management box (INF-WSSQL001)
+  gather_facts: true
+  hosts: "tag_cst_application_inf_admin_ssms:&region_{{ (aws_region | default('us-east-1')) | replace('-', '_') }}"
+  vars:
+    ansible_aws_ssm_instance_id: "{{ instance_id }}"
+    ansible_aws_ssm_region: "{{ aws_region | default('us-east-1') }}"
+    ansible_aws_ssm_timeout: 3600
+    aws_region: "{{ aws_region | default('us-east-1') }}"
+    ssms_presign_url: "{{ hostvars['localhost']['ssms_presign_url'] }}"
+  vars_files:
+    - vars/winrm_connection.yml
+  tasks:
+    - name: Include SSMS setup role
+      include_role:
+        name: ssms_setup
+        apply:
+          tags: always
+      tags: always
+
+# Play 4: fire SSM Run Command for Chocolatey installs on the SQL host.
+# Same architecture as Play 5 (RDSH) — SSM Run Command elevates past the
+# Session Manager token restrictions Chocolatey 2.x requires.
+- name: Install Chocolatey packages on SQL box via SSM Run Command
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    _ssms_hosts: "{{ query('inventory_hostnames', 'tag_cst_application_inf_admin_ssms:&region_' ~ (aws_region | default('us-east-1')) | replace('-', '_')) }}"
+    _ssms_region: "{{ aws_region | default('us-east-1') }}"
+  tasks:
+    - name: Run ssms-choco-install.ps1 on SQL host via SSM Run Command
+      ansible.builtin.shell: |
+        set -e
+        INSTANCE_ID="{{ hostvars[item]['instance_id'] }}"
+        REGION="{{ _ssms_region }}"
+
+        COMMAND_ID=$(aws ssm send-command \
+          --instance-ids "$INSTANCE_ID" \
+          --document-name "AWS-RunPowerShellScript" \
+          --parameters 'commands=["powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File C:\\Windows\\Temp\\ssms-choco-install.ps1"]' \
+          --timeout-seconds 10800 \
+          --comment "Ansible ssms-choco-install {{ item }}" \
+          --region "$REGION" \
+          --query "Command.CommandId" \
+          --output text)
+        echo "{{ item }} SSM CommandId: $COMMAND_ID"
+
+        while true; do
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "Status" \
+            --output text 2>/dev/null || echo "Pending")
+          echo "{{ item }} Status: $STATUS"
+          case "$STATUS" in
+            Success|Failed|Cancelled|TimedOut|Undeliverable) break ;;
+          esac
+          sleep 15
+        done
+
+        RESULT=$(aws ssm get-command-invocation \
+          --command-id "$COMMAND_ID" \
+          --instance-id "$INSTANCE_ID" \
+          --region "$REGION" \
+          --output json)
+
+        STDOUT=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('StandardOutputContent',''))")
+        STDERR=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('StandardErrorContent',''))")
+        RC=$(echo "$RESULT"     | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('ResponseCode',-1))")
+
+        echo "--- {{ item }} stdout ---"
+        echo "$STDOUT"
+        if [ -n "$STDERR" ]; then
+          echo "--- {{ item }} stderr ---"
+          echo "$STDERR"
+        fi
+        echo "--- {{ item }} exit: $RC ---"
+        exit $RC
+      args:
+        executable: /bin/bash
+      loop: "{{ _ssms_hosts }}"
+      register: ssms_choco_results
+      changed_when: true
+      tags: always
+
+# Play 5: fire SSM Run Command for Chocolatey installs on each RDSH host.
+#
+# Why a separate localhost play: the SSM Session Manager SYSTEM token (used by
+# the community.aws.aws_ssm connection plugin in Play 2) fails Chocolatey 2.x's
+# IsElevated check and blocks CIM/WMI entirely. SSM Run Command executes via the
+# SSM agent Windows service which holds a proper elevated LocalSystem token.
+#
+# Why not delegate_to: localhost inside the role: play-level vars in Play 2
+# reference inventory-composed vars (instance_id) that are undefined on localhost,
+# causing any delegate_to: localhost task to fail at variable resolution time
+# regardless of what set_fact has captured. A dedicated localhost play sidesteps
+# this entirely — hostvars[item]['instance_id'] resolves the inventory composition
+# cleanly because there is no conflicting play-level var chain on localhost.
+- name: Install Chocolatey packages on RDSH servers via SSM Run Command
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    _rdsh_hosts: "{{ query('inventory_hostnames', 'tag_cst_application_inf_admin_rdsh:&region_' ~ (aws_region | default('us-east-1')) | replace('-', '_')) }}"
+    _rdsh_region: "{{ aws_region | default('us-east-1') }}"
+  tasks:
+    - name: Run choco-install.ps1 on each RDSH host via SSM Run Command
+      ansible.builtin.shell: |
+        set -e
+        INSTANCE_ID="{{ hostvars[item]['instance_id'] }}"
+        REGION="{{ _rdsh_region }}"
+
+        COMMAND_ID=$(aws ssm send-command \
+          --instance-ids "$INSTANCE_ID" \
+          --document-name "AWS-RunPowerShellScript" \
+          --parameters 'commands=["powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File C:\\Windows\\Temp\\choco-install.ps1"]' \
+          --timeout-seconds 3600 \
+          --comment "Ansible choco-install {{ item }}" \
+          --region "$REGION" \
+          --query "Command.CommandId" \
+          --output text)
+        echo "{{ item }} SSM CommandId: $COMMAND_ID"
+
+        while true; do
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "Status" \
+            --output text 2>/dev/null || echo "Pending")
+          echo "{{ item }} Status: $STATUS"
+          case "$STATUS" in
+            Success|Failed|Cancelled|TimedOut|Undeliverable) break ;;
+          esac
+          sleep 15
+        done
+
+        RESULT=$(aws ssm get-command-invocation \
+          --command-id "$COMMAND_ID" \
+          --instance-id "$INSTANCE_ID" \
+          --region "$REGION" \
+          --output json)
+
+        STDOUT=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('StandardOutputContent',''))")
+        STDERR=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('StandardErrorContent',''))")
+        RC=$(echo "$RESULT"     | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('ResponseCode',-1))")
+
+        echo "--- {{ item }} stdout ---"
+        echo "$STDOUT"
+        if [ -n "$STDERR" ]; then
+          echo "--- {{ item }} stderr ---"
+          echo "$STDERR"
+        fi
+        echo "--- {{ item }} exit: $RC ---"
+        exit $RC
+      args:
+        executable: /bin/bash
+      loop: "{{ _rdsh_hosts }}"
+      register: choco_results
+      changed_when: true
       tags: always

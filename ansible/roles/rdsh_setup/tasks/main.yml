@@ -25,80 +25,296 @@
     reboot_timeout: 600
   when: rsat_install.reboot_required
 
-- name: Verify RDSH role is active
-  win_shell: |
-    (Get-WindowsFeature RDS-RD-Server).InstallState
-  register: rdsh_state
-  changed_when: false
-  failed_when: rdsh_state.stdout.strip() != 'Installed'
-
 - name: Set timezone
   win_timezone:
     timezone: "{{ 'Pacific Standard Time' if aws_region == 'us-west-2' else 'Eastern Standard Time' }}"
 
-# --- winget applications ---
-# Each entry: id = winget package ID, name = display name for task output.
-# Idempotent: winget exits 0 on already-installed packages (exit code -1978335189
-# is treated as already installed by the failed_when guard).
-- name: Install applications via winget
+# --- winget bootstrap (single SSM session) ---
+# The msixbundle is pre-staged to S3 by the localhost pre-play. Instances
+# download via a presigned URL which routes through the S3 VPC endpoint -
+# no internet, no proxy, fast. Proxy is not needed for this step.
+- name: Bootstrap winget if not already installed
   win_shell: |
-    winget install --id {{ item.id }} --exact --silent `
-      --accept-package-agreements --accept-source-agreements
-  loop:
-    - { id: "Microsoft.PowerShell",              name: "PowerShell 7" }
-    - { id: "Microsoft.WindowsTerminal",          name: "Windows Terminal" }
-    - { id: "JanDeDobbeleer.OhMyPosh",            name: "Oh My Posh" }
-    - { id: "Git.Git",                            name: "Git" }
-    - { id: "Notepad++.Notepad++",                name: "Notepad++" }
-    - { id: "WinSCP.WinSCP",                      name: "WinSCP" }
-    - { id: "PuTTY.PuTTY",                        name: "PuTTY" }
-    - { id: "Microsoft.Sysinternals.Suite",       name: "Sysinternals Suite" }
-    - { id: "WiresharkFoundation.Wireshark",      name: "Wireshark" }
-    - { id: "VanDyke.SecureCRT",                  name: "SecureCRT" }
-    - { id: "Nmap.Nmap",                          name: "Nmap" }
-  loop_control:
-    label: "{{ item.name }}"
-  register: winget_result
-  changed_when: "'Successfully installed' in winget_result.stdout"
-  # winget exit code -1978335189 (0x8A150021) = already installed — treat as ok
-  failed_when: winget_result.rc != 0 and winget_result.rc != -1978335189
-
-# --- PowerShell 7 post-install configuration ---
-
-- name: Set PowerShell 7 as default SSH shell
-  win_regedit:
-    path: HKLM:\SOFTWARE\OpenSSH
-    name: DefaultShell
-    data: 'C:\Program Files\PowerShell\7\pwsh.exe'
-    type: string
-    state: present
-
-- name: Configure Oh My Posh in PowerShell 7 profile (all users)
-  win_shell: |
-    $profileDir = "C:\Program Files\PowerShell\7"
-    $profilePath = "$profileDir\profile.ps1"
-    $ompLine = 'oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\jandedobbeleer.omp.json" | Invoke-Expression'
-    if (-not (Test-Path $profilePath) -or (Get-Content $profilePath -Raw) -notmatch 'oh-my-posh') {
-        Add-Content -Path $profilePath -Value $ompLine
+    $wingetExe = "C:\ProgramData\WinGet\winget.exe"
+    if (Test-Path $wingetExe) {
+        Write-Host "winget already installed - skipping bootstrap"
+        exit 0
     }
-  changed_when: true
 
-# Seed Windows Terminal settings into the Default user profile so every new
-# user login inherits PS7 as the default shell. WT's auto-detected PS7 profile
-# always uses the stable GUID {574e775e-4f2a-5b96-ac1e-a2962a402336}.
-- name: Create Windows Terminal LocalState dir in Default user profile
-  win_file:
-    path: 'C:\Users\Default\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState'
-    state: directory
+    $tmp = "C:\ProgramData\WinGet-Bootstrap"
+    Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
-- name: Write Windows Terminal settings to Default user profile
+    Write-Host "Downloading winget msixbundle from S3 staging..."
+    $progressPreference = 'SilentlyContinue'
+    Invoke-WebRequest `
+        -Uri "{{ winget_presign_url }}" `
+        -OutFile "$tmp\winget.msixbundle" -UseBasicParsing
+
+    Copy-Item "$tmp\winget.msixbundle" "$tmp\winget-bundle.zip" -Force
+    Expand-Archive -Path "$tmp\winget-bundle.zip" -DestinationPath "$tmp\bundle" -Force
+
+    $msix = Get-ChildItem "$tmp\bundle" -Filter "*x64*.msix" | Select-Object -First 1
+    if (-not $msix) {
+        $msix = Get-ChildItem "$tmp\bundle" -Filter "*.msix" |
+            Where-Object { $_.Name -notlike "*arm*" -and $_.Name -notlike "*x86*" } |
+            Select-Object -First 1
+    }
+    if (-not $msix) { Write-Error "x64 msix not found in bundle"; exit 1 }
+
+    Write-Host "Extracting $($msix.Name)..."
+    Copy-Item $msix.FullName "$tmp\winget.zip" -Force
+    Expand-Archive -Path "$tmp\winget.zip" -DestinationPath "$tmp\winget-extracted" -Force
+
+    if (-not (Test-Path "$tmp\winget-extracted\winget.exe")) {
+        Write-Error "winget.exe not found in extracted msix"; exit 1
+    }
+
+    $installDir = "C:\ProgramData\WinGet"
+    New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+    Copy-Item "$tmp\winget-extracted\*" $installDir -Recurse -Force
+
+    Set-Content -Path "C:\Windows\System32\winget.cmd" `
+        -Value "@echo off`r`n`"$wingetExe`" %*"
+
+    Write-Host "winget installed to $wingetExe"
+  register: winget_bootstrap
+  changed_when: "'winget installed to' in winget_bootstrap.stdout"
+  tags: always
+
+# Chocolatey package installs run via SSM Run Command (AWS-RunPowerShellScript),
+# fired from a dedicated localhost play (Play 3) after this play completes.
+#
+# Why Run Command and not win_shell: the SSM Session Manager SYSTEM token
+# fails Chocolatey 2.x IsElevated check and blocks CIM/WMI entirely (scheduled
+# task cmdlets also fail with "Cannot connect to CIM server. Access denied").
+# SSM Run Command executes via the SSM agent service process which holds a
+# proper elevated LocalSystem token - no elevation check failures.
+#
+# Why win_copy + file: the install script is written to disk first so that
+# PowerShell syntax (apostrophes, backslashes, etc.) never passes through
+# Ansible split_args tokenizer. All escaping issues are eliminated.
+#
+# powershell-core: installer downloads from github.com which is blocked by
+# the on-prem proxy. Marked soft-fail so a proxy miss does not abort the run.
+# microsoft-windows-terminal / nmap: removed - MSIX and Npcap driver installs
+# require interactive session or SeLoadDriverPrivilege. Install manually.
+- name: Write Chocolatey install script to disk
   win_copy:
-    dest: 'C:\Users\Default\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
     content: |
-      {
-          "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
-          "profiles": {
-              "defaults": {}
-          },
-          "schemes": []
+      $ErrorActionPreference = "Stop"
+      $log = "C:\Windows\Temp\choco-install.log"
+      function Log {
+          param([string]$m)
+          $line = "$(Get-Date -Format 'HH:mm:ss')  $m"
+          Add-Content -Path $log -Value $line
+          Write-Host $line
       }
+
+      netsh winhttp set proxy 172.30.20.55:8080 | Out-Null
+      $env:HTTPS_PROXY = "http://172.30.20.55:8080"
+      $env:HTTP_PROXY  = "http://172.30.20.55:8080"
+      Log "Proxy set"
+
+      $chocoInstall = 'C:\ProgramData\chocolatey'
+      $chocoBin     = "$chocoInstall\bin"
+      $chocoExe     = "$chocoBin\choco.exe"
+      $env:ChocolateyInstall = $chocoInstall
+
+      if (-not (Test-Path $chocoExe)) {
+          Log "Installing Chocolatey..."
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+          $proxy = New-Object System.Net.WebProxy("http://172.30.20.55:8080", $true)
+          $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
+          [System.Net.WebRequest]::DefaultWebProxy = $proxy
+          $wc = New-Object System.Net.WebClient
+          $wc.Proxy = $proxy
+          $installScript = $wc.DownloadString('https://community.chocolatey.org/install.ps1')
+          try {
+              Invoke-Expression $installScript
+          } catch {
+              # Chocolatey setup writes ChocolateyInstall and PATH to
+              # HKLM\SYSTEM\...\Environment. On these servers that write is
+              # blocked before the binary copy step. The nupkg is already
+              # extracted - choco.exe is in tools\ of the extract directory.
+              if ($_ -notmatch 'registry access') { throw }
+              Log "Registry access blocked - manually completing Chocolatey binary placement"
+
+              $nupkgTools = 'C:\Windows\TEMP\chocolatey\chocoInstall\tools'
+              if (-not (Test-Path "$nupkgTools\choco.exe")) {
+                  $found = Get-ChildItem 'C:\Windows\TEMP\chocolatey' -Filter 'choco.exe' -Recurse `
+                      -ErrorAction SilentlyContinue | Select-Object -First 1
+                  if (-not $found) { Log "choco.exe not found in extracted nupkg"; exit 1 }
+                  $nupkgTools = $found.DirectoryName
+              }
+              Log "Copying binaries from: $nupkgTools"
+              foreach ($d in @('bin', 'config', 'helpers', 'lib', 'lib-bad', 'lib-good', 'logs', 'temp')) {
+                  New-Item -ItemType Directory -Force -Path "$chocoInstall\$d" | Out-Null
+              }
+              Get-ChildItem $nupkgTools -File | Copy-Item -Destination $chocoBin -Force
+              Log "Chocolatey binaries placed to $chocoBin"
+              if (Test-Path "$nupkgTools\helpers") {
+                  New-Item -ItemType Directory -Force -Path "$chocoInstall\helpers" | Out-Null
+                  Copy-Item "$nupkgTools\helpers\*" "$chocoInstall\helpers" -Recurse -Force
+                  Log "Helpers placed from nupkg extract (includes functions dir)"
+              }
+          }
+          if (-not (Test-Path $chocoExe)) {
+              Log "choco.exe not found at $chocoExe after install"; exit 1
+          }
+          Log "Chocolatey installed: $(& $chocoExe --version)"
+      } else {
+          Log "Chocolatey already present: $(& $chocoExe --version)"
+      }
+
+      # Always force-refresh helpers from the matching nupkg. Prior failed runs
+      # can leave chocolateyInstaller.psm1 empty or truncated. Copy the full
+      # helpers tree so the PSM1 can dot-source its functions subdirectory.
+      $helpersTarget = "$chocoInstall\helpers"
+      New-Item -ItemType Directory -Force -Path $helpersTarget | Out-Null
+      Log "Refreshing helpers from nupkg..."
+      $chocoVer  = (& $chocoExe --version).Trim()
+      $nupkgUrl  = "https://community.chocolatey.org/api/v2/package/chocolatey/$chocoVer"
+      $nupkgZip  = "$env:TEMP\choco-helpers.zip"
+      $nupkgDir  = "$env:TEMP\choco-helpers"
+      [System.Net.WebRequest]::DefaultWebProxy = New-Object System.Net.WebProxy("http://172.30.20.55:8080", $true)
+      (New-Object System.Net.WebClient).DownloadFile($nupkgUrl, $nupkgZip)
+      Remove-Item -Recurse -Force $nupkgDir -ErrorAction SilentlyContinue
+      Expand-Archive -Path $nupkgZip -DestinationPath $nupkgDir -Force
+      $nupkgHelpers = Get-ChildItem $nupkgDir -Directory -Recurse -Filter 'helpers' | Select-Object -First 1
+      if ($nupkgHelpers) {
+          Copy-Item ($nupkgHelpers.FullName + '\*') $helpersTarget -Recurse -Force
+          Log "Helpers refreshed from nupkg (full tree copied)"
+      } else {
+          $psm1Files = Get-ChildItem $nupkgDir -Filter '*.psm1' -Recurse
+          if ($psm1Files) {
+              $psm1Files | Copy-Item -Destination $helpersTarget -Force
+              Log "Helpers placed from nupkg (PSM1 files only): $($psm1Files.Name -join ', ')"
+          } else {
+              Log "helpers dir and PSM1 files not found in chocolatey nupkg - cannot continue"
+              exit 1
+          }
+      }
+
+      $env:Path = "$chocoBin;$env:Path"
+      & $chocoExe config set proxy http://172.30.20.55:8080 | Out-Null
+      Log "Chocolatey proxy configured"
+
+      $skipDeps = @('wireshark')
+      # oh-my-posh: binary installs fine but chocolateyinstall.ps1 always tries
+      # to update $PROFILE (null under SSM Run Command) and exits -1. Treat as
+      # soft-fail — binary is present, we write profile.ps1 ourselves below.
+      $softFail  = @('sysinternals', 'powershell-core', 'oh-my-posh')
+      $noProfile = @('oh-my-posh')
+
+      $packages = @(
+          'powershell-core',
+          'oh-my-posh',
+          'git',
+          'notepadplusplus',
+          'winscp',
+          'putty',
+          'sysinternals',
+          'wireshark'
+      )
+
+      $failed = @()
+      foreach ($pkg in $packages) {
+          Log "--- Installing $pkg ---"
+          if ($skipDeps -contains $pkg) {
+              & $chocoExe install $pkg -y --no-progress --ignore-dependencies 2>&1 |
+                  ForEach-Object { Log $_ }
+          } elseif ($noProfile -contains $pkg) {
+              & $chocoExe install $pkg -y --no-progress --params='"/NoProfileUpdate"' 2>&1 |
+                  ForEach-Object { Log $_ }
+          } else {
+              & $chocoExe install $pkg -y --no-progress 2>&1 |
+                  ForEach-Object { Log $_ }
+          }
+          $rc = $LASTEXITCODE
+          Log "exit: $rc"
+          if ($rc -ne 0) {
+              if ($softFail -contains $pkg) {
+                  Log "SOFT-FAIL: $pkg (exit $rc) - continuing"
+              } else {
+                  Log "FAILED: $pkg (exit $rc)"
+                  $failed += $pkg
+              }
+          }
+      }
+
+      netsh winhttp reset proxy | Out-Null
+      & $chocoExe config unset proxy | Out-Null
+      $env:HTTPS_PROXY = ""
+      $env:HTTP_PROXY  = ""
+      Log "Proxy cleared"
+
+      # Configure Oh My Posh in the PS7 all-users profile. Done before the
+      # fatal check so it runs even when other packages soft-failed.
+      $ps7Profile = "C:\Program Files\PowerShell\7\profile.ps1"
+      $ompThemes  = "C:\Program Files (x86)\oh-my-posh\themes"
+      $ompLine    = "oh-my-posh init pwsh --config `"$ompThemes\jandedobbeleer.omp.json`" | Invoke-Expression"
+      if (-not (Test-Path $ps7Profile) -or (Get-Content $ps7Profile -Raw) -notmatch 'oh-my-posh') {
+          Set-Content -Path $ps7Profile -Value $ompLine -NoNewline
+          Log "Oh My Posh configured in PS7 all-users profile"
+      } else {
+          Log "Oh My Posh already configured in PS7 all-users profile"
+      }
+
+      # Set PS7 as the default SSH shell.
+      # win_regedit in the Ansible role cannot write to HKLM under the SSM
+      # Session Manager restricted SYSTEM token — this runs here instead via
+      # the SSM Run Command elevated SYSTEM token.
+      $sshKey = "HKLM:\SOFTWARE\OpenSSH"
+      if (-not (Test-Path $sshKey)) { New-Item -Path $sshKey -Force | Out-Null }
+      Set-ItemProperty -Path $sshKey -Name DefaultShell `
+          -Value "C:\Program Files\PowerShell\7\pwsh.exe" -Type String
+      Log "PS7 set as default SSH shell"
+
+      # Seed Windows Terminal settings into Default user profile so every new
+      # user login gets PS7 as the default shell in WT.
+      # WT auto-detected PS7 profile uses stable GUID {574e775e-4f2a-5b96-ac1e-a2962a402336}.
+      $wtStateDir = "C:\Users\Default\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState"
+      New-Item -ItemType Directory -Force -Path $wtStateDir | Out-Null
+      Set-Content -Path "$wtStateDir\settings.json" -Value '{
+          "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+          "profiles": { "defaults": {} },
+          "schemes": []
+      }'
+      Log "Windows Terminal default profile seeded for new users"
+
+      # Seed desktop shortcuts into Default user profile.
+      $wsh = New-Object -ComObject WScript.Shell
+      $desktopDir = "C:\Users\Default\Desktop"
+      New-Item -ItemType Directory -Force -Path $desktopDir | Out-Null
+      $shortcuts = @(
+          @{ Name = "PowerShell 7";      Target = "C:\Program Files\PowerShell\7\pwsh.exe" },
+          @{ Name = "Git Bash";          Target = "C:\Program Files\Git\git-bash.exe" },
+          @{ Name = "Notepad++";         Target = "C:\Program Files\Notepad++\notepad++.exe" },
+          @{ Name = "WinSCP";            Target = "C:\Program Files (x86)\WinSCP\WinSCP.exe" },
+          @{ Name = "PuTTY";             Target = "C:\ProgramData\chocolatey\bin\putty.exe" },
+          @{ Name = "Wireshark";         Target = "C:\Program Files\Wireshark\Wireshark.exe" },
+          @{ Name = "Process Monitor";   Target = "C:\ProgramData\chocolatey\lib\sysinternals\tools\Procmon.exe" },
+          @{ Name = "Process Explorer";  Target = "C:\ProgramData\chocolatey\lib\sysinternals\tools\procexp64.exe" }
+      )
+      foreach ($s in $shortcuts) {
+          if (Test-Path $s.Target) {
+              $lnk = $wsh.CreateShortcut("$desktopDir\$($s.Name).lnk")
+              $lnk.TargetPath = $s.Target
+              $lnk.Save()
+              Log "Shortcut: $($s.Name)"
+          } else {
+              Log "Shortcut skipped (not found): $($s.Name)"
+          }
+      }
+
+      if ($failed.Count -gt 0) {
+          Log "FATAL: Failed packages: $($failed -join ', ')"
+          exit 1
+      }
+      Log "All packages installed successfully"
+    dest: C:\Windows\Temp\choco-install.ps1
+  tags: always
+
+# Windows Terminal Default profile seeding is handled in choco-install.ps1
+# (runs via SSM Run Command with elevated token after WT is installed).
