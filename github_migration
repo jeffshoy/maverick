@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Source and Target GitHub Organizations
+SOURCE_ORG="OldCompany"
+TARGET_ORG="NewCompany"
+
+# GitHub repositories to migrate
+REPOS=(
+  "github_repo1"
+  "github_repo2"
+)
+
+echo "Starting GitHub Repository Migration..."
+echo "--------------------------------------"
+
+for REPO in "${REPOS[@]}"
+do
+    echo ""
+    echo "Migrating Repository: $REPO"
+
+    # Clone the repository with full history
+    git clone --mirror https://github.com/$SOURCE_ORG/$REPO.git
+
+    cd $REPO.git || exit
+
+    # Push everything to the new organization
+    git push --mirror https://github.com/$TARGET_ORG/$REPO.git
+
+    if [ $? -eq 0 ]; then
+        echo "✔ Successfully migrated $REPO"
+    else
+        echo "✖ Migration failed for $REPO"
+    fi
+
+    cd ..
+
+    # Remove temporary mirror clone
+    rm -rf $REPO.git
+
+done
+
+echo ""
+echo "Migration Complete!"
