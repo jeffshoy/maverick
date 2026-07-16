@@ -1,0 +1,44 @@
+#!/bin/bash
+
+SOURCE_ORG="OldCompany"
+TARGET_ORG="NewCompany"
+
+LOGFILE="migration.log"
+
+REPOS=(
+    github_repo1
+    github_repo2
+)
+
+echo "Migration Started: $(date)" > $LOGFILE
+
+for REPO in "${REPOS[@]}"
+do
+    echo "--------------------------------------"
+    echo "Migrating $REPO..."
+
+    git clone --mirror https://github.com/$SOURCE_ORG/$REPO.git
+
+    if [ $? -ne 0 ]; then
+        echo "$REPO - Clone Failed" | tee -a $LOGFILE
+        continue
+    fi
+
+    cd $REPO.git
+
+    git push --mirror https://github.com/$TARGET_ORG/$REPO.git
+
+    if [ $? -eq 0 ]; then
+        echo "$REPO - Push Successful" | tee -a ../$LOGFILE
+    else
+        echo "$REPO - Push Failed" | tee -a ../$LOGFILE
+    fi
+
+    cd ..
+
+    rm -rf $REPO.git
+
+done
+
+echo ""
+echo "Migration Complete."
