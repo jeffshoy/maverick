@@ -85,6 +85,7 @@ The bootstrap script installs PS7 via winget. After install:
 | sectigo-add | `/sectigo-add <server> [<server2> ...]` | `scripts/sectigo/MassServerAdd/add_servers_to_agent.py` |
 | sectigo-remove | `/sectigo-remove <search> [--inactive]` | `scripts/sectigo/MassServerAdd/remove_servers_from_agent.py` |
 | docker-restart | `/docker-restart <client> <prod\|staging>` | SSM Run Command → Docker Swarm service updates on PAC manager nodes |
+| PR_Review | `/PR_Review` | Code quality + PSJ Platform Engineering Spec (v0.2.0) compliance check on current branch diff |
 
 **Authoring a new shared skill:** create a folder under `.claude/skills/`, add a `SKILL.md` with `name` and `description` frontmatter, open a PR. One teammate review, same as any script change.
 

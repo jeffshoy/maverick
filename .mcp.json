@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "logicmonitor": {
+      "command": "npx",
+      "args": ["logicmonitor-api-mcp", "--stdio"],
+      "env": {
+        "LM_ACCOUNT": "${LM_ACCOUNT}",
+        "LM_BEARER_TOKEN": "${LM_BEARER_TOKEN}"
+      }
+    },
     "sectigo": {
       "command": "python",
       "args": ["scripts/sectigo/mcp_proxy.py"],

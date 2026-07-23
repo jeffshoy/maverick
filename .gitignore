@@ -4,6 +4,9 @@ mgmt-microsoft/changedns-ms_*.log
 .env
 *.env
 
+# Claude local settings (contains credentials)
+.claude/settings.local.json
+
 # Sectigo — output files contain plaintext service account passwords
 scripts/sectigo/MassServerAdd/servers_*.json
 # Sectigo — timestamped output CSVs and spreadsheets (run artifacts, not source)
