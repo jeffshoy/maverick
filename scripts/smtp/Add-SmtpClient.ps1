@@ -72,7 +72,7 @@ if ($LASTEXITCODE -eq 0) {
     if ($PSCmdlet.ShouldProcess("SES $SesRegion", "Create identity for $Domain")) {
         $createResult = & aws sesv2 create-email-identity `
             --email-identity $Domain `
-            --dkim-signing-attributes 'SigningAttributesOrigin=AWS_SES,NextSigningKeyLength=RSA_2048_BIT' `
+            --dkim-signing-attributes 'DomainSigningAttributesOrigin=AWS_SES,NextSigningKeyLength=RSA_2048_BIT' `
             --profile $AwsProfile --region $SesRegion --output json 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Failed to create SES identity: $createResult" }
         $created = $createResult | ConvertFrom-Json
