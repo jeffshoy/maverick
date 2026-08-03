@@ -1,9 +1,6 @@
 #Requires -Version 5.1
 #Requires -Modules ActiveDirectory
 
-# SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
-Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
-
 <#
 .SYNOPSIS
     Terminate a PLUS customer user end-to-end: removes SQL access from all customer databases,
@@ -15,23 +12,23 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
     Does not require the legacy PowerShell profile or VM workstations.
 
     All configuration ships with the script under ./config/ and ./templates/.
-    You must supply Template_SQL_RemoveUserAccess-Simple.txt before running — grab it from:
+    You must supply Template_SQL_RemoveUserAccess-Simple.txt before running - grab it from:
     \\CLD-PPLSRDS001.aspgov.pri\PLUS$\PS_EnvironmentAdmin\scriptTemplates\
 
     What it does:
       1. Validates the samid prefix against config/PLUSCustomers.csv
       2. Removes the user from all customer databases on PRD04+STG04 (5.2 customers)
-         or PRD01+STG01 (non-5.2 customers) — never both; 5.2 customers have no presence on PRD01/STG01
+         or PRD01+STG01 (non-5.2 customers) - never both; 5.2 customers have no presence on PRD01/STG01
          via Template_SQL_RemoveUserAccess-Simple.txt (removes DB user + SQL login)
       3. Removes the user from the <CUST>_PLUS AD group on aspgov.pri
       4. Disables the aspgov.pri AD account: sets Description, prepends Info field with
          who/when/why disabled, clears AccountExpirationDate
       5. Disables the centroid.cloud.lcl c_<samid> account if it exists
       6. Deletes the user's RPT folders on prod and train file servers by going directly
-         to \\server\share\<cust>\<samid> — no recursive enumeration of the whole share
+         to \\server\share\<cust>\<samid> - no recursive enumeration of the whole share
 
     What it does NOT do:
-      - Touch FTP virtual directories — do those separately if applicable
+      - Touch FTP virtual directories - do those separately if applicable
 
 .PARAMETER Samid
     aspgov.pri samAccountName of the user to terminate (e.g. "lmpkpeterson").
@@ -42,7 +39,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 .PARAMETER Is52Customer
     Override automatic 5.2 detection. When set, PRD04/STG04 SQL envs are included.
-    By default the script checks the Platform column in config/PLUSCustomers.csv.
+    By default the script checks the Version column in config/PLUSCustomers.csv.
 
 .EXAMPLE
     .\Disable-PLUSCustomerUser.ps1 -Samid lmpkpeterson -CaseNo 02502101
@@ -51,7 +48,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
     .\Disable-PLUSCustomerUser.ps1 -Samid lmpkpeterson -CaseNo 02502101 -WhatIf
 
 .NOTES
-    Author: CloudOps SRE — CentralSquare Technologies
+    Author: CloudOps SRE - CentralSquare Technologies
     Replaces: PLUS_TerminateCustUser (PLUSSysAdmins.psm1)
     No VMware, no Rubrik, no PSync dependencies.
 #>
@@ -66,6 +63,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
+Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
+
 #region --- helpers -----------------------------------------------------------
 
 function Get-PLUSConfig {
@@ -78,7 +78,7 @@ function Get-PLUSConfig {
 
     return @{
         Customers   = @($rows | ForEach-Object { $_.SiteCode.Trim().ToLower() })
-        Customers52 = @($rows | Where-Object { $_.Platform.Trim() -eq '52' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        Customers52 = @($rows | Where-Object { $_.Version.Trim() -eq '5.2' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
     }
 }
 
@@ -93,6 +93,7 @@ function Invoke-PLUSRemoveUserAccess {
       ZZZRemoveLogin01ZZZ      -> '1' (always remove the SQL login on termination)
       ZZZRemoveSectbAccessZZZ  -> '0' (customer users: do not remove sectb access row)
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$Database,
@@ -161,7 +162,7 @@ function Get-PLUSCustomerDatabases {
 
         return @($results | ForEach-Object { $_.name })
     } catch {
-        Write-Warning "  Could not query databases on $SqlInstance — $_"
+        Write-Warning "  Could not query databases on $SqlInstance - $_"
         return @()
     }
 }
@@ -171,6 +172,7 @@ function Disable-AspgovCustomerUser {
     Disables the aspgov.pri account: removes from <CUST>_PLUS group, sets Description,
     prepends Info field with who/when disabled, clears AccountExpirationDate.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$CustUpper,
@@ -190,7 +192,7 @@ function Disable-AspgovCustomerUser {
             if ($_ -match 'not a member') {
                 Write-Verbose "  ASPGOV: $Samid was not in $group (no change needed)"
             } else {
-                Write-Warning "  Failed removing $Samid from $group — $_"
+                Write-Warning "  Failed removing $Samid from $group - $_"
             }
         }
     }
@@ -214,17 +216,19 @@ function Disable-AspgovCustomerUser {
             -ErrorAction Stop
         Clear-ADAccountExpiration -Identity $Samid -Server $PdcAspgov -Confirm:$false -ErrorAction Stop
         Write-Verbose "  ASPGOV: Disabled $Samid, set Description, stamped Info, cleared expiration"
+        Write-Host "  OK: ASPGOV\$Samid disabled." -ForegroundColor Green
     }
 }
 
 function Remove-PLUSReportFolders {
     <#
     Removes the user's rpt folder tree on prod and train file servers by going directly
-    to \\server\share\<cust>\<samid> — no recursive enumeration of the whole share.
+    to \\server\share\<cust>\<samid> - no recursive enumeration of the whole share.
     The legacy Remove-PLUS-RPTFolders used Get-ChildItem -Depth 2 across every customer
     folder which was slow; for a customer user the path is fully deterministic.
     Returns an array of [pscustomobject]{Path; Status}.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$CustLower,
@@ -267,6 +271,7 @@ function Disable-CentroidCustomerUser {
     Disables c_<samid> on centroid.cloud.lcl if it exists and is currently enabled.
     Returns [pscustomobject]{Status; Samid}.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$AspgovSamid,
         [string]$PdcCentroid
@@ -302,9 +307,9 @@ function Disable-CentroidCustomerUser {
 
 #region --- main script -------------------------------------------------------
 
-$scriptDir   = $PSScriptRoot
+$scriptDir   = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MyInvocation.MyCommand.Path -Parent }
 $configDir   = Join-Path $scriptDir '..\config'
-$tmplDir     = Join-Path $scriptDir 'templates'
+$tmplDir     = Join-Path $scriptDir '..\templates'
 $sqlTmplPath = Join-Path $tmplDir 'Template_SQL_RemoveUserAccess-Simple.txt'
 
 $sqlInstances = @{
@@ -334,7 +339,7 @@ Write-Verbose 'Resolving aspgov.pri PDC emulator...'
 try {
     $pdcAspgov = (Get-ADDomain aspgov.pri -ErrorAction Stop).PDCEmulator
 } catch {
-    Write-Warning "Could not query aspgov.pri domain — falling back to inf-svrdc101.aspgov.pri. Error: $_"
+    Write-Warning "Could not query aspgov.pri domain - falling back to inf-svrdc101.aspgov.pri. Error: $_"
     $pdcAspgov = 'inf-svrdc101.aspgov.pri'
 }
 $pdcCentroid = 'centroid.cloud.lcl'
@@ -376,7 +381,7 @@ foreach ($e in $sqlEnvs) {
     $dbs = Get-PLUSCustomerDatabases -CustLower $custL -SqlInstance $e.Instance -OnlyTrain $e.OnlyTrain
 
     if (-not $dbs) {
-        Write-Host ("  No {0} databases found on {1} — skipping." -f $custU, $e.Env) -ForegroundColor Yellow
+        Write-Host ("  No {0} databases found on {1} - skipping." -f $custU, $e.Env) -ForegroundColor Yellow
         continue
     }
 
@@ -403,8 +408,6 @@ Disable-AspgovCustomerUser `
     -CaseNo    $CaseNo `
     -PdcAspgov $pdcAspgov `
     -RunningAs $runningAs
-
-Write-Host "  OK: ASPGOV\$samidL disabled." -ForegroundColor Green
 
 # ---- Step 6: Disable centroid.cloud.lcl account ----------------------------
 Write-Host "Disabling centroid.cloud.lcl user ..." -ForegroundColor Cyan

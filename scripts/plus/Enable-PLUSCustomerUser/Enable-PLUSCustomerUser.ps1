@@ -1,9 +1,6 @@
 #Requires -Version 5.1
 #Requires -Modules ActiveDirectory
 
-# SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
-Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
-
 <#
 .SYNOPSIS
     Re-enable a disabled PLUS customer user end-to-end: aspgov.pri AD account, centroid.cloud.lcl
@@ -14,18 +11,20 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
     PLUSSysAdmins module. Does not require the legacy PowerShell profile or VM workstations.
 
     All configuration ships with the script under ./config/ and ./templates/.
-    Symlink (or copy) config/ from the New-PLUSCustomerUser folder — both scripts share the
+    Symlink (or copy) config/ from the New-PLUSCustomerUser folder - both scripts share the
     same config files.
 
     What it does:
       1. Looks up the existing aspgov.pri user (disabled or enabled) by samAccountName
-      2. Re-enables the account: clears Description, stamps the Info field with who/when,
-         adds/re-adds to the <CUST>_PLUS AD group, refreshes AD properties (Company, State,
-         City, UPN, msDS-cloudExtensionAttribute18)
+      2. Re-enables the account: sets a short Description (Re-enabled - date - who), stamps
+         the Info field with who/when, adds/re-adds to the <CUST>_PLUS AD group, refreshes
+         AD properties (Company, State, City, UPN, msDS-cloudExtensionAttribute18), and
+         verifies the Enabled flag on the PDC emulator before continuing
       3. Optionally sets a Manager on the AD account (must be in the same OU)
       4. Creates/verifies rpt folders on prod and train file servers
-      5. Re-grants SQL access via Template_SQL_GrantUserAccess.txt on PRD04+STG04 (5.2 customers)
-         or PRD01+STG01 (non-5.2 customers) — never both; 5.2 customers have no presence on PRD01/STG01
+      5. Re-grants SQL access via Template_SQL_GrantUserAccess.txt on the environment(s)
+         selected interactively (Production/Train/Stage, 1/2/3 or a comma combination) or
+         via -SqlEnv; PRD04/STG04 for 5.2 customers, PRD01/STG01 otherwise
       6. Ensures the centroid.cloud.lcl c_<samid> account exists and is enabled
       7. Resets the aspgov.pri password, outputs the credentials block to console and clipboard
 
@@ -38,16 +37,24 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 .PARAMETER Is52Customer
     Override automatic 5.2 detection. When set, PRD04/STG04 SQL envs are included.
-    By default the script checks the Platform column in config/PLUSCustomers.csv.
+    By default the script checks the Version column in config/PLUSCustomers.csv.
+
+.PARAMETER SqlEnv
+    Advanced override: skip the interactive menu and target a specific SQL environment
+    (PRD01, STG01, PRD04, STG04). Omit to use the interactive Production/Train/Stage
+    selection menu (1/2/3 or a comma-separated combination, e.g. 1,2).
 
 .EXAMPLE
     .\Enable-PLUSCustomerUser.ps1 -Samid opakalvarado
 
 .EXAMPLE
+    .\Enable-PLUSCustomerUser.ps1 -Samid opakalvarado -SqlEnv PRD01
+
+.EXAMPLE
     .\Enable-PLUSCustomerUser.ps1 -Samid opakalvarado -WhatIf
 
 .NOTES
-    Author: CloudOps SRE — CentralSquare Technologies
+    Author: CloudOps SRE - CentralSquare Technologies
     Replaces: PLUS_CustomerUsers_QuickSetup -Reenable (PLUSSysAdmins.psm1)
     No VMware, no Rubrik, no PSync dependencies.
 #>
@@ -55,11 +62,15 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Samid,
-    [Parameter()][switch]$Is52Customer
+    [Parameter()][switch]$Is52Customer,
+    [Parameter()][ValidateSet('PRD01','STG01','PRD04','STG04')][string]$SqlEnv
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
+Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 #region --- helpers -----------------------------------------------------------
 
@@ -81,7 +92,7 @@ function Get-PLUSConfig {
 
     return @{
         Customers     = @($rows | ForEach-Object { $_.SiteCode.Trim().ToLower() })
-        Customers52   = @($rows | Where-Object { $_.Platform.Trim() -eq '52' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        Customers52   = @($rows | Where-Object { $_.Version.Trim() -eq '5.2' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
         CustomersLNFI = @($rows | Where-Object { $_.UIDLNFI.Trim()  -eq 'Y'  } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
         CentroidOuMap = @($rows | Where-Object { $_.CentroidOU -match '\S' } | ForEach-Object {
             [pscustomobject]@{ cust = $_.SiteCode.Trim().ToLower(); CentroidCustomerOU = $_.CentroidOU.Trim() }
@@ -92,10 +103,14 @@ function Get-PLUSConfig {
 
 function Enable-AspgovCustomerUser {
     <#
-    Re-enables the aspgov.pri user: enables the account, clears Description,
+    Re-enables the aspgov.pri user: enables the account, sets a short Description,
     stamps the Info field, refreshes AD properties from the OU, adds to <CUST>_PLUS.
+    Verifies Enabled=$true on the PDC emulator before returning - the PDC emulator is
+    authoritative here; if ADUC or another DC still shows the account disabled right
+    after this returns OK, that is AD replication lag to that DC, not a failed re-enable.
     Returns the refreshed ADUser object.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Microsoft.ActiveDirectory.Management.ADUser]$User,
         [string]$CustUpper,
@@ -121,13 +136,16 @@ function Enable-AspgovCustomerUser {
         $newInfo = $infoLine
     }
 
+    # Short, human-readable Description (replaces whatever was there, e.g. a DISABLED stamp)
+    $newDescription = "Re-enabled - $((Get-Date).ToShortDateString()) - $RunningAs"
+
     # Normalise display fields from what's already on the account
     $firstName   = (Get-Culture).TextInfo.ToTitleCase($User.GivenName.Trim().ToLower())
     $lastName    = (Get-Culture).TextInfo.ToTitleCase($User.Surname.Trim().ToLower())
     $displayName = (Get-Culture).TextInfo.ToTitleCase($User.DisplayName.Trim().ToLower()).TrimEnd()
     $upn         = "$samid@aspgov.pri"
 
-    # Determine msDS-cloudExtensionAttribute18 value — preserve CustAdmin if already set
+    # Determine msDS-cloudExtensionAttribute18 value - preserve CustAdmin if already set
     $custAdmin = if ($User.'msDS-cloudExtensionAttribute18' -eq 'IsPLUSCustAdmin=TRUE') {
         'IsPLUSCustAdmin=TRUE'
     } else {
@@ -144,10 +162,16 @@ function Enable-AspgovCustomerUser {
             -Company           $CustName `
             -State             $CustState `
             -City              $CustName `
-            -Clear             @('Description') `
-            -Replace           @{ Info = $newInfo } `
+            -Replace           @{ Description = $newDescription; Info = $newInfo } `
             -ErrorAction       Stop
-        Write-Verbose "  ASPGOV: Enabled $samid, cleared Description, stamped Info"
+        Write-Verbose "  ASPGOV: Enabled $samid, set Description, stamped Info"
+
+        # Verify the write actually landed on the PDC emulator before reporting success
+        $verify = Get-ADUser -Identity $samid -Server $PdcAspgov -Properties Enabled -ErrorAction Stop
+        if (-not $verify.Enabled) {
+            throw "ERROR: Set-ADUser reported success but '$samid' still shows Enabled=`$false on PDC emulator '$PdcAspgov'. Aborting - do not report this account as re-enabled."
+        }
+        Write-Host "  OK: ASPGOV\$samid enabled and refreshed (verified on $PdcAspgov)." -ForegroundColor Green
     }
 
     # Rename the AD object to match the cleaned display name
@@ -156,7 +180,7 @@ function Enable-AspgovCustomerUser {
             Rename-ADObject -Identity $User.DistinguishedName -NewName $displayName -Server $PdcAspgov -ErrorAction Stop
             Write-Verbose "  ASPGOV: Renamed object to '$displayName'"
         } catch {
-            Write-Warning "  Could not rename AD object for $samid to '$displayName' — skipping (non-fatal). Error: $_"
+            Write-Warning "  Could not rename AD object for $samid to '$displayName' - skipping (non-fatal). Error: $_"
         }
     }
 
@@ -169,11 +193,11 @@ function Enable-AspgovCustomerUser {
                 -Add @{ 'msDS-cloudExtensionAttribute18' = $custAdmin } -ErrorAction SilentlyContinue
             Write-Verbose "  ASPGOV: Set msDS-cloudExtensionAttribute18=$custAdmin on $samid"
         } catch {
-            Write-Warning "  Could not set msDS-cloudExtensionAttribute18 on $samid — skipping (non-fatal). Error: $_"
+            Write-Warning "  Could not set msDS-cloudExtensionAttribute18 on $samid - skipping (non-fatal). Error: $_"
         }
     }
 
-    # (Re-)add to the <CUST>_PLUS group — idempotent, ignore "already a member"
+    # (Re-)add to the <CUST>_PLUS group - idempotent, ignore "already a member"
     if ($PSCmdlet.ShouldProcess("aspgov.pri", "Add-ADGroupMember '$group' <- '$samid'")) {
         try {
             Add-ADGroupMember -Identity $group -Members $samid -Server $PdcAspgov -ErrorAction Stop
@@ -196,6 +220,7 @@ function Reset-AspgovPassword {
     Resets the aspgov.pri password to a fresh initial value.
     Returns the new password string.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$FirstName,
@@ -212,12 +237,14 @@ function Reset-AspgovPassword {
             -Reset -ErrorAction Stop
         Set-ADUser -Identity $Samid -Server $PdcAspgov -ChangePasswordAtLogon $true -ErrorAction Stop
         Write-Verbose "  ASPGOV: Password reset for $Samid"
+        Write-Host "  OK: Password reset." -ForegroundColor Green
     }
 
     return $password
 }
 
 function New-PLUSReportFolders {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$CustLower,
@@ -276,6 +303,13 @@ function Build-PLUSSqlUserInfo {
 }
 
 function Invoke-PLUSGrantUserAccess {
+    <#
+    Tokenizes Template_SQL_GrantUserAccess.txt and executes it against the specified
+    SQL instance. Verifies the sectb_crosswalk row actually landed before reporting OK -
+    the template's two-phase print-then-execute pattern can silently do nothing without
+    throwing, so absence of an exception is not proof of success.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$CustLower,
@@ -283,17 +317,23 @@ function Invoke-PLUSGrantUserAccess {
         [string]$SqlInstance,
         [string]$UserInfoToken,
         [string]$TemplatePath,
-        [bool]$OnlyTrain
+        [string]$FilterMode   # 'prod', 'train', or 'stage'
     )
 
     if (-not (Test-Path $TemplatePath)) {
         return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "SKIP-no-template ($TemplatePath)"; ScriptPath = $null }
     }
 
-    if ($OnlyTrain) {
-        $cursorWhere = "name LIKE LOWER('$CustLower' + '%' + 'trn' + '%') AND (name LIKE '%fin%' OR name LIKE '%comp%') AND name NOT LIKE '%[_]%'"
-    } else {
-        $cursorWhere = "name LIKE LOWER('$CustLower' + '%' + '' + '%') AND (name LIKE '%fin%' OR name LIKE '%comp%') AND name NOT LIKE '%[_]%'"
+    switch ($FilterMode) {
+        'train' {
+            $cursorWhere = "name LIKE LOWER('$CustLower' + '%trn%') AND (name LIKE '%fin%' OR name LIKE '%comp%') AND name NOT LIKE '%[_]%'"
+        }
+        'stage' {
+            $cursorWhere = "name LIKE LOWER('$CustLower%') AND name NOT LIKE '%trn%' AND (name LIKE '%fin%' OR name LIKE '%comp%') AND name NOT LIKE '%[_]%'"
+        }
+        default {  # 'prod'
+            $cursorWhere = "name LIKE LOWER('$CustLower%') AND (name LIKE '%fin%' OR name LIKE '%comp%') AND name NOT LIKE '%[_]%'"
+        }
     }
 
     $rawTemplate = Get-Content $TemplatePath -Raw
@@ -306,16 +346,40 @@ function Invoke-PLUSGrantUserAccess {
     $ts         = Get-Date -Format 'yyyyMMdd_HHmmss'
     $scriptFile = Join-Path $env:TEMP "GrantUserAccess_${Samid}_${CustLower}_${SqlEnv}_${ts}.sql"
 
-    if ($PSCmdlet.ShouldProcess($SqlInstance, "Invoke-Sqlcmd GrantUserAccess for $Samid ($SqlEnv)")) {
+    if (-not $PSCmdlet.ShouldProcess($SqlInstance, "Invoke-Sqlcmd GrantUserAccess for $Samid ($SqlEnv)")) {
+        return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = 'WHATIF'; ScriptPath = $null }
+    }
+
+    # A newly re-enabled/renamed ASPGOV account can take a while to replicate to whichever DC
+    # this SQL instance resolves Windows logins against - CREATE LOGIN ... FROM WINDOWS (the
+    # first statement the generated script runs) fails with "Windows NT user or group ... not
+    # found" until that catches up, which aborts the entire generated script including every
+    # downstream per-database grant. Retry the whole generate-and-execute cycle on that
+    # specific error so a single run succeeds without a manual re-run. Any other error fails
+    # immediately, no retries.
+    $replicationRetryDelaysSec = @(30, 60, 120, 120, 120, 120)   # ~9.5 min total if every retry fires
+    $maxAttempts               = $replicationRetryDelaysSec.Count + 1
+
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         try {
+            # @EXECUTENOW=0 in the template means every real statement is PRINTed, not EXECed -
+            # Invoke-Sqlcmd only puts PRINT/message output on the pipeline with -Verbose, and
+            # only once stream 4 is redirected onto stream 1 (4>&1). Without both, $generatedSql
+            # is empty and Phase 2 below silently executes nothing.
             $generatedSql = Invoke-Sqlcmd `
                 -ServerInstance $SqlInstance `
                 -Query          $sql `
                 -QueryTimeout   120 `
-                -ErrorAction    Stop |
+                -Verbose `
+                -ErrorAction    Stop `
+                4>&1 |
                 Out-String -Width 800
 
+            # Strip "Changed database context to 'master'." noise, and the "VERBOSE: " prefix
+            # PowerShell prepends to each line when a VerboseRecord (from 4>&1 above) is
+            # rendered to text - the captured SQL must be plain text for Phase 2 to replay it.
             $generatedSql = $generatedSql -replace "Changed database context to 'master'\.", ''
+            $generatedSql = ($generatedSql -split "`r?`n" | ForEach-Object { $_ -replace '^VERBOSE:\s?', '' }) -join "`r`n"
             Set-Content -Path $scriptFile -Value $generatedSql -Force
 
             Invoke-Sqlcmd `
@@ -324,12 +388,59 @@ function Invoke-PLUSGrantUserAccess {
                 -QueryTimeout   120 `
                 -ErrorAction    Stop
 
+            # Verify the sectb_crosswalk row actually landed. Phase 1/2 above only fail on a
+            # thrown exception - if Phase 1's PRINT capture was empty/incomplete (e.g. the
+            # cursor matched zero databases, or Invoke-Sqlcmd's message-stream capture dropped
+            # part of the output), Phase 2 can silently execute nothing and still report success.
+            $verifyDbs = @()
+            try {
+                $verifyDbs = @(Invoke-Sqlcmd `
+                    -ServerInstance $SqlInstance `
+                    -Database       'master' `
+                    -Query          "SELECT name FROM sys.databases WHERE $cursorWhere" `
+                    -QueryTimeout   30 `
+                    -ErrorAction    Stop)
+            } catch {
+                return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED-not-verified: could not query sys.databases to verify sectb_crosswalk - $_"; ScriptPath = $scriptFile }
+            }
+
+            $crosswalkFound = $false
+            $samidLower = $Samid.ToLower()
+            foreach ($dbRow in $verifyDbs) {
+                try {
+                    $uidRow = Invoke-Sqlcmd `
+                        -ServerInstance $SqlInstance `
+                        -Database       $dbRow.name `
+                        -Query          "SELECT TOP 1 spiuser FROM sectb_crosswalk WHERE winuser = '$samidLower'" `
+                        -QueryTimeout   30 `
+                        -ErrorAction    Stop | Select-Object -First 1
+                    if ($uidRow -and $uidRow.spiuser) { $crosswalkFound = $true; break }
+                } catch {
+                    Write-Verbose "  Could not query sectb_crosswalk on $SqlInstance.$($dbRow.name) during verification - $_"
+                }
+            }
+
+            if (-not $crosswalkFound) {
+                return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED-not-verified: sectb_crosswalk row for '$samidLower' not found in any target database on $SqlInstance"; ScriptPath = $scriptFile }
+            }
+
             return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = 'OK'; ScriptPath = $scriptFile }
         } catch {
+            $isAdReplicationLag = $_ -match 'Windows NT user or group .* not found'
+
+            if ($isAdReplicationLag -and $attempt -lt $maxAttempts) {
+                $delay = $replicationRetryDelaysSec[$attempt - 1]
+                Write-Warning "  ASPGOV\$Samid not yet visible to $SqlInstance (AD replication lag) - attempt $attempt of $maxAttempts, retrying in ${delay}s..."
+                Start-Sleep -Seconds $delay
+                continue
+            }
+
+            if ($isAdReplicationLag) {
+                return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED: AD replication lag persisted after $maxAttempts attempts - $_"; ScriptPath = $scriptFile }
+            }
+
             return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED: $_"; ScriptPath = $scriptFile }
         }
-    } else {
-        return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = 'WHATIF'; ScriptPath = $null }
     }
 }
 
@@ -340,6 +451,7 @@ function Enable-CentroidCustomerUser {
     If it does not exist, creates it (same logic as New-PLUSCustomerUser).
     Returns [pscustomobject]{Status; Samid; Dn}.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$AspgovSamid,
         [string]$CustUpper,
@@ -371,7 +483,7 @@ function Enable-CentroidCustomerUser {
             }
         }
 
-        # Account exists but is disabled — re-enable it and reset the password
+        # Account exists but is disabled - re-enable it and reset the password
         if ($PSCmdlet.ShouldProcess("centroid.cloud.lcl", "Enable + reset password for '$centroidSam'")) {
             try {
                 Set-ADAccountPassword -Identity $existing.DistinguishedName -Server $PdcCentroid `
@@ -395,7 +507,7 @@ function Enable-CentroidCustomerUser {
         }
     }
 
-    # Account does not exist — create it (same as New-PLUSCustomerUser)
+    # Account does not exist - create it (same as New-PLUSCustomerUser)
     $mapRow = $OuMap | Where-Object { $_.cust.Trim().ToUpper() -eq $CustUpper } | Select-Object -First 1
     if (-not $mapRow -or -not $mapRow.CentroidCustomerOU) {
         return [pscustomobject]@{
@@ -413,7 +525,7 @@ function Enable-CentroidCustomerUser {
         $null = Get-ADOrganizationalUnit -Server $PdcCentroid -Identity $centroidUsersDn -ErrorAction Stop
     } catch {
         return [pscustomobject]@{
-            Status = "FAILED-target-OU-missing: $centroidUsersDn — $_"
+            Status = "FAILED-target-OU-missing: $centroidUsersDn - $_"
             Samid  = $null
             Dn     = $null
         }
@@ -490,13 +602,65 @@ Send credentials to the user manually.
     return $block
 }
 
+function New-PLUSCredsEmail {
+    <#
+    Renders the HTML credentials email template and opens it in the default browser.
+    Returns the path to the saved .htm file, or $null if the template is missing.
+    #>
+    param(
+        [string]$Samid,
+        [string]$FirstName,
+        [string]$CustName,
+        [string]$CustCode,
+        [string]$TemplatePath,
+        [bool]$IsReenable = $false
+    )
+
+    if (-not (Test-Path $TemplatePath)) {
+        Write-Warning "  Email template not found: $TemplatePath - skipping email draft."
+        return $null
+    }
+
+    $pwdLine = "<span style='background:yellow'><b><i>Your temporary password will be sent via a separate communication.</i></b></span>"
+
+    $body = Get-Content $TemplatePath -Raw
+    $tomorrow = (Get-Date).AddDays(1).ToShortDateString()
+    $tokens = [ordered]@{
+        'ZZZFNameZZZ'         = $FirstName
+        'ZZZCustomerNameZZZ'  = $CustName
+        'ZZZCUSTZZZ'          = $CustCode.ToUpper()
+        'ZZZSAMIDZZZ'         = $Samid.ToUpper()
+        'ZZZPWDLINEZZZ'       = $pwdLine
+        'ZZZTOMORROWZZZ'      = $tomorrow
+        'ZZZEMAILSIGZZZ'      = ''
+        'ZZZFirstUsersInfoZZZ'= ''
+    }
+    foreach ($token in $tokens.GetEnumerator()) { $body = $body -replace $token.Key, $token.Value }
+
+    if ($IsReenable) {
+        $body = $body -replace ' new account ',     ' account '
+        $body = $body -replace ' has been created', ' has been re-enabled'
+        $body = $body -replace 'You will not be able to access', 'As a reminder, you will not be able to access'
+    }
+
+    $dateDir   = Join-Path $env:TEMP "PLUSUserAdmin\$(Get-Date -Format 'yyyy-MM-dd')"
+    if (-not (Test-Path $dateDir)) { $null = New-Item -ItemType Directory -Path $dateDir -Force }
+    $suffix    = if ($IsReenable) { 'Reenable' } else { 'New' }
+    $emailFile = Join-Path $dateDir "UserCredsEmail_${suffix}_$($Samid.ToUpper()).htm"
+    Set-Content -Path $emailFile -Value $body -Encoding UTF8 -Force
+
+    Write-Host "  Email draft saved to: $emailFile" -ForegroundColor Cyan
+    Start-Process $emailFile
+    return $emailFile
+}
+
 #endregion --- helpers --------------------------------------------------------
 
 #region --- main script -------------------------------------------------------
 
-$scriptDir   = $PSScriptRoot
+$scriptDir   = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MyInvocation.MyCommand.Path -Parent }
 $configDir   = Join-Path $scriptDir '..\config'
-$tmplDir     = Join-Path $scriptDir 'templates'
+$tmplDir     = Join-Path $scriptDir '..\templates'
 $sqlTmplPath = Join-Path $tmplDir 'Template_SQL_GrantUserAccess.txt'
 
 $sqlInstances = @{
@@ -525,7 +689,7 @@ if ($cfg.CustomerNames.ContainsKey($custL)) {
     $custName  = $cfg.CustomerNames[$custL].Name
     $custState = $cfg.CustomerNames[$custL].State
 } else {
-    Write-Warning "No customer name found for '$custU' in PLUSCustomers.csv — using site code as display name."
+    Write-Warning "No customer name found for '$custU' in PLUSCustomers.csv - using site code as display name."
     $custName  = $custU
     $custState = ''
 }
@@ -535,7 +699,7 @@ Write-Verbose 'Resolving aspgov.pri PDC emulator...'
 try {
     $pdcAspgov = (Get-ADDomain aspgov.pri -ErrorAction Stop).PDCEmulator
 } catch {
-    Write-Warning "Could not query aspgov.pri domain — falling back to inf-svrdc101.aspgov.pri. Error: $_"
+    Write-Warning "Could not query aspgov.pri domain - falling back to inf-svrdc101.aspgov.pri. Error: $_"
     $pdcAspgov = 'inf-svrdc101.aspgov.pri'
 }
 $pdcCentroid = 'centroid.cloud.lcl'
@@ -545,7 +709,7 @@ Write-Host "Looking up ASPGOV\$samidL ..." -ForegroundColor Cyan
 
 $adUser = $null
 try {
-    # Include disabled users — this is a re-enable script
+    # Include disabled users - this is a re-enable script
     $adUser = Get-ADUser -Filter "samaccountname -eq '$samidL'" `
         -Server $pdcAspgov -Properties * -ErrorAction Stop
 } catch {
@@ -584,8 +748,6 @@ $adUser = Enable-AspgovCustomerUser `
     -PdcAspgov   $pdcAspgov `
     -RunningAs   $runningAs
 
-Write-Host "  OK: ASPGOV\$samidL enabled and refreshed." -ForegroundColor Green
-
 # ---- Step 5: Reset password -------------------------------------------------
 Write-Host "Resetting password for ASPGOV\$samidL ..." -ForegroundColor Cyan
 $newPassword = Reset-AspgovPassword `
@@ -593,8 +755,6 @@ $newPassword = Reset-AspgovPassword `
     -FirstName $firstName `
     -LastName  $lastName `
     -PdcAspgov $pdcAspgov
-
-Write-Host "  OK: Password reset." -ForegroundColor Green
 
 # ---- Step 6: Create/verify rpt folders --------------------------------------
 Write-Host "Verifying RPT report folders ..." -ForegroundColor Cyan
@@ -617,16 +777,36 @@ $userInfoToken = Build-PLUSSqlUserInfo `
     -EmployeeID   $employeeID `
     -IsUserDBA    $bIsDBA
 
-if ($bIs52) {
-    $sqlEnvs = @(
-        @{ Env = 'PRD04'; Instance = $sqlInstances.PRD04; OnlyTrain = $false }
-        @{ Env = 'STG04'; Instance = $sqlInstances.STG04; OnlyTrain = $true  }
-    )
+if ($SqlEnv) {
+    $filterMode = if ($SqlEnv -in @('STG01','STG04')) { 'train' } else { 'prod' }
+    $sqlEnvs = @(@{ Env = $SqlEnv; Instance = $sqlInstances[$SqlEnv]; FilterMode = $filterMode })
 } else {
-    $sqlEnvs = @(
-        @{ Env = 'PRD01'; Instance = $sqlInstances.PRD01; OnlyTrain = $false }
-        @{ Env = 'STG01'; Instance = $sqlInstances.STG01; OnlyTrain = $true  }
-    )
+    $prdEnv    = if ($bIs52) { 'PRD04' } else { 'PRD01' }
+    $stgEnv    = if ($bIs52) { 'STG04' } else { 'STG01' }
+    $prdServer = if ($bIs52) { 'cld-pplsdb004' } else { 'cld-pplsdb001' }
+    $stgServer = if ($bIs52) { 'cld-splsdb004' } else { 'cld-splsdb001' }
+    $versionTag = if ($bIs52) { ' - PLUS 5.2' } else { '' }
+
+    Write-Host ""
+    Write-Host "  Customer: $custName ($custU)$versionTag" -ForegroundColor Cyan
+    Write-Host "  1) Production  ($prdServer)" -ForegroundColor White
+    Write-Host "  2) Train       ($stgServer)" -ForegroundColor White
+    Write-Host "  3) Stage       ($stgServer)" -ForegroundColor White
+    Write-Host ""
+
+    do {
+        $raw   = (Read-Host "  Select environments [1/2/3 or combination e.g. 1,2]").Trim() -replace '\s', ''
+        $parts = @($raw -split ',' | ForEach-Object { $_.Trim() } | Select-Object -Unique | Sort-Object)
+        $valid = $parts.Count -ge 1 -and @($parts | Where-Object { $_ -notin @('1','2','3') }).Count -eq 0
+        if (-not $valid) {
+            Write-Host "  Enter 1, 2, 3 or a comma-separated combination (e.g. 1,2 or 1,2,3)." -ForegroundColor Yellow
+        }
+    } while (-not $valid)
+
+    $sqlEnvs = @()
+    if ('1' -in $parts) { $sqlEnvs += @{ Env = $prdEnv; Instance = $sqlInstances[$prdEnv]; FilterMode = 'prod'  } }
+    if ('2' -in $parts) { $sqlEnvs += @{ Env = $stgEnv; Instance = $sqlInstances[$stgEnv]; FilterMode = 'train' } }
+    if ('3' -in $parts) { $sqlEnvs += @{ Env = $stgEnv; Instance = $sqlInstances[$stgEnv]; FilterMode = 'stage' } }
 }
 
 $sqlResults = @()
@@ -639,7 +819,7 @@ foreach ($e in $sqlEnvs) {
         -SqlInstance   $e.Instance `
         -UserInfoToken $userInfoToken `
         -TemplatePath  $sqlTmplPath `
-        -OnlyTrain     $e.OnlyTrain
+        -FilterMode    $e.FilterMode
     $sqlResults += $r
     $color = if ($r.Status -eq 'OK') { 'Green' } elseif ($r.Status -eq 'WHATIF') { 'Yellow' } else { 'Red' }
     Write-Host ("  {0,-8} {1}" -f $r.Status, $r.SqlEnv) -ForegroundColor $color
@@ -686,5 +866,15 @@ $credBlock = Format-PLUSReenableCredentialsBlock `
 Write-Host "`n$credBlock" -BackgroundColor DarkBlue -ForegroundColor White
 Set-Clipboard -Value $credBlock
 Write-Host "`n[Credentials block copied to clipboard]" -ForegroundColor Cyan
+
+# ---- Step 10: Open credentials email draft ----------------------------------
+$emailTmplPath = Join-Path $tmplDir 'Email-NewCustomerUserCredentials.htm'
+New-PLUSCredsEmail `
+    -Samid        $samidL `
+    -FirstName    $firstName `
+    -CustName     $custName `
+    -CustCode     $custU `
+    -TemplatePath $emailTmplPath `
+    -IsReenable   $true
 
 #endregion --- main script ----------------------------------------------------

@@ -1,9 +1,6 @@
 #Requires -Version 5.1
 #Requires -Modules ActiveDirectory
 
-# SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
-Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
-
 <#
 .SYNOPSIS
     Create a new PLUS customer user end-to-end: aspgov.pri AD account, centroid.cloud.lcl
@@ -14,7 +11,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
     module. Does not require the legacy PowerShell profile or VM workstations.
 
     All configuration ships with the script under ./config/ and ./templates/.
-    You must supply Template_SQL_GrantUserAccess.txt before running — see the README for where to grab it.
+    You must supply Template_SQL_GrantUserAccess.txt before running - see the README for where to grab it.
 
     What it does:
       1. Validates the customer site code against config/PLUSCustomers.csv
@@ -24,7 +21,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
       4. Sets msDS-cloudExtensionAttribute18 = IsPLUSCustAdmin=FALSE on the new account
       5. Creates report folders: \\plus-efp-fs[.|-train.]\aspgov.com\Userfolders[52|52TRN]\<cust>\<samid>\rpt
       6. Grants SQL access via Template_SQL_GrantUserAccess.txt on PRD04+STG04 (5.2 customers)
-         or PRD01+STG01 (non-5.2 customers) — never both; 5.2 customers have no presence on PRD01/STG01
+         or PRD01+STG01 (non-5.2 customers) - never both; 5.2 customers have no presence on PRD01/STG01
       7. Creates c_<samid> on centroid.cloud.lcl (skips gracefully if no OU mapping exists)
       8. Outputs the credentials block to console and copies it to clipboard
 
@@ -57,7 +54,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 .PARAMETER Is52Customer
     Override automatic 5.2 detection. When set, PRD04/STG04 SQL envs are included.
-    By default the script checks the Platform column in config/PLUSCustomers.csv.
+    By default the script checks the Version column in config/PLUSCustomers.csv.
 
 .PARAMETER SamidOverride
     Override the auto-generated samAccountName. Use with caution.
@@ -71,7 +68,7 @@ Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
         -EmailAddress jsmith@tompkins.gov -WhatIf
 
 .NOTES
-    Author: CloudOps SRE — CentralSquare Technologies
+    Author: CloudOps SRE - CentralSquare Technologies
     Replaces: PLUS_Create_CustomerUser (PLUSSysAdmins.psm1)
     No VMware, no Rubrik, no PSync dependencies.
 #>
@@ -92,6 +89,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
+Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
 
 #region --- helpers -----------------------------------------------------------
 
@@ -117,7 +117,7 @@ function Get-PLUSConfig {
 
     return @{
         Customers     = @($rows | ForEach-Object { $_.SiteCode.Trim().ToLower() })
-        Customers52   = @($rows | Where-Object { $_.Platform.Trim() -eq '52' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
+        Customers52   = @($rows | Where-Object { $_.Version.Trim() -eq '5.2' } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
         CustomersLNFI = @($rows | Where-Object { $_.UIDLNFI.Trim()  -eq 'Y'  } | ForEach-Object { $_.SiteCode.Trim().ToLower() })
         CentroidOuMap = @($rows | Where-Object { $_.CentroidOU -match '\S' } | ForEach-Object {
             [pscustomobject]@{ cust = $_.SiteCode.Trim().ToLower(); CentroidCustomerOU = $_.CentroidOU.Trim() }
@@ -170,7 +170,7 @@ function Resolve-PLUSSamid {
         return $samid
     }
 
-    # samid taken — try samid2 if we have a middle initial
+    # samid taken - try samid2 if we have a middle initial
     if ($samid2 -ne $samid) {
         Write-Verbose "  $samid is taken. Trying $samid2 ..."
         $exists2 = $null
@@ -193,6 +193,7 @@ function New-AspgovCustomerUser {
     and stamps msDS-cloudExtensionAttribute18.
     Returns nothing; throws on failure.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$DisplayName,
@@ -231,6 +232,7 @@ function New-AspgovCustomerUser {
             -ChangePasswordAtLogon $true `
             -ErrorAction Stop
         Write-Verbose "  ASPGOV: Created $Samid in $path"
+        Write-Host "  OK: ASPGOV\$Samid created." -ForegroundColor Green
     }
 
     if ($PSCmdlet.ShouldProcess("aspgov.pri", "Add-ADGroupMember '$group' <- '$Samid'")) {
@@ -242,7 +244,7 @@ function New-AspgovCustomerUser {
         }
     }
 
-    # Stamp the PLUS admin attribute — non-fatal if schema is absent on this DC
+    # Stamp the PLUS admin attribute - non-fatal if schema is absent on this DC
     if ($PSCmdlet.ShouldProcess("aspgov.pri", "Set msDS-cloudExtensionAttribute18 on '$Samid'")) {
         try {
             Set-ADUser -Identity $Samid -Server $PdcAspgov `
@@ -250,7 +252,7 @@ function New-AspgovCustomerUser {
                 -ErrorAction SilentlyContinue
             Write-Verbose "  ASPGOV: Set msDS-cloudExtensionAttribute18=IsPLUSCustAdmin=FALSE on $Samid"
         } catch {
-            Write-Warning "  Could not set msDS-cloudExtensionAttribute18 on $Samid — skipping (non-fatal). Error: $_"
+            Write-Warning "  Could not set msDS-cloudExtensionAttribute18 on $Samid - skipping (non-fatal). Error: $_"
         }
     }
 }
@@ -258,9 +260,10 @@ function New-AspgovCustomerUser {
 function New-PLUSReportFolders {
     <#
     Creates the rpt folder for the user on prod and train file servers.
-    Customer users get prod + train only (no stage, no dev) — mirrors PLUS_CreateRPT behavior.
+    Customer users get prod + train only (no stage, no dev) - mirrors PLUS_CreateRPT behavior.
     Returns an array of [pscustomobject]{Path; Status} result objects.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$CustLower,
@@ -331,6 +334,9 @@ function Invoke-PLUSGrantUserAccess {
     <#
     Tokenizes Template_SQL_GrantUserAccess.txt and executes it against the
     specified SQL instance. Saves the generated script to $env:TEMP for audit.
+    Verifies the sectb_crosswalk row actually landed before reporting OK - the
+    template's two-phase print-then-execute pattern can silently do nothing
+    without throwing, so absence of an exception is not proof of success.
     Returns [pscustomobject]{SqlEnv; Status; ScriptPath}.
 
     Template tokens:
@@ -339,6 +345,7 @@ function Invoke-PLUSGrantUserAccess {
       ZZZexecSectbAccessZZZ -> '0' for customer users
       ZZZcursorwhereZZZ     -> WHERE clause
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Samid,
         [string]$CustLower,
@@ -346,7 +353,7 @@ function Invoke-PLUSGrantUserAccess {
         [string]$SqlInstance,        # e.g. 'CLD-PPLSDB001.aspgov.pri\PLUS'
         [string]$UserInfoToken,
         [string]$TemplatePath,
-        [bool]$OnlyTrain             # true for STG envs — match legacy -onlyTrain behavior
+        [bool]$OnlyTrain             # true for STG envs - match legacy -onlyTrain behavior
     )
 
     if (-not (Test-Path $TemplatePath)) {
@@ -370,18 +377,41 @@ function Invoke-PLUSGrantUserAccess {
     $ts         = Get-Date -Format 'yyyyMMdd_HHmmss'
     $scriptFile = Join-Path $env:TEMP "GrantUserAccess_${Samid}_${CustLower}_${SqlEnv}_${ts}.sql"
 
-    if ($PSCmdlet.ShouldProcess($SqlInstance, "Invoke-Sqlcmd GrantUserAccess for $Samid ($SqlEnv)")) {
+    if (-not $PSCmdlet.ShouldProcess($SqlInstance, "Invoke-Sqlcmd GrantUserAccess for $Samid ($SqlEnv)")) {
+        return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = 'WHATIF'; ScriptPath = $null }
+    }
+
+    # A newly-created ASPGOV account can take a while to replicate to whichever DC this SQL
+    # instance resolves Windows logins against - CREATE LOGIN ... FROM WINDOWS (the first
+    # statement the generated script runs) fails with "Windows NT user or group ... not
+    # found" until that catches up, which aborts the entire generated script including every
+    # downstream per-database grant. Retry the whole generate-and-execute cycle on that
+    # specific error so a single New-PLUSCustomerUser.ps1 run succeeds without a manual
+    # Grant-PLUSUserAccess.ps1 re-run. Any other error fails immediately, no retries.
+    $replicationRetryDelaysSec = @(30, 60, 120, 120, 120, 120)   # ~9.5 min total if every retry fires
+    $maxAttempts               = $replicationRetryDelaysSec.Count + 1
+
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         try {
-            # Phase 1: run the template query to produce the per-database execution script
+            # Phase 1: run the template query to produce the per-database execution script.
+            # @EXECUTENOW=0 in the template means every real statement is PRINTed, not EXECed -
+            # Invoke-Sqlcmd only puts PRINT/message output on the pipeline with -Verbose, and
+            # only once stream 4 is redirected onto stream 1 (4>&1). Without both, $generatedSql
+            # is empty and Phase 2 below silently executes nothing.
             $generatedSql = Invoke-Sqlcmd `
                 -ServerInstance    $SqlInstance `
                 -Query             $sql `
                 -QueryTimeout      120 `
-                                -ErrorAction       Stop |
+                -Verbose `
+                -ErrorAction       Stop `
+                4>&1 |
                 Out-String -Width 800
 
-            # Strip "Changed database context to 'master'." noise
+            # Strip "Changed database context to 'master'." noise, and the "VERBOSE: " prefix
+            # PowerShell prepends to each line when a VerboseRecord (from 4>&1 above) is
+            # rendered to text - the captured SQL must be plain text for Phase 2 to replay it.
             $generatedSql = $generatedSql -replace "Changed database context to 'master'\.", ''
+            $generatedSql = ($generatedSql -split "`r?`n" | ForEach-Object { $_ -replace '^VERBOSE:\s?', '' }) -join "`r`n"
 
             Set-Content -Path $scriptFile -Value $generatedSql -Force
 
@@ -392,12 +422,59 @@ function Invoke-PLUSGrantUserAccess {
                 -QueryTimeout      120 `
                                 -ErrorAction       Stop
 
+            # Verify the sectb_crosswalk row actually landed. Phase 1/2 above only fail on a
+            # thrown exception - if Phase 1's PRINT capture was empty/incomplete (e.g. the
+            # cursor matched zero databases, or Invoke-Sqlcmd's message-stream capture dropped
+            # part of the output), Phase 2 can silently execute nothing and still report success.
+            $verifyDbs = @()
+            try {
+                $verifyDbs = @(Invoke-Sqlcmd `
+                    -ServerInstance $SqlInstance `
+                    -Database       'master' `
+                    -Query          "SELECT name FROM sys.databases WHERE $cursorWhere" `
+                    -QueryTimeout   30 `
+                    -ErrorAction    Stop)
+            } catch {
+                return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED-not-verified: could not query sys.databases to verify sectb_crosswalk - $_"; ScriptPath = $scriptFile }
+            }
+
+            $crosswalkFound = $false
+            $samidLower = $Samid.ToLower()
+            foreach ($dbRow in $verifyDbs) {
+                try {
+                    $uidRow = Invoke-Sqlcmd `
+                        -ServerInstance $SqlInstance `
+                        -Database       $dbRow.name `
+                        -Query          "SELECT TOP 1 spiuser FROM sectb_crosswalk WHERE winuser = '$samidLower'" `
+                        -QueryTimeout   30 `
+                        -ErrorAction    Stop | Select-Object -First 1
+                    if ($uidRow -and $uidRow.spiuser) { $crosswalkFound = $true; break }
+                } catch {
+                    Write-Verbose "  Could not query sectb_crosswalk on $SqlInstance.$($dbRow.name) during verification - $_"
+                }
+            }
+
+            if (-not $crosswalkFound) {
+                return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED-not-verified: sectb_crosswalk row for '$samidLower' not found in any target database on $SqlInstance"; ScriptPath = $scriptFile }
+            }
+
             return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = 'OK'; ScriptPath = $scriptFile }
         } catch {
+            $isAdReplicationLag = $_ -match 'Windows NT user or group .* not found'
+
+            if ($isAdReplicationLag -and $attempt -lt $maxAttempts) {
+                $delay = $replicationRetryDelaysSec[$attempt - 1]
+                Write-Warning "  ASPGOV\$Samid not yet visible to $SqlInstance (AD replication lag) - attempt $attempt of $maxAttempts, retrying in ${delay}s..."
+                Start-Sleep -Seconds $delay
+                continue
+            }
+
+            if ($isAdReplicationLag) {
+                return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED: AD replication lag persisted after $maxAttempts attempts - $_"; ScriptPath = $scriptFile }
+            }
+
             return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = "FAILED: $_"; ScriptPath = $scriptFile }
         }
-    } else {
-        return [pscustomobject]@{ SqlEnv = $SqlEnv; Status = 'WHATIF'; ScriptPath = $null }
     }
 }
 
@@ -407,6 +484,7 @@ function New-CentroidCustomerUser {
     Skips gracefully if no OU mapping is found for the customer.
     Returns [pscustomobject]{Status; Samid; Dn}.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$AspgovSamid,
         [string]$CustUpper,
@@ -438,7 +516,7 @@ function New-CentroidCustomerUser {
         $null = Get-ADOrganizationalUnit -Server $PdcCentroid -Identity $centroidUsersDn -ErrorAction Stop
     } catch {
         return [pscustomobject]@{
-            Status = "FAILED-target-OU-missing: $centroidUsersDn — $_"
+            Status = "FAILED-target-OU-missing: $centroidUsersDn - $_"
             Samid  = $null
             Dn     = $null
         }
@@ -542,14 +620,66 @@ Send credentials to the user manually.
     return $block
 }
 
+function New-PLUSCredsEmail {
+    <#
+    Renders the HTML credentials email template and opens it in the default browser.
+    Returns the path to the saved .htm file, or $null if the template is missing.
+    #>
+    param(
+        [string]$Samid,
+        [string]$FirstName,
+        [string]$CustName,
+        [string]$CustCode,
+        [string]$TemplatePath,
+        [bool]$IsReenable = $false
+    )
+
+    if (-not (Test-Path $TemplatePath)) {
+        Write-Warning "  Email template not found: $TemplatePath - skipping email draft."
+        return $null
+    }
+
+    $pwdLine = "<span style='background:yellow'><b><i>Your temporary password will be sent via a separate communication.</i></b></span>"
+
+    $body = Get-Content $TemplatePath -Raw
+    $tomorrow = (Get-Date).AddDays(1).ToShortDateString()
+    $tokens = [ordered]@{
+        'ZZZFNameZZZ'         = $FirstName
+        'ZZZCustomerNameZZZ'  = $CustName
+        'ZZZCUSTZZZ'          = $CustCode.ToUpper()
+        'ZZZSAMIDZZZ'         = $Samid.ToUpper()
+        'ZZZPWDLINEZZZ'       = $pwdLine
+        'ZZZTOMORROWZZZ'      = $tomorrow
+        'ZZZEMAILSIGZZZ'      = ''
+        'ZZZFirstUsersInfoZZZ'= ''
+    }
+    foreach ($token in $tokens.GetEnumerator()) { $body = $body -replace $token.Key, $token.Value }
+
+    if ($IsReenable) {
+        $body = $body -replace ' new account ',     ' account '
+        $body = $body -replace ' has been created', ' has been re-enabled'
+        $body = $body -replace 'You will not be able to access', 'As a reminder, you will not be able to access'
+    }
+
+    $dateDir   = Join-Path $env:TEMP "PLUSUserAdmin\$(Get-Date -Format 'yyyy-MM-dd')"
+    if (-not (Test-Path $dateDir)) { $null = New-Item -ItemType Directory -Path $dateDir -Force }
+    $suffix    = if ($IsReenable) { 'Reenable' } else { 'New' }
+    $emailFile = Join-Path $dateDir "UserCredsEmail_${suffix}_$($Samid.ToUpper()).htm"
+    Set-Content -Path $emailFile -Value $body -Encoding UTF8 -Force
+
+    Write-Host "  Email draft saved to: $emailFile" -ForegroundColor Cyan
+    Start-Process $emailFile
+    return $emailFile
+}
+
 #endregion --- helpers --------------------------------------------------------
 
 #region --- main script -------------------------------------------------------
 
 # Resolve paths
-$scriptDir   = $PSScriptRoot
+$scriptDir   = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MyInvocation.MyCommand.Path -Parent }
 $configDir   = Join-Path $scriptDir '..\config'
-$tmplDir     = Join-Path $scriptDir 'templates'
+$tmplDir     = Join-Path $scriptDir '..\templates'
 $sqlTmplPath = Join-Path $tmplDir 'Template_SQL_GrantUserAccess.txt'
 
 # SQL instance map (from PLUS_GetSQLInstance, PLUSSysAdmins.psm1:642)
@@ -587,7 +717,7 @@ if ($cfg.CustomerNames.ContainsKey($custL)) {
     $custName  = $cfg.CustomerNames[$custL].Name
     $custState = $cfg.CustomerNames[$custL].State
 } else {
-    Write-Warning "No customer name found for '$custU' in PLUSCustomers.csv — using site code as display name. Add Name/State to the CSV for better output."
+    Write-Warning "No customer name found for '$custU' in PLUSCustomers.csv - using site code as display name. Add Name/State to the CSV for better output."
     $custName  = $custU
     $custState = ''
 }
@@ -597,7 +727,7 @@ Write-Verbose 'Resolving aspgov.pri PDC emulator...'
 try {
     $pdcAspgov = (Get-ADDomain aspgov.pri -ErrorAction Stop).PDCEmulator
 } catch {
-    Write-Warning "Could not query aspgov.pri domain — falling back to inf-svrdc101.aspgov.pri. Error: $_"
+    Write-Warning "Could not query aspgov.pri domain - falling back to inf-svrdc101.aspgov.pri. Error: $_"
     $pdcAspgov = 'inf-svrdc101.aspgov.pri'
 }
 $pdcCentroid = 'centroid.cloud.lcl'
@@ -651,8 +781,6 @@ New-AspgovCustomerUser `
     -EmployeeID      $employeeID `
     -InitialPassword $initPassword `
     -PdcAspgov       $pdcAspgov
-
-Write-Host "  OK: ASPGOV\$samid created." -ForegroundColor Green
 
 # ---- Step 6: Create rpt folders ---------------------------------------------
 Write-Host "Creating RPT report folders ..." -ForegroundColor Cyan
@@ -741,5 +869,15 @@ $credBlock = Format-PLUSCredentialsBlock `
 Write-Host "`n$credBlock" -BackgroundColor DarkBlue -ForegroundColor White
 Set-Clipboard -Value $credBlock
 Write-Host "`n[Credentials block copied to clipboard]" -ForegroundColor Cyan
+
+# ---- Step 10: Open credentials email draft ----------------------------------
+$emailTmplPath = Join-Path $tmplDir 'Email-NewCustomerUserCredentials.htm'
+New-PLUSCredsEmail `
+    -Samid        $samid `
+    -FirstName    (Get-Culture).TextInfo.ToTitleCase($FirstName) `
+    -CustName     $custName `
+    -CustCode     $custU `
+    -TemplatePath $emailTmplPath `
+    -IsReenable   $false
 
 #endregion --- main script ----------------------------------------------------

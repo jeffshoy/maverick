@@ -30,31 +30,20 @@ Standalone replacement for `PLUS_TerminateCustUser "samid" "CaseNo"` from the de
 
 ## Config and template files
 
-This script shares `config/` with `New-PLUSCustomerUser` (symlink or copy). It has its own `templates/` folder with a different SQL template.
+This script uses the shared `config\` folder at `scripts\plus\config\` and the shared `templates\` folder at `scripts\plus\templates\`. Scripts reference both via `$scriptDir\..\config\` and `$scriptDir\..\templates\` - no per-script symlinks needed.
 
-### Config files (shared)
-
-Symlink or copy from `New-PLUSCustomerUser/config/`:
-
-```powershell
-New-Item -ItemType Junction `
-    -Path   ".\config" `
-    -Target "..\New-PLUSCustomerUser\config"
-```
+### Required files
 
 | File | Purpose |
 |------|---------|
-| `config/PLUSCustomers.csv` | Single source of truth — all customers with Platform column for 5.2 detection |
-
-### Template file (this script only)
-
-| File | Source |
-|------|--------|
-| `templates/Template_SQL_RemoveUserAccess-Simple.txt` | `\\CLD-PPLSRDS001.aspgov.pri\PLUS$\PS_EnvironmentAdmin\scriptTemplates\` |
+| `config\PLUSCustomers.csv` | Single source of truth - all customers with Version column for 5.2 detection |
+| `scripts\plus\templates\Template_SQL_RemoveUserAccess-Simple.txt` | SQL removal template (grab from `\\CLD-PPLSRDS001.aspgov.pri\PLUS$\PS_EnvironmentAdmin\scriptTemplates\`) |
 
 ---
 
 ## Usage
+
+Support staff use menu option 3 via `support\PLUS-UserAdmin.bat`. Direct PowerShell invocation below is for SRE / power users.
 
 ```powershell
 # Standard termination
@@ -63,7 +52,7 @@ New-Item -ItemType Junction `
 # Dry run (no changes made)
 .\Disable-PLUSCustomerUser.ps1 -Samid lmpkpeterson -CaseNo 02502101 -WhatIf
 
-# Force 5.2 SQL envs regardless of PLUSCustomers.csv Platform column
+# Force 5.2 SQL envs regardless of PLUSCustomers.csv Version column
 .\Disable-PLUSCustomerUser.ps1 -Samid lmpkpeterson -CaseNo 02502101 -Is52Customer
 ```
 

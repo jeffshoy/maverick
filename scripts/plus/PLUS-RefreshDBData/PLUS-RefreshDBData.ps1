@@ -147,8 +147,9 @@ $sqlInstances = @{
     DEV04 = 'CLD-DPLSDB004.aspgov.pri\PLUS'
 }
 
-$DefaultTemplate51 = Join-Path $PSScriptRoot 'Templates\Template_SQL_DBDataRefresh.txt'
-$DefaultTemplate52 = Join-Path $PSScriptRoot 'Templates\Template_SQL_DBDataRefresh_52.txt'
+$scriptDir51       = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MyInvocation.MyCommand.Path -Parent }
+$DefaultTemplate51 = Join-Path $scriptDir51 'Templates\Template_SQL_DBDataRefresh.txt'
+$DefaultTemplate52 = Join-Path $scriptDir51 'Templates\Template_SQL_DBDataRefresh_52.txt'
 $DefaultChangeUid  = 'clouddba'
 $ScriptVersion     = '2.1.0'
 
@@ -652,8 +653,12 @@ if ($CopyToClipboard) {
 
 } else {
 
-    # SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed
-    Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
+    # SqlServer 22.x has an InOutOfProcHelper bug on this server; force 21.x which is also installed.
+    # Skip re-import if the correct version is already loaded — re-importing with -Force causes
+    # duplicate Update-TypeData warnings for every SMO type extension.
+    if (-not (Get-Module -Name SqlServer | Where-Object { $_.Version -eq '21.1.18226' })) {
+        Import-Module SqlServer -RequiredVersion 21.1.18226 -Force
+    }
 
     $dstInstance = $sqlInstances[$DestSQLEnv]
 
