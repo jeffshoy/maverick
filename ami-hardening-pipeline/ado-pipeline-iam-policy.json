@@ -1,0 +1,157 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "TerraformStateBackend",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::ami-hardening-pipeline-tfstate-300512157817",
+        "arn:aws:s3:::ami-hardening-pipeline-tfstate-300512157817/*"
+      ]
+    },
+    {
+      "Sid": "TerraformStateLock",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:300512157817:table/terraform-state-lock"
+    },
+    {
+      "Sid": "Networking",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeVpcAttribute",
+        "ec2:CreateVpc",
+        "ec2:DeleteVpc",
+        "ec2:ModifyVpcAttribute",
+        "ec2:DescribeSubnets",
+        "ec2:CreateSubnet",
+        "ec2:DeleteSubnet",
+        "ec2:DescribeInternetGateways",
+        "ec2:CreateInternetGateway",
+        "ec2:DeleteInternetGateway",
+        "ec2:AttachInternetGateway",
+        "ec2:DetachInternetGateway",
+        "ec2:DescribeRouteTables",
+        "ec2:CreateRouteTable",
+        "ec2:DeleteRouteTable",
+        "ec2:CreateRoute",
+        "ec2:DeleteRoute",
+        "ec2:AssociateRouteTable",
+        "ec2:DisassociateRouteTable",
+        "ec2:DescribeSecurityGroups",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:CreateTags",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AmiResolution",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeImages",
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IamForBuildRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:TagRole",
+        "iam:PassRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile"
+      ],
+      "Resource": [
+        "arn:aws:iam::300512157817:role/ami-hardening-*",
+        "arn:aws:iam::300512157817:instance-profile/ami-hardening-*"
+      ]
+    },
+    {
+      "Sid": "LogsBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteBucket",
+        "s3:PutBucketVersioning",
+        "s3:PutEncryptionConfiguration",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::ami-hardening-*-imagebuilder-logs-*"
+    },
+    {
+      "Sid": "ImageBuilder",
+      "Effect": "Allow",
+      "Action": [
+        "imagebuilder:GetComponent",
+        "imagebuilder:CreateComponent",
+        "imagebuilder:DeleteComponent",
+        "imagebuilder:ListComponents",
+        "imagebuilder:TagResource",
+        "imagebuilder:GetImageRecipe",
+        "imagebuilder:CreateImageRecipe",
+        "imagebuilder:DeleteImageRecipe",
+        "imagebuilder:GetInfrastructureConfiguration",
+        "imagebuilder:CreateInfrastructureConfiguration",
+        "imagebuilder:UpdateInfrastructureConfiguration",
+        "imagebuilder:DeleteInfrastructureConfiguration",
+        "imagebuilder:GetDistributionConfiguration",
+        "imagebuilder:CreateDistributionConfiguration",
+        "imagebuilder:UpdateDistributionConfiguration",
+        "imagebuilder:DeleteDistributionConfiguration",
+        "imagebuilder:GetImagePipeline",
+        "imagebuilder:CreateImagePipeline",
+        "imagebuilder:UpdateImagePipeline",
+        "imagebuilder:DeleteImagePipeline",
+        "imagebuilder:StartImagePipelineExecution",
+        "imagebuilder:ListImagePipelineImages",
+        "imagebuilder:GetImage"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CallerIdentityAndRegion",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetCallerIdentity",
+        "ec2:DescribeRegions"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
