@@ -1,7 +1,5 @@
 SiteCode,Name,State,Version,UIDLNFI,CentroidOU
 ala,Alachua County Clerk of the Courts,FL,5.2,,ALACHUACOUNTYCLERKOFTHECOURTSFL
-alm,,,,,
-arn,,,,,
 ava,Avalon,CA,,,AVALONCA
 ave,Avenal,CA,,,AVENALCA
 bac,Bay County Clerk,FL,,,BAYCOUNTYCLERKCOURTFL
@@ -15,16 +13,14 @@ csc,Central Sierra Child Support,CA,,,CENTRALSIERRACHILDSUPPORTAGENCYCA
 eme,Emeryville,CA,5.2,,EMERYVILLECA
 eri,Erie,PA,5.2,,ERIEPA
 fwl,Fowler,CA,,,FOWLERCA
-gld,,,5.2,,GLADSTONEMO
+gld,Gladstone,MO,5.2,,GLADSTONEMO
 glo,Gloucester,VA,5.2,,GLOUCESTERCOUNTYVA
-grb,Greenbelt,MD,,,
 hfm,Hoffman Estates,IL,5.2,Y,HOFFMANESTATESIL
-hic,Highlands County,FL,5.2,,
+hic,Highlands County,FL,5.2,,HIGHLANDSCOUNTYFL
 lin,Lindsay,CA,,,LINDSAYCA
 lir,Livermore,CA,,,LIVERMORECA
 lmp,Lake Metroparks,OH,5.2,,LAKEMETROPARKSOH
 mea,Meadville,PA,5.2,,MEADVILLEPA
-mun,,,,,
 nwl,Norwalk,CA,,,NORWALKCA
 opa,Opa-locka,FL,,,OPALOCKAPOLICEFL
 oro,Oroville,CA,5.2,,OROVILLECA
@@ -33,7 +29,6 @@ pet,Peters Township,PA,5.2,,PETERSTOWNSHIPPA
 pou,Poulsbo,WA,5.2,,POULSBOWA
 rhe,Rolling Hills Estates,CA,5.2,,ROLLINGHILLSESTATESCA
 sjc,St. John's County Clerk,FL,,,STJOHNSCOUNTYCLERKOFTHECOURTFL
-smt,,,,,
 sra,Saratoga,CA,5.2,,SARASOTACOUNTYFL
 srs,Santa Rosa County Sheriff,FL,5.2,,SANTAROSACOUNTYSHERIFFFL
 sta,Santa Rosa County,FL,5.2,,SANTAROSACOUNTYFL
