@@ -1,0 +1,89 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - ami-hardening-pipeline/*
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - ami-hardening-pipeline/*
+
+name: ami-hardening-pipeline
+
+variables:
+  - name: TF_VERSION
+    value: "1.15.8"
+  - name: WORKING_DIR
+    value: "$(System.DefaultWorkingDirectory)/ami-hardening-pipeline"
+  # AWS credentials come from the "ami-hardening-pipeline-aws" service connection below,
+  # via the AWSShellScript task — nothing else in this file needs AWS secrets directly.
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Validate
+    displayName: Terraform Validate & Plan
+    jobs:
+      - job: plan
+        displayName: terraform validate + plan
+        steps:
+          - script: |
+              curl -sSL -o terraform.zip "https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip"
+              unzip -o terraform.zip -d /usr/local/bin
+              terraform -version
+            displayName: Install Terraform $(TF_VERSION)
+
+          - task: AWSShellScript@1
+            displayName: terraform init + validate + plan
+            inputs:
+              awsCredentials: "ami-hardening-pipeline-aws"
+              regionName: "us-east-1"
+              scriptType: "inline"
+              inlineScript: |
+                set -euo pipefail
+                cd "$(WORKING_DIR)"
+                terraform init -input=false
+                terraform validate
+                terraform plan -input=false -out=tfplan
+
+          - publish: $(WORKING_DIR)/tfplan
+            artifact: tfplan
+            displayName: Publish plan artifact
+
+  - stage: Apply_Dev
+    displayName: Apply (dev / root module)
+    dependsOn: Validate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: apply
+        displayName: terraform apply
+        steps:
+          - script: |
+              curl -sSL -o terraform.zip "https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip"
+              unzip -o terraform.zip -d /usr/local/bin
+              terraform -version
+            displayName: Install Terraform $(TF_VERSION)
+
+          - task: AWSShellScript@1
+            displayName: terraform init + apply
+            inputs:
+              awsCredentials: "ami-hardening-pipeline-aws"
+              regionName: "us-east-1"
+              scriptType: "inline"
+              inlineScript: |
+                set -euo pipefail
+                cd "$(WORKING_DIR)"
+                terraform init -input=false
+                terraform apply -input=false -auto-approve
+
+  # Prod (environments/prod) is intentionally NOT wired up yet — see the project's
+  # memory notes: environments/prod has never been applied and is a separate, empty
+  # state file from the root module that's actually live in AWS. Add a manually-gated
+  # stage here (using an ADO Environment with an approval check) once that's ready.
