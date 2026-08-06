@@ -152,7 +152,7 @@ module "windows2019_pipeline" {
   component_documents = [
     { name = "cis-hardening", version = "1.1.0", document = local.windows2019_component_document },
   ]
-  recipe_version = "1.1.0"
+  recipe_version = "1.1.1"
 
   instance_types        = var.windows_build_instance_types
   instance_profile_name = module.imagebuilder_core.instance_profile_name
@@ -178,7 +178,7 @@ module "windows2022_pipeline" {
   component_documents = [
     { name = "cis-hardening", version = "1.1.0", document = local.windows2022_component_document },
   ]
-  recipe_version = "1.1.0"
+  recipe_version = "1.1.1"
 
   instance_types        = var.windows_build_instance_types
   instance_profile_name = module.imagebuilder_core.instance_profile_name
@@ -204,7 +204,7 @@ module "rhel9_pipeline" {
   component_documents = [
     { name = "cis-hardening", version = "1.1.0", document = local.rhel9_component_document },
   ]
-  recipe_version = "1.1.0"
+  recipe_version = "1.1.1"
 
   instance_types        = var.linux_build_instance_types
   instance_profile_name = module.imagebuilder_core.instance_profile_name
@@ -230,7 +230,7 @@ module "ubuntu2204_pipeline" {
   component_documents = [
     { name = "cis-hardening", version = "1.0.3", document = local.ubuntu2204_component_document },
   ]
-  recipe_version = "1.0.3"
+  recipe_version = "1.0.4"
 
   instance_types        = var.linux_build_instance_types
   instance_profile_name = module.imagebuilder_core.instance_profile_name
