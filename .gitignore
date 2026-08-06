@@ -37,18 +37,3 @@ __pycache__/
 .kiro/steering/
 .kiro/specs/
 .kiro/hooks/
-
-# Terraform (ami-hardening-pipeline)
-.terraform/
-*.tfstate
-*.tfstate.*
-crash.log
-crash.*.log
-*.tfvars.json
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
-.scratch-ami-check/
