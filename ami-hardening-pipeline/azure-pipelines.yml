@@ -14,6 +14,18 @@ pr:
     include:
       - ami-hardening-pipeline/*
 
+parameters:
+  - name: osToBuild
+    displayName: OS to build (leave as "none" for a plain plan/apply run)
+    type: string
+    default: none
+    values:
+      - none
+      - rhel9
+      - windows2019
+      - windows2022
+      - ubuntu2204
+
 name: ami-hardening-pipeline
 
 variables:
@@ -23,6 +35,16 @@ variables:
     value: "$(System.DefaultWorkingDirectory)/ami-hardening-pipeline"
   # AWS credentials come from the "ami-hardening-pipeline-aws" service connection below,
   # via the AWSShellScript task — nothing else in this file needs AWS secrets directly.
+  # Pipeline ARNs are fixed (account/region/naming are stable) so triggering a build
+  # doesn't require running terraform just to look one up.
+  - name: rhel9_pipeline_arn
+    value: "arn:aws:imagebuilder:us-east-1:300512157817:image-pipeline/ami-hardening-dev-rhel9-pipeline"
+  - name: windows2019_pipeline_arn
+    value: "arn:aws:imagebuilder:us-east-1:300512157817:image-pipeline/ami-hardening-dev-windows2019-pipeline"
+  - name: windows2022_pipeline_arn
+    value: "arn:aws:imagebuilder:us-east-1:300512157817:image-pipeline/ami-hardening-dev-windows2022-pipeline"
+  - name: ubuntu2204_pipeline_arn
+    value: "arn:aws:imagebuilder:us-east-1:300512157817:image-pipeline/ami-hardening-dev-ubuntu2204-pipeline"
 
 pool:
   vmImage: ubuntu-latest
@@ -87,3 +109,35 @@ stages:
   # memory notes: environments/prod has never been applied and is a separate, empty
   # state file from the root module that's actually live in AWS. Add a manually-gated
   # stage here (using an ADO Environment with an approval check) once that's ready.
+
+  - stage: TriggerBuild
+    displayName: Trigger AMI Build
+    condition: and(succeeded(), ne('${{ parameters.osToBuild }}', 'none'))
+    jobs:
+      - job: trigger
+        displayName: Start Image Builder execution
+        steps:
+          - task: AWSShellScript@1
+            displayName: "Start build: ${{ parameters.osToBuild }}"
+            inputs:
+              awsCredentials: "ami-hardening-pipeline-aws"
+              regionName: "us-east-1"
+              scriptType: "inline"
+              inlineScript: |
+                set -euo pipefail
+                # Fire-and-forget: this only starts the build and returns the tracking
+                # ARN immediately. A real CIS build takes 20-40+ minutes (longer for
+                # Windows) — check progress separately via the AWS console
+                # (EC2 Image Builder > Images) or:
+                #   aws imagebuilder get-image --image-build-version-arn <ARN>
+                case "${{ parameters.osToBuild }}" in
+                  rhel9)        PIPELINE_ARN="$(rhel9_pipeline_arn)" ;;
+                  windows2019)  PIPELINE_ARN="$(windows2019_pipeline_arn)" ;;
+                  windows2022)  PIPELINE_ARN="$(windows2022_pipeline_arn)" ;;
+                  ubuntu2204)   PIPELINE_ARN="$(ubuntu2204_pipeline_arn)" ;;
+                esac
+                RESPONSE=$(aws imagebuilder start-image-pipeline-execution \
+                  --image-pipeline-arn "$PIPELINE_ARN" \
+                  --region us-east-1)
+                echo "$RESPONSE"
+                echo "##vso[task.setvariable variable=buildArn;isOutput=true]$(echo "$RESPONSE" | grep -o '"imageBuildVersionArn": *"[^"]*"' | sed 's/.*: *"//;s/"$//')"
