@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-26T19:13:09Z",
+  "generatedAt": "2026-08-06T16:13:34Z",
   "ssoSessions": {
     "foundation": {
       "startUrl": "https://d-9067f93f22.awsapps.com/start",
@@ -64,15 +64,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "ACSAPrdFE",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "AIPOCDev",
-      "accountId": "216989118172",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "AIPOCDev",
       "nicknames": [],
       "applications": []
     },
@@ -167,15 +158,6 @@
       "applications": []
     },
     {
-      "name": "C3Sandbox",
-      "accountId": "471112599884",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "C3Sandbox",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "C3SandboxGC",
       "accountId": "471112878321",
       "org": "foundation",
@@ -190,15 +172,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "CCEDev",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "CCRDev",
-      "accountId": "312831649175",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "CCRDev",
       "nicknames": [],
       "applications": []
     },
@@ -241,9 +214,9 @@
     {
       "name": "CLOUD-Concord-Engage-PROD",
       "accountId": "562218614843",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CLOUD-Concord-Engage-PROD",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CLOUD-Concord-Engage-PROD",
       "nicknames": [],
       "applications": []
     },
@@ -293,6 +266,15 @@
       "applications": []
     },
     {
+      "name": "COAPrdFE",
+      "accountId": "062773946643",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "COAPrdFE",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "COMPPrdFE",
       "accountId": "680486335452",
       "org": "foundation",
@@ -313,9 +295,9 @@
     {
       "name": "CS Pro DevOps",
       "accountId": "693224262766",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CS Pro DevOps",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CS Pro DevOps",
       "nicknames": [],
       "applications": []
     },
@@ -338,20 +320,20 @@
       "applications": []
     },
     {
-      "name": "CST-Management-Prd",
-      "accountId": "105680322993",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "CST-Management-Prd",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "CST-Observability",
       "accountId": "510978032531",
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "CST-Observability",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "CST-ObservabilityGC",
+      "accountId": "292763666904",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CST-ObservabilityGC",
       "nicknames": [],
       "applications": []
     },
@@ -383,6 +365,15 @@
       "applications": []
     },
     {
+      "name": "CSTCloudSandbox",
+      "accountId": "073167108101",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CSTCloudSandbox",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "CSTHomeProd",
       "accountId": "378743674153",
       "org": "foundation",
@@ -397,15 +388,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "CSTHomeProdCA",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "CSTHomeSandbox",
-      "accountId": "058264502926",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "CSTHomeSandbox",
       "nicknames": [],
       "applications": []
     },
@@ -509,15 +491,6 @@
       "applications": []
     },
     {
-      "name": "CenterlineDev",
-      "accountId": "129271358951",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "CenterlineDev",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "CenterlinePrd",
       "accountId": "512138916590",
       "org": "foundation",
@@ -545,15 +518,6 @@
       "applications": []
     },
     {
-      "name": "ChocolateCityDev",
-      "accountId": "352383909052",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "ChocolateCityDev",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "CimDevUS",
       "accountId": "936998755740",
       "org": "foundation",
@@ -563,11 +527,29 @@
       "applications": []
     },
     {
+      "name": "CitizenLinkAIDev",
+      "accountId": "987989462510",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CitizenLinkAIDev",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "CitizenLinkAIProd",
+      "accountId": "526860034533",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CitizenLinkAIProd",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "Cloud Data Protection Services",
       "accountId": "832071262165",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-Cloud Data Protection Services",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Cloud Data Protection Services",
       "nicknames": [],
       "applications": []
     },
@@ -583,9 +565,9 @@
     {
       "name": "CloudApper-Prod",
       "accountId": "767116502928",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CloudApper-Prod",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CloudApper-Prod",
       "nicknames": [],
       "applications": []
     },
@@ -595,15 +577,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "CloudApper-Stage",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "CloudDevSRE",
-      "accountId": "323612677988",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "CloudDevSRE",
       "nicknames": [],
       "applications": []
     },
@@ -628,18 +601,18 @@
     {
       "name": "CommDev-Prod",
       "accountId": "260032096987",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CommDev-Prod",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CommDev-Prod",
       "nicknames": [],
       "applications": []
     },
     {
       "name": "CrimeView-Prod",
       "accountId": "081557494613",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-CrimeView-Prod",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "CrimeView-Prod",
       "nicknames": [],
       "applications": []
     },
@@ -896,11 +869,38 @@
       "applications": []
     },
     {
+      "name": "FEOnboarding",
+      "accountId": "126942145727",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FEOnboarding",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "FESharedServices",
+      "accountId": "660118041187",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FESharedServices",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "FESmshProd",
       "accountId": "850756191955",
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "FESmshProd",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "FITPrdFE",
+      "accountId": "319014022787",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "FITPrdFE",
       "nicknames": [],
       "applications": []
     },
@@ -1031,20 +1031,11 @@
       "applications": []
     },
     {
-      "name": "LZAtestingAccount",
-      "accountId": "139923077263",
+      "name": "KAUAPrdFE",
+      "accountId": "499989195509",
       "org": "foundation",
       "ssoSession": "foundation",
-      "profile": "LZAtestingAccount",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "LZAtestingAccount2",
-      "accountId": "279635434788",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "LZAtestingAccount2",
+      "profile": "KAUAPrdFE",
       "nicknames": [],
       "applications": []
     },
@@ -1120,9 +1111,9 @@
     {
       "name": "Marketplace-Prod",
       "accountId": "533267094065",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-Marketplace-Prod",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Marketplace-Prod",
       "nicknames": [],
       "applications": []
     },
@@ -1141,6 +1132,24 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "NCRTDPrdFE",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "NavilineANCOProd",
+      "accountId": "667173675333",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineANCOProd",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "NavilineCBSOProd",
+      "accountId": "684494099983",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineCBSOProd",
       "nicknames": [],
       "applications": []
     },
@@ -1181,6 +1190,15 @@
       "applications": []
     },
     {
+      "name": "NavilineHNVRProd",
+      "accountId": "462025067407",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineHNVRProd",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "NavilineOwasso",
       "accountId": "192722010352",
       "org": "foundation",
@@ -1204,6 +1222,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "NavilineSharedServices",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "NavilineStaf",
+      "accountId": "898711548089",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "NavilineStaf",
       "nicknames": [],
       "applications": []
     },
@@ -1595,11 +1622,29 @@
       "applications": []
     },
     {
-      "name": "PACloudSandbox",
-      "accountId": "557690582456",
+      "name": "PACloudNonProd-1",
+      "accountId": "032614958662",
       "org": "foundation",
       "ssoSession": "foundation",
-      "profile": "PACloudSandbox",
+      "profile": "PACloudNonProd-1",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PACloudProd-1",
+      "accountId": "379611522896",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PACloudProd-1",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PACloudShared",
+      "accountId": "165030185169",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PACloudShared",
       "nicknames": [],
       "applications": []
     },
@@ -1811,15 +1856,6 @@
       "applications": []
     },
     {
-      "name": "PALegacyFinEntDENT",
-      "accountId": "540334252762",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntDENT",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "PALegacyFinEntDHILL",
       "accountId": "784486495262",
       "org": "foundation",
@@ -1843,15 +1879,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyFinEntELGR",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PALegacyFinEntELGR-DCI",
-      "accountId": "826297868806",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntELGR-DCI",
       "nicknames": [],
       "applications": []
     },
@@ -2072,15 +2099,6 @@
       "applications": []
     },
     {
-      "name": "PALegacyFinEntNUC",
-      "accountId": "327285291655",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntNUC",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "PALegacyFinEntOCLS",
       "accountId": "043031296181",
       "org": "foundation",
@@ -2104,24 +2122,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyFinEntPIETD",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PALegacyFinEntPLCNT",
-      "accountId": "934860272059",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntPLCNT",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PALegacyFinEntPOCA",
-      "accountId": "650681344239",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntPOCA",
       "nicknames": [],
       "applications": []
     },
@@ -2194,15 +2194,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyFinEntSLT",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PALegacyFinEntSMIA",
-      "accountId": "640698236228",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntSMIA",
       "nicknames": [],
       "applications": []
     },
@@ -2293,15 +2284,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PALegacyFinEntVALL",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PALegacyFinEntWASHC",
-      "accountId": "391957224958",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PALegacyFinEntWASHC",
       "nicknames": [],
       "applications": []
     },
@@ -2417,15 +2399,6 @@
       "applications": []
     },
     {
-      "name": "PSJ-LETG-Prod",
-      "accountId": "652776727729",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PSJ-LETG-Prod",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "PSJ-Pro-Backups-Prod",
       "accountId": "905418371664",
       "org": "legacy",
@@ -2489,6 +2462,15 @@
       "applications": []
     },
     {
+      "name": "PSJExperimentalDev",
+      "accountId": "344157142314",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJExperimentalDev",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJLETGDevGC",
       "accountId": "396913721413",
       "org": "foundation",
@@ -2521,6 +2503,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProALMorganEMCD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProARFortSmithPD",
+      "accountId": "601512581750",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProARFortSmithPD",
       "nicknames": [],
       "applications": []
     },
@@ -2561,6 +2552,15 @@
       "applications": []
     },
     {
+      "name": "PSJProCABarstowPD",
+      "accountId": "514422154781",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProCABarstowPD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJProCOArapahoeSO",
       "accountId": "354793419864",
       "org": "foundation",
@@ -2575,6 +2575,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProCOKitcarsonSO",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProCOLake911",
+      "accountId": "500763020530",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProCOLake911",
       "nicknames": [],
       "applications": []
     },
@@ -2642,38 +2651,20 @@
       "applications": []
     },
     {
-      "name": "PSJProGADekalbSDGC",
-      "accountId": "417589271190",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PSJProGADekalbSDGC",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PSJProGADekalbschoolPSGC",
-      "accountId": "195216431769",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PSJProGADekalbschoolPSGC",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "PSJProGAFloydPD",
-      "accountId": "956574163249",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PSJProGAFloydPD",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "PSJProGAFloydSO",
       "accountId": "923516173232",
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProGAFloydSO",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProGANorcrossPD",
+      "accountId": "190884857577",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProGANorcrossPD",
       "nicknames": [],
       "applications": []
     },
@@ -2737,6 +2728,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProIAPoweshiekSO",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProILOttawa911",
+      "accountId": "308703001355",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProILOttawa911",
       "nicknames": [],
       "applications": []
     },
@@ -2912,11 +2912,29 @@
       "applications": []
     },
     {
+      "name": "PSJProMOHowell911",
+      "accountId": "964043552411",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOHowell911",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJProMOJacksonSO",
       "accountId": "204485030437",
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProMOJacksonSO",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProMOLafayette911",
+      "accountId": "215302750358",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMOLafayette911",
       "nicknames": [],
       "applications": []
     },
@@ -2984,6 +3002,15 @@
       "applications": []
     },
     {
+      "name": "PSJProMTHavrePD",
+      "accountId": "537388952913",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProMTHavrePD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJProMTLincolnSO",
       "accountId": "584779375565",
       "org": "foundation",
@@ -3016,6 +3043,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProNEPerkins911",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProNHBerlinPD",
+      "accountId": "841775659140",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProNHBerlinPD",
       "nicknames": [],
       "applications": []
     },
@@ -3128,15 +3164,6 @@
       "applications": []
     },
     {
-      "name": "PSJProOHCincinnatiPDGC",
-      "accountId": "815283997212",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "PSJProOHCincinnatiPDGC",
-      "nicknames": [],
-      "applications": []
-    },
-    {
       "name": "PSJProOHHocking911",
       "accountId": "802096227074",
       "org": "foundation",
@@ -3191,11 +3218,20 @@
       "applications": []
     },
     {
-      "name": "PSJProOKLefloreEMSGC",
-      "accountId": "455162986579",
+      "name": "PSJProOKCowetaPD",
+      "accountId": "684897144065",
       "org": "foundation",
       "ssoSession": "foundation",
-      "profile": "PSJProOKLefloreEMSGC",
+      "profile": "PSJProOKCowetaPD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProOKWagonerSO",
+      "accountId": "194169602000",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProOKWagonerSO",
       "nicknames": [],
       "applications": []
     },
@@ -3218,6 +3254,15 @@
       "applications": []
     },
     {
+      "name": "PSJProRIJohnstonPD",
+      "accountId": "852922979498",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProRIJohnstonPD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJProSCClemsonPD",
       "accountId": "707188165096",
       "org": "foundation",
@@ -3227,11 +3272,38 @@
       "applications": []
     },
     {
+      "name": "PSJProSCEasleyPD",
+      "accountId": "912302000522",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSCEasleyPD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
       "name": "PSJProSCKershaw911",
       "accountId": "315702089617",
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSJProSCKershaw911",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProSCMUSCPD",
+      "accountId": "545349726066",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSCMUSCPD",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSJProSDBrookingsPD",
+      "accountId": "516909142299",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSJProSDBrookingsPD",
       "nicknames": [],
       "applications": []
     },
@@ -3506,11 +3578,11 @@
       "applications": []
     },
     {
-      "name": "PSJRMSDevGC",
-      "accountId": "891377368358",
+      "name": "PSJRespondRMSDev",
+      "accountId": "407364449886",
       "org": "foundation",
       "ssoSession": "foundation",
-      "profile": "PSJRMSDevGC",
+      "profile": "PSJRespondRMSDev",
       "nicknames": [],
       "applications": []
     },
@@ -3544,9 +3616,9 @@
     {
       "name": "PSSE-Fort Bend County Sheriff-TX-Prod",
       "accountId": "397887684283",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-PSSE-Fort Bend County Sheriff-TX-Prod",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSE-Fort Bend County Sheriff-TX-Prod",
       "nicknames": [],
       "applications": []
     },
@@ -3601,6 +3673,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PSSEAlleghenyPAPrdG",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "PSSEAllenPoliceTXPrd",
+      "accountId": "498529855455",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "PSSEAllenPoliceTXPrd",
       "nicknames": [],
       "applications": []
     },
@@ -4127,9 +4208,9 @@
     {
       "name": "Prod-P2P-Comm",
       "accountId": "395393843633",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-Prod-P2P-Comm",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Prod-P2P-Comm",
       "nicknames": [],
       "applications": []
     },
@@ -4166,6 +4247,15 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "PropertyTaxProdUS",
+      "nicknames": [],
+      "applications": []
+    },
+    {
+      "name": "RACOPrdFE",
+      "accountId": "506318770572",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "RACOPrdFE",
       "nicknames": [],
       "applications": []
     },
@@ -4289,9 +4379,9 @@
     {
       "name": "Tools-prod",
       "accountId": "277660576486",
-      "org": "legacy",
-      "ssoSession": "legacy",
-      "profile": "legacy-Tools-prod",
+      "org": "foundation",
+      "ssoSession": "foundation",
+      "profile": "Tools-prod",
       "nicknames": [],
       "applications": []
     },
@@ -4391,15 +4481,6 @@
       "org": "foundation",
       "ssoSession": "foundation",
       "profile": "prod-respond-comm",
-      "nicknames": [],
-      "applications": []
-    },
-    {
-      "name": "testaccountdev",
-      "accountId": "286918585600",
-      "org": "foundation",
-      "ssoSession": "foundation",
-      "profile": "testaccountdev",
       "nicknames": [],
       "applications": []
     }

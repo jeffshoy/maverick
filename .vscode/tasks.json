@@ -208,6 +208,15 @@
       "problemMatcher": []
     },
     {
+      "label": "AWS: Enable TLS 1.2",
+      "detail": "Check/apply TLS 1.2 + .NET strong crypto, schedules a 5am-local reboot. Defaults to --check (read-only); edit the args to add --apply.",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/aws/tls-enable/tls_enable.py", "--account", "${input:awsAccount}", "--name", "${input:serverName}", "--check"],
+      "presentation": { "reveal": "always", "panel": "new", "focus": true },
+      "problemMatcher": []
+    },
+    {
       "label": "AWS: Investigate Site",
       "detail": "Leave account blank to use the interactive picker",
       "type": "shell",
