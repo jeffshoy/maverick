@@ -23,6 +23,17 @@ scripts/sectigo/MassServerAdd/*.xlsx
 # Sectigo — root-level working directory (run artifacts, never committed)
 /Sectigo/
 
+# Decommission scripts — client-specific run artifacts (instance manifests, backup
+# results, parameter dumps), not source. Keep the .ps1 scripts, exclude everything
+# these runs generate.
+scripts/aws/decommission/*-decommission-*.csv
+scripts/aws/decommission/decommission-backups-*.csv
+scripts/aws/decommission/*_prod_params.json
+scripts/aws/decommission/*_stg_params.json
+scripts/aws/decommission/*_stg_instances.csv
+scripts/aws/decommission/*_prod_instances.csv
+scripts/aws/decommission/*-instances.csv
+
 # Python
 __pycache__/
 *.pyc
