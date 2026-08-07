@@ -75,6 +75,26 @@ stages:
                 terraform validate
                 terraform plan -input=false -out=tfplan
 
+          # Apply_Dev applies this exact plan file rather than recomputing its own, so any
+          # destroy/replace must be caught and blocked HERE, in a stage with no auto-approve,
+          # not discovered after Apply_Dev has already auto-applied it against real infra.
+          - task: AWSShellScript@1
+            displayName: Fail if plan contains destroy/replace actions
+            inputs:
+              awsCredentials: "ami-hardening-pipeline-aws"
+              regionName: "us-east-1"
+              scriptType: "inline"
+              inlineScript: |
+                set -euo pipefail
+                cd "$(WORKING_DIR)"
+                DESTROY_COUNT=$(terraform show -json tfplan | jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length')
+                echo "Destroy/replace actions in plan: $DESTROY_COUNT"
+                if [ "$DESTROY_COUNT" -gt 0 ]; then
+                  terraform show -no-color tfplan
+                  echo "##vso[task.logissue type=error]Plan contains $DESTROY_COUNT destroy/replace action(s) - see plan output above. Apply_Dev will not run automatically. Review the drift, resolve it, and re-run once the plan is add/update-only."
+                  exit 1
+                fi
+
           - publish: $(WORKING_DIR)/tfplan
             artifact: tfplan
             displayName: Publish plan artifact
@@ -94,10 +114,10 @@ stages:
               terraform -version
             displayName: Install Terraform $(TF_VERSION)
 
-          # DIAGNOSTIC: split into separate steps (not one silent block) so we can see
-          # exactly which command stalls — Apply_Dev has hung with zero log output on
-          # every real attempt so far (builds 1221569, 1221654, 1222249, 1222336), while
-          # the Validate stage's near-identical init+plan always succeeds in seconds.
+          - download: current
+            artifact: tfplan
+            displayName: Download plan artifact from Validate
+
           - task: AWSShellScript@1
             displayName: terraform init
             timeoutInMinutes: 3
@@ -109,11 +129,16 @@ stages:
                 set -x
                 echo "=== BEFORE init: $(date -u) ==="
                 cd "$(WORKING_DIR)"
+                cp "$(Pipeline.Workspace)/tfplan/tfplan" ./tfplan
                 terraform init -input=false -no-color
                 echo "=== AFTER init: $(date -u) ==="
 
+          # Applies the EXACT plan file Validate produced and already screened for
+          # destroy/replace actions — does NOT recompute a fresh plan here. Recomputing
+          # would let drift between Validate and Apply_Dev (however small the window)
+          # produce a different, unreviewed plan that this step would then auto-approve.
           - task: AWSShellScript@1
-            displayName: terraform apply
+            displayName: terraform apply (from plan artifact)
             timeoutInMinutes: 5
             inputs:
               awsCredentials: "ami-hardening-pipeline-aws"
@@ -123,7 +148,7 @@ stages:
                 set -x
                 echo "=== BEFORE apply: $(date -u) ==="
                 cd "$(WORKING_DIR)"
-                terraform apply -input=false -auto-approve -no-color
+                terraform apply -input=false -auto-approve -no-color tfplan
                 echo "=== AFTER apply: $(date -u) ==="
 
   # Prod (environments/prod) is intentionally NOT wired up yet — see the project's
