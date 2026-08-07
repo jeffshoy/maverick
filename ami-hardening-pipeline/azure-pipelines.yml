@@ -86,6 +86,7 @@ stages:
     jobs:
       - job: apply
         displayName: terraform apply
+        timeoutInMinutes: 10
         steps:
           - script: |
               curl -sSL -o terraform.zip "https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip"
@@ -93,17 +94,37 @@ stages:
               terraform -version
             displayName: Install Terraform $(TF_VERSION)
 
+          # DIAGNOSTIC: split into separate steps (not one silent block) so we can see
+          # exactly which command stalls — Apply_Dev has hung with zero log output on
+          # every real attempt so far (builds 1221569, 1221654, 1222249, 1222336), while
+          # the Validate stage's near-identical init+plan always succeeds in seconds.
           - task: AWSShellScript@1
-            displayName: terraform init + apply
+            displayName: terraform init
+            timeoutInMinutes: 3
             inputs:
               awsCredentials: "ami-hardening-pipeline-aws"
               regionName: "us-east-1"
               scriptType: "inline"
               inlineScript: |
-                set -euo pipefail
+                set -x
+                echo "=== BEFORE init: $(date -u) ==="
                 cd "$(WORKING_DIR)"
-                terraform init -input=false
-                terraform apply -input=false -auto-approve
+                terraform init -input=false -no-color
+                echo "=== AFTER init: $(date -u) ==="
+
+          - task: AWSShellScript@1
+            displayName: terraform apply
+            timeoutInMinutes: 5
+            inputs:
+              awsCredentials: "ami-hardening-pipeline-aws"
+              regionName: "us-east-1"
+              scriptType: "inline"
+              inlineScript: |
+                set -x
+                echo "=== BEFORE apply: $(date -u) ==="
+                cd "$(WORKING_DIR)"
+                terraform apply -input=false -auto-approve -no-color
+                echo "=== AFTER apply: $(date -u) ==="
 
   # Prod (environments/prod) is intentionally NOT wired up yet — see the project's
   # memory notes: environments/prod has never been applied and is a separate, empty
