@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars and fill in real values.
+# workspaces_directory_id comes from the platform layer's output:
+#   cd ../platform && terraform output workspaces_directory_id
+
+workspaces_directory_id = "REPLACE_WITH_PLATFORM_OUTPUT"
+bundle_id               = "wsb-REPLACE0000" # e.g. Standard with Windows 11 bundle, or your custom bundle ID
+
+users = {
+  "jsmith" = {
+    user_name = "jsmith"
+  }
+  "agarcia" = {
+    user_name           = "agarcia"
+    running_mode         = "ALWAYS_ON" # power user, override the default AUTO_STOP
+    root_volume_size_gb = 175
+  }
+}
+
+tags = {
+  Environment = "prod"
+  ManagedBy   = "terraform"
+  Team        = "workspace-engineering"
+}

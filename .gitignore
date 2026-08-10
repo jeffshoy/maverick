@@ -1,0 +1,16 @@
+# Terraform local state, plans, and provider cache — never commit these
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfstate.lock.info
+
+# Real per-deployment vars (contain secret ARNs / CIDRs) — commit only *.tfvars.example
+terraform.tfvars
+*.auto.tfvars
