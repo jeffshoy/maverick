@@ -119,8 +119,8 @@ $ComputerName = "$ClientCode-${EnvLetter}ONSLRP001"
 $AdDomain = "$($ClientCode.ToLower()).cloud.lcl"  # for display in the final summary only — domain join itself is manual
 
 $RegionLookup = @{
-    'use1' = @{ AwsRegion = 'us-east-1'; Ami = 'ami-007e574ddf94a654b' }
-    'usw2' = @{ AwsRegion = 'us-west-2'; Ami = 'ami-0f6a4e7c36328cfd0' }
+    'use1' = @{ AwsRegion = 'us-east-1'; Ami = 'ami-04a1a6ee507695289' }
+    'usw2' = @{ AwsRegion = 'us-west-2'; Ami = 'ami-06dfdbf3cac70c6a7' }
 }
 $RegionInfo = $RegionLookup[$Region]
 $AwsRegion  = $RegionInfo.AwsRegion
@@ -199,7 +199,9 @@ function Find-ReferenceInstances {
         --output json `
         --profile $Profile --region $Reg 2>&1
     if ($LASTEXITCODE -ne 0) { throw "AWS CLI error discovering reference instances (pattern=$NamePattern): $raw" }
-    $rows = $raw | ConvertFrom-Json
+    # -NoEnumerate: ConvertFrom-Json unwraps a single-element outer array by default,
+    # collapsing a lone [InstanceId,Name,...] row into 7 separate scalar "rows".
+    $rows = $raw | ConvertFrom-Json -NoEnumerate
     return @($rows | ForEach-Object {
         [PSCustomObject]@{
             InstanceId    = $_[0]

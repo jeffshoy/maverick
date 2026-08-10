@@ -7,8 +7,8 @@ client from the golden AMI. This is the per-client process that runs after the A
 build is complete.
 
 **Golden AMIs (owned by PALegacySharedServices - 361362055558):**
-- us-west-2: `ami-0f6a4e7c36328cfd0` (v1.3)
-- us-east-1: `ami-007e574ddf94a654b` (v1.3)
+- us-west-2: `ami-06dfdbf3cac70c6a7` (v1.4)
+- us-east-1: `ami-04a1a6ee507695289` (v1.4)
 
 **KMS Keys (shared services, grant access to all PALegacyFinEnt accounts):**
 - us-west-2: `arn:aws:kms:us-west-2:361362055558:key/f17195a0-525f-49be-b625-9fa79e4b0d01`
@@ -120,7 +120,7 @@ tiers the skill applies automatically. See the Tagging section in
 # Replace variables with client-specific values
 $profile = "PALegacyFinEnt{CLIENT}"
 $region = "us-east-1"  # or us-west-2
-$ami = "ami-007e574ddf94a654b"  # east; use ami-0f6a4e7c36328cfd0 for west
+$ami = "ami-04a1a6ee507695289"  # east; use ami-06dfdbf3cac70c6a7 for west
 $subnet = "subnet-XXXXXXXXX"
 $sg = "sg-XXXXXXXXX"
 $name = "{CLIENT}-TONSLRP001"  # or PONSLRP001 for prod
@@ -319,7 +319,7 @@ export http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY
 
 Security team provided the Linux Tanium client bundle directly; it was installed once
 during the AMI build (see `fe-legacy-cognos-ami-build.md`, Phase 8b) and is present on every
-instance launched from `ami-0f6a4e7c36328cfd0` (west) / `ami-007e574ddf94a654b` (east).
+instance launched from `ami-06dfdbf3cac70c6a7` (west) / `ami-04a1a6ee507695289` (east).
 Per security team guidance, the Tanium agent periodically re-pulls host information
 (hostname, etc.), so no per-instance identity reset or re-registration step is required here.
 
@@ -382,12 +382,12 @@ been added to the share list yet.
 
 ```powershell
 # West
-aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-west-2 --image-id ami-0f6a4e7c36328cfd0 --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
-aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-west-2 --snapshot-id snap-0296b4e9096306fe2 --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
+aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-west-2 --image-id ami-06dfdbf3cac70c6a7 --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
+aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-west-2 --snapshot-id snap-0644c82a28e817cfc --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
 
 # East
-aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-east-1 --image-id ami-007e574ddf94a654b --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
-aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-east-1 --snapshot-id snap-0a46be4f4a2a872d1 --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
+aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-east-1 --image-id ami-04a1a6ee507695289 --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
+aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-east-1 --snapshot-id snap-0e1c15b2b8248c640 --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
 ```
 
 **2. Add the new account to the KMS key policy** (the AMI's root volume is encrypted with a

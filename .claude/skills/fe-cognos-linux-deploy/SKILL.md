@@ -36,7 +36,7 @@ client, get one provisioned before deploying, since the domain join immediately 
 - Configure Cognos itself (content store, gateway URI, auth namespace) — hand off to the
   GlobalLogic team per `runbooks/fe-legacy-cognos-client-deploy.md` Step 9.
 - Configure the proxy — already baked into the golden AMI.
-- Install security tooling — Tanium is already baked into the golden AMI (v1.3); see
+- Install security tooling — Tanium is already baked into the golden AMI (v1.4); see
   `runbooks/fe-legacy-cognos-ami-build.md` Phase 8b. No per-client action needed.
 - Register the instance with a load balancer.
 
@@ -45,12 +45,12 @@ client, get one provisioned before deploying, since the domain join immediately 
 - Client instance: `PALegacyFinEnt{CLIENT}` — SSO session `foundation` (auto-refreshed if
   expired, no manual login required).
 
-## Golden AMIs (v1.3)
+## Golden AMIs (v1.4)
 
 | Region | AMI ID |
 |--------|--------|
-| us-west-2 | `ami-0f6a4e7c36328cfd0` |
-| us-east-1 | `ami-007e574ddf94a654b` |
+| us-west-2 | `ami-06dfdbf3cac70c6a7` |
+| us-east-1 | `ami-04a1a6ee507695289` |
 
 ## Network/IAM Discovery
 
@@ -164,12 +164,12 @@ permission error, the new client's account ID hasn't been added to the share lis
 
 ```powershell
 # West
-aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-west-2 --image-id ami-0f6a4e7c36328cfd0 --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
-aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-west-2 --snapshot-id snap-0296b4e9096306fe2 --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
+aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-west-2 --image-id ami-06dfdbf3cac70c6a7 --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
+aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-west-2 --snapshot-id snap-0644c82a28e817cfc --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
 
 # East
-aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-east-1 --image-id ami-007e574ddf94a654b --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
-aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-east-1 --snapshot-id snap-0a46be4f4a2a872d1 --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
+aws ec2 modify-image-attribute --profile PALegacySharedServices --region us-east-1 --image-id ami-04a1a6ee507695289 --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]"
+aws ec2 modify-snapshot-attribute --profile PALegacySharedServices --region us-east-1 --snapshot-id snap-0e1c15b2b8248c640 --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID
 ```
 
 **2. Add the new account to the KMS key policy** (the AMI's root volume is encrypted with a

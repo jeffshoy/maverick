@@ -30,7 +30,7 @@ Windows Web Server to Linux Cognos.
 | **Reference Instance** | `i-089f9b511c61ef3cf` (ISB-PONSRP001 — existing Windows Cognos, being migrated away from) | `i-08c3d8d7b69c29e5a` (HIC-PONSRP001 — existing Windows Cognos, being migrated away from) |
 | **Build Instance** | `i-0067f3e81d03d22b5` (cognos-11.2.4-ami-build-usw2) | `i-0bbee90ce9fab60be` (cognos-11.2.4-ami-build-use1) |
 | **Build Instance IP** | `10.60.13.55` | `10.130.33.19` |
-| **Golden AMI (v1.3)** | `ami-0f6a4e7c36328cfd0` (Shared Services 361362055558, us-west-2) | `ami-007e574ddf94a654b` (Shared Services 361362055558, us-east-1) |
+| **Golden AMI (v1.4)** | `ami-06dfdbf3cac70c6a7` (Shared Services 361362055558, us-west-2) | `ami-04a1a6ee507695289` (Shared Services 361362055558, us-east-1) |
 
 ---
 
