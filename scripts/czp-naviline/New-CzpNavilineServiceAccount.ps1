@@ -98,7 +98,10 @@ if ($existing) {
     $upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
     $lower   = 'abcdefghjkmnpqrstuvwxyz'
     $digits  = '23456789'
-    $special = '!@#$%^&*'
+    # No $, `, ", ' — any of these inside a double-quoted string passed to a CLI (e.g.
+    # aws ssm put-parameter --value "...") can be silently mangled: PowerShell/shells treat
+    # "$word" as a variable interpolation attempt and truncate the string when it fails.
+    $special = '!@#%^&*'
     $all     = $upper + $lower + $digits + $special
     $rng     = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     $bytes   = [byte[]]::new(24)

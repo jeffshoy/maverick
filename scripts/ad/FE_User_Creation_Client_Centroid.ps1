@@ -64,7 +64,10 @@ function Generate-RandomPassword {
     $upper   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.ToCharArray()
     $lower   = 'abcdefghijklmnopqrstuvwxyz'.ToCharArray()
     $digits  = '0123456789'.ToCharArray()
-    $special = '!@#$%^&*()-_=+[]{};:,.<>?'.ToCharArray()
+    # No $, `, ", ' — any of these inside a double-quoted string passed to a CLI (e.g.
+    # aws ssm put-parameter --value "...") can be silently mangled: PowerShell/shells treat
+    # "$word" as a variable interpolation attempt and truncate the string when it fails.
+    $special = '!@#%^&*()-_=+[]{};:,.<>?'.ToCharArray()
     $all     = $upper + $lower + $digits + $special
     do {
         $chars = @()
