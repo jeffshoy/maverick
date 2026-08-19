@@ -16,6 +16,7 @@ module "ami_hardening_pipeline" {
 
   rhel9_ami_id_override      = var.rhel9_ami_id_override
   ubuntu2204_ami_id_override = var.ubuntu2204_ami_id_override
+  ubuntu2404_ami_id_override = var.ubuntu2404_ami_id_override
 
   windows_build_instance_types = var.windows_build_instance_types
   linux_build_instance_types   = var.linux_build_instance_types
@@ -26,6 +27,7 @@ module "ami_hardening_pipeline" {
   windows2022_schedule_expression = var.windows2022_schedule_expression
   rhel9_schedule_expression       = var.rhel9_schedule_expression
   ubuntu2204_schedule_expression  = var.ubuntu2204_schedule_expression
+  ubuntu2404_schedule_expression  = var.ubuntu2404_schedule_expression
 
   default_tags = var.default_tags
 }

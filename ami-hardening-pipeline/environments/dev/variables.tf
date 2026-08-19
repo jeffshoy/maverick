@@ -62,6 +62,11 @@ variable "ubuntu2204_ami_id_override" {
   default = ""
 }
 
+variable "ubuntu2404_ami_id_override" {
+  type    = string
+  default = ""
+}
+
 variable "windows_build_instance_types" {
   type    = list(string)
   default = ["t3.large"]
@@ -93,6 +98,11 @@ variable "rhel9_schedule_expression" {
 }
 
 variable "ubuntu2204_schedule_expression" {
+  type    = string
+  default = null
+}
+
+variable "ubuntu2404_schedule_expression" {
   type    = string
   default = null
 }

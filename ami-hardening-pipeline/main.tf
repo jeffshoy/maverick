@@ -117,6 +117,38 @@ data "aws_ami" "ubuntu2204_resolved" {
   }
 }
 
+# Owned directly by Canonical's account, not a Marketplace product — same
+# ownership pattern as ubuntu2204 above. Name filter uses "hvm-ssd-gp3" (not
+# "hvm-ssd" like the jammy filter above) — confirmed 2026-08-19 by directly
+# resolving real matching AMIs for this exact pattern; Canonical's noble
+# catalog entries use gp3 as the published root volume type, unlike jammy's.
+data "aws_ami" "ubuntu2404" {
+  count       = var.ubuntu2404_ami_id_override == "" ? 1 : 0
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu-pro-server/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-pro-server-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+}
+
+locals {
+  resolved_ubuntu2404_ami_id = var.ubuntu2404_ami_id_override != "" ? var.ubuntu2404_ami_id_override : one(data.aws_ami.ubuntu2404[*].id)
+}
+
+data "aws_ami" "ubuntu2404_resolved" {
+  filter {
+    name   = "image-id"
+    values = [local.resolved_ubuntu2404_ami_id]
+  }
+}
+
 # ── Component documents ───────────────────────────────────────────────────────
 
 locals {
@@ -133,6 +165,10 @@ locals {
   })
 
   ubuntu2204_component_document = templatefile("${path.module}/components/ubuntu-2204/cis-hardening.yaml.tpl", {
+    logs_bucket = module.imagebuilder_core.logs_bucket_name
+  })
+
+  ubuntu2404_component_document = templatefile("${path.module}/components/ubuntu-2404/cis-hardening.yaml.tpl", {
     logs_bucket = module.imagebuilder_core.logs_bucket_name
   })
 }
@@ -241,4 +277,30 @@ module "ubuntu2204_pipeline" {
   distribution_regions  = var.distribution_regions
   kms_key_arn           = var.kms_key_arn
   schedule_expression   = var.ubuntu2204_schedule_expression
+}
+
+module "ubuntu2404_pipeline" {
+  source = "./modules/imagebuilder-pipeline"
+
+  project_name     = var.project_name
+  environment      = var.environment
+  pipeline_name    = "ubuntu2404"
+  platform         = "Linux"
+  parent_image_id  = local.resolved_ubuntu2404_ami_id
+  root_device_name = data.aws_ami.ubuntu2404_resolved.root_device_name
+
+  component_documents = [
+    { name = "cis-hardening", version = "1.0.0", document = local.ubuntu2404_component_document },
+  ]
+  recipe_version = "1.0.0"
+
+  instance_types        = var.linux_build_instance_types
+  instance_profile_name = module.imagebuilder_core.instance_profile_name
+  subnet_id             = local.resolved_subnet_id
+  security_group_ids    = [module.imagebuilder_core.security_group_id]
+  logs_bucket_name      = module.imagebuilder_core.logs_bucket_name
+  ami_name_prefix       = "${var.project_name}-${var.environment}-ubuntu2404-cis"
+  distribution_regions  = var.distribution_regions
+  kms_key_arn           = var.kms_key_arn
+  schedule_expression   = var.ubuntu2404_schedule_expression
 }

@@ -84,6 +84,12 @@ variable "ubuntu2204_ami_id_override" {
   default     = ""
 }
 
+variable "ubuntu2404_ami_id_override" {
+  description = "Ubuntu 24.04 Pro parent AMI ID. Leave empty to auto-resolve the latest Canonical Ubuntu Pro server AMI."
+  type        = string
+  default     = ""
+}
+
 # ── Build instance sizing ─────────────────────────────────────────────────────
 
 variable "windows_build_instance_types" {
@@ -128,6 +134,12 @@ variable "rhel9_schedule_expression" {
 
 variable "ubuntu2204_schedule_expression" {
   description = "Cron expression for scheduled Ubuntu 22.04 pipeline builds. Null = manual trigger only."
+  type        = string
+  default     = null
+}
+
+variable "ubuntu2404_schedule_expression" {
+  description = "Cron expression for scheduled Ubuntu 24.04 pipeline builds. Null = manual trigger only."
   type        = string
   default     = null
 }

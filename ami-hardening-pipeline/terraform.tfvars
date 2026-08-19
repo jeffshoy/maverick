@@ -20,6 +20,7 @@ build_availability_zone = "us-east-1a"
 
 rhel9_ami_id_override      = "" # leave empty to auto-resolve latest Marketplace RHEL 9 AMI
 ubuntu2204_ami_id_override = "" # leave empty to auto-resolve latest Canonical Ubuntu Pro server AMI
+ubuntu2404_ami_id_override = "" # leave empty to auto-resolve latest Canonical Ubuntu Pro server AMI
 
 windows_build_instance_types = ["t3.large"]
 linux_build_instance_types   = ["t3.medium"]
@@ -30,3 +31,4 @@ windows2019_schedule_expression = null # null = manual trigger only
 windows2022_schedule_expression = null
 rhel9_schedule_expression       = null
 ubuntu2204_schedule_expression  = null
+ubuntu2404_schedule_expression  = null

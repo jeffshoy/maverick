@@ -19,6 +19,10 @@ output "ubuntu2204_pipeline_arn" {
   value = module.ubuntu2204_pipeline.pipeline_arn
 }
 
+output "ubuntu2404_pipeline_arn" {
+  value = module.ubuntu2404_pipeline.pipeline_arn
+}
+
 output "rhel9_resolved_ami_id" {
   description = "RHEL 9 parent AMI ID used by the recipe (explicit override or auto-resolved from Marketplace)"
   value       = local.resolved_rhel9_ami_id
@@ -27,4 +31,9 @@ output "rhel9_resolved_ami_id" {
 output "ubuntu2204_resolved_ami_id" {
   description = "Ubuntu 22.04 Pro parent AMI ID used by the recipe (explicit override or auto-resolved from Canonical)"
   value       = local.resolved_ubuntu2204_ami_id
+}
+
+output "ubuntu2404_resolved_ami_id" {
+  description = "Ubuntu 24.04 Pro parent AMI ID used by the recipe (explicit override or auto-resolved from Canonical)"
+  value       = local.resolved_ubuntu2404_ami_id
 }

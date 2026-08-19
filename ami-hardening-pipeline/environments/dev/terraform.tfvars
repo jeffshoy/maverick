@@ -20,6 +20,7 @@ build_availability_zone = "us-east-1a"
 
 rhel9_ami_id_override      = ""
 ubuntu2204_ami_id_override = ""
+ubuntu2404_ami_id_override = ""
 
 windows_build_instance_types = ["t3.large"]
 linux_build_instance_types   = ["t3.medium"]
@@ -31,3 +32,4 @@ windows2019_schedule_expression = null
 windows2022_schedule_expression = null
 rhel9_schedule_expression       = null
 ubuntu2204_schedule_expression  = null
+ubuntu2404_schedule_expression  = null
